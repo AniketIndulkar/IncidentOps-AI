@@ -1,15 +1,18 @@
 [project]
 name = "incidentops-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "Production-grade AI incident triage and diagnosis"
 readme = "README.md"
 authors = [
     { name = "Aniket Indulkar", email = "aniketindulkar.ms@gmail.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.20.0",
+    "asyncpg>=0.32.0",
     "fastapi>=0.142.2",
     "pydantic-settings>=2.15.0",
+    "sqlalchemy[asyncio]>=2.1.4",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -27,3 +30,15 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.10",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["apps/api"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "incidentops_ai"]
