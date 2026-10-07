@@ -35,7 +35,7 @@ def migrated_db(settings: Settings) -> None:
 async def clean_tables(settings: Settings) -> AsyncIterator[None]:
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE incidents"))
+        await conn.execute(text("TRUNCATE incidents CASCADE"))
     await engine.dispose()
     yield
 

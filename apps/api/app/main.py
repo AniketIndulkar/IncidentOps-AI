@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.errors import register_error_handlers
 from app.routes import incidents
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
@@ -27,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health():
         return {"status": "ok"}
 
+    register_error_handlers(app)
     app.include_router(incidents.router)
     return app
 
