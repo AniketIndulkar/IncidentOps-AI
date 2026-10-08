@@ -11,15 +11,18 @@ If you know Kotlin coroutines, the mapping is close: `async def` ≈ `suspend fu
 ```python
 import asyncio
 
+
 async def fetch(n: int) -> int:
-    await asyncio.sleep(1)      # pretend this is network I/O
+    await asyncio.sleep(1)  # pretend this is network I/O
     return n * 2
+
 
 async def main():
     result = await fetch(21)
-    print(result)               # 42
+    print(result)  # 42
 
-asyncio.run(main())             # the entry point: starts the event loop
+
+asyncio.run(main())  # the entry point: starts the event loop
 ```
 
 - `async def` defines a **coroutine function**. Calling it returns a **coroutine object** and runs *nothing* yet.
@@ -28,7 +31,7 @@ asyncio.run(main())             # the entry point: starts the event loop
 
 ```python
 coro = fetch(1)
-print(type(coro))   # <class 'coroutine'>, nothing has executed
+print(type(coro))  # <class 'coroutine'>, nothing has executed
 # forgetting `await` gives "coroutine was never awaited" warnings
 ```
 
@@ -84,8 +87,8 @@ Schedules a coroutine to run in the background and returns a `Task`.
 async def main():
     task = asyncio.create_task(fetch(5))
     print("task is running in the background...")
-    await asyncio.sleep(0.1)    # yields control; task gets to start
-    result = await task         # wait for the result
+    await asyncio.sleep(0.1)  # yields control; task gets to start
+    result = await task  # wait for the result
 ```
 
 Things to know:
@@ -118,7 +121,8 @@ Error behavior (the tricky part):
 ```python
 results = await asyncio.gather(a(), b(), return_exceptions=True)
 for r in results:
-    if isinstance(r, Exception): ...
+    if isinstance(r, Exception):
+        ...
 ```
 
 ### `asyncio.TaskGroup` (Python 3.11+): the modern, structured way
@@ -142,7 +146,7 @@ try:
     async with asyncio.TaskGroup() as tg:
         tg.create_task(might_fail())
         tg.create_task(other())
-except* ValueError as eg:        # note `except*`
+except* ValueError as eg:  # note `except*`
     print("value errors:", eg.exceptions)
 ```
 
@@ -159,13 +163,14 @@ Like `with`, but setup and teardown can `await`. Used for connections, sessions,
 ```python
 class Connection:
     async def __aenter__(self):
-        await asyncio.sleep(0.1)       # e.g. open connection
+        await asyncio.sleep(0.1)  # e.g. open connection
         print("opened")
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        await asyncio.sleep(0.1)       # e.g. close connection
-        print("closed")                # runs even on exceptions
+        await asyncio.sleep(0.1)  # e.g. close connection
+        print("closed")  # runs even on exceptions
+
 
 async def main():
     async with Connection() as conn:
@@ -177,6 +182,7 @@ The shortcut with a decorator:
 ```python
 from contextlib import asynccontextmanager
 
+
 @asynccontextmanager
 async def connection():
     print("opened")
@@ -184,6 +190,7 @@ async def connection():
         yield "conn"
     finally:
         print("closed")
+
 
 async with connection() as c:
     ...
@@ -202,13 +209,16 @@ Since everything shares one thread, **a blocking call freezes every task.**
 ```python
 import time
 
+
 async def heartbeat():
     while True:
         print("tick")
         await asyncio.sleep(0.5)
 
+
 async def bad():
-    time.sleep(3)            # BLOCKS the whole loop for 3s
+    time.sleep(3)  # BLOCKS the whole loop for 3s
+
 
 async def main():
     async with asyncio.TaskGroup() as tg:
@@ -238,14 +248,14 @@ It's your escape hatch when you must call **blocking, synchronous code** from as
 # Simplest: asyncio.to_thread (3.9+)
 import requests
 
+
 async def main():
     resp = await asyncio.to_thread(requests.get, "https://example.com")
     print(resp.status_code)
 
+
 # Run many blocking calls concurrently
-results = await asyncio.gather(
-    *(asyncio.to_thread(requests.get, u) for u in urls)
-)
+results = await asyncio.gather(*(asyncio.to_thread(requests.get, u) for u in urls))
 ```
 
 With your own pool (to cap concurrency or isolate workloads):
@@ -254,6 +264,7 @@ With your own pool (to cap concurrency or isolate workloads):
 from concurrent.futures import ThreadPoolExecutor
 
 pool = ThreadPoolExecutor(max_workers=4)
+
 
 async def main():
     loop = asyncio.get_running_loop()
