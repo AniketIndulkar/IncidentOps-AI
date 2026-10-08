@@ -60,9 +60,9 @@ Client ──▶  FastAPI ingress (typed API, idempotency, structured errors)
 | Day | Ticket | Deliverable | Status |
 |---|---|---|---|
 | Mon | AIENG-2 | Repo skeleton, minimal FastAPI, asyncio vs Kotlin note | ✅ Done |
-| Tue | AIENG-15 | Pydantic models, `POST /incidents`, `GET /incidents/{id}`, PostgreSQL | 🟡 In progress |
-| Wed | AIENG-16 | Idempotency keys, structured errors, failure-path tests | To do |
-| Thu | AIENG-17 | Dockerfile, GitHub Actions (lint/test/build), AWS deploy, budget alert | To do |
+| Tue | AIENG-15 | Pydantic models, `POST /incidents`, `GET /incidents/{id}`, PostgreSQL | ✅ Done |
+| Wed | AIENG-16 | Idempotency keys, structured errors, failure-path tests | ✅ Done |
+| Thu | AIENG-17 | Dockerfile, GitHub Actions (lint/test/build), AWS deploy, budget alert | ✅ Done (CI green, PR #1) |
 | Fri | AIENG-18 | E2E against deployed env, fix one real defect, Week 1 note | To do |
 
 **W02 · LLM Application Engineering** (AIENG-3) — *exit: typed extraction that fails safely on malformed output/timeouts*
@@ -182,27 +182,37 @@ Hard dependencies to protect:
 | Decision | Recommendation | Why |
 |---|---|---|
 | Vector store | **pgvector** in existing Postgres | One fewer service, same DB for metadata filters and tenant isolation (W10) |
-| DB access | SQLAlchemy 2.x async + asyncpg + Alembic | Matches async FastAPI; migrations needed by W07/W08 |
+| DB access | SQLAlchemy 2.x async + asyncpg + Alembic ✅ adopted | Matches async FastAPI; migrations needed by W07/W08 |
+| Errors | RFC 9457 `problem+json` with stable `code` ✅ adopted | One error shape for clients; no input echo |
+| Hosting (W01–W12) | Lightsail `micro` + docker compose, deleted after use ✅ adopted | Fixed $7/mo, no hidden costs; registry/orchestrator deferred (see deployment note) |
 | Repo layout | Keep `apps/api` (HTTP) thin, domain logic in `src/incidentops_ai` | Workflow, evals and CLI reuse the same code |
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
 
-## Current state (7 Oct 2026, Wed W01)
+## Current state (8 Oct 2026, Thu W01)
 
-- Done: AIENG-2 (skeleton, `/health`, async note), AIENG-79 PREP marked Done.
-- In progress: AIENG-15 (Tue) — nothing in repo yet (no models, routes, DB). **One day behind.**
-- Repo: FastAPI + pydantic-settings + uvicorn; dev: pytest, pytest-asyncio, httpx, ruff. `docs/adr/` exists, empty.
+- Done: AIENG-2, AIENG-15, AIENG-16, AIENG-17 (W01 back on schedule). Next: AIENG-18 (Fri).
+- API: `POST /incidents` (optional `Idempotency-Key`), `GET /incidents/{id}`, `/health`; RFC 9457 errors.
+- Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`).
+- Tests: 26 pytest tests against real Postgres (local 14, CI 17).
+- Docker: multi-stage image (non-root, healthcheck, migrations on start); `docker-compose.yml` with API + Postgres.
+- CI: GitHub Actions lint → test → build; green on `main`.
+- AWS: account secured (root MFA, IAM user `aniket-admin`, $25 budget + anomaly alerts, `aws login`).
+  First deploy to Lightsail verified `/health` from the internet, then deleted (≈ $0.01). Steps: `docs/deploy-lightsail.md`.
+- Notes: `docs/notes/python-async-vs-kotlin.md`, `docs/notes/deployment-docker-ci-aws.md`.
 
 ## Risks & gaps found in the tickets
 
-1. **Schedule slip in W01.** AIENG-15 still in progress on Wednesday. Option: merge AIENG-15 + AIENG-16 today, and keep Thu deploy; if AWS slips, deploy on Fri and move the defect hunt into W02 Mon.
-2. **PREP marked Done but items unchecked:** local PostgreSQL, AWS account + budget alert, LLM API credit, Neo4j Aura, Langfuse. AWS + Postgres block this week (AIENG-15/17). Reopen or add a subtask.
-3. **`__pycache__/*.pyc` committed** under `apps/api/app/`. Add to `.gitignore` and remove from index.
-4. **README is empty** and `pyproject.toml` description is the placeholder. Fill in a minimal README this week; AIENG-77 depends on it.
+1. ~~Schedule slip in W01~~ — resolved: AIENG-15/16/17 done by Thu.
+2. **PREP partly open:** Postgres ✅, Docker ✅ (OrbStack), AWS + budget ✅. Still open: LLM API credit (needed W02), Neo4j Aura (W05), Langfuse (W11).
+3. ~~`__pycache__` committed~~ — resolved (`.gitignore` populated, files untracked).
+4. ~~README empty~~ — resolved (setup/run/test steps); keep it current for AIENG-77.
 5. **Heavy weeks:** W09 (3 integrations + Text-to-SQL) and W10 (RBAC + data permissions + red-team) are dense for 10h each. Pre-decide what drops first (candidate: legacy SOAP adapter AIENG-58 → known limitation).
 6. **Holiday weeks:** W12 (Christmas) and W13 (New Year) are full release work. AIENG-73 is already optional; consider making AIENG-74 start in W12 Fri if energy is low.
 7. **Corpus is synthetic/public.** Eval results risk overfitting a small set; W11 golden-set expansion (AIENG-64) is the mitigation — don't skip it.
 8. **Data permissions retrofit (W10)** touches every retriever. Carry a `tenant_id`/ACL field in chunk metadata from W03 to make W10 cheap.
+9. **AWS Paid plan, no hard spending cap.** Account moved to Paid when Identity Center/Organizations were enabled (now removed). Mitigation: budget + anomaly alerts, fixed-price Lightsail, delete resources after every session; never enable Organizations/Identity Center.
+10. **Idempotency keys are global and never expire.** Scope per user once auth lands (AIENG-60) and add TTL cleanup (W12, AIENG-71).
 
 ## Weekly cadence
 
