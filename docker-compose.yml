@@ -1,0 +1,34 @@
+# Local stack and single-server deploy: API + PostgreSQL.
+#   POSTGRES_PASSWORD must be set (in .env next to this file, never committed).
+#   docker compose up --build
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: incidentops
+      POSTGRES_DB: incidentops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incidentops -d incidentops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No ports published: the database is reachable only from the api container.
+
+  api:
+    build: .
+    image: incidentops-api:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      INCIDENTOPS_DATABASE_URL: postgresql+asyncpg://incidentops:${POSTGRES_PASSWORD}@db:5432/incidentops
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+volumes:
+  pgdata:
