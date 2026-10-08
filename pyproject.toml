@@ -39,6 +39,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+# docs/ holds prose with illustrative (sometimes deliberately wrong) Python snippets.
+extend-exclude = ["docs"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "incidentops_ai"]
