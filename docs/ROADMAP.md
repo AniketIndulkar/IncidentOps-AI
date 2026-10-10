@@ -67,6 +67,8 @@ Client ──▶  FastAPI ingress (typed API, idempotency, structured errors)
 
 **W02 · LLM Application Engineering** (AIENG-3) — *exit: typed extraction that fails safely on malformed output/timeouts*
 
+Detailed day-by-day plan: [roadmap-w02.md](roadmap-w02.md).
+
 - AIENG-19 Provider abstraction: `generate_structured` / `tool_call` + model config.
 - AIENG-20 Nested extraction schema (title, service, symptoms, error codes, env, severity, entities, missing info); 10 samples parse.
 - AIENG-21 Fault injection (bad JSON, schema mismatch, timeout, 429); bounded retry; explicit failure states, no coercion.
