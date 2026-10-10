@@ -63,7 +63,7 @@ Client ──▶  FastAPI ingress (typed API, idempotency, structured errors)
 | Tue | AIENG-15 | Pydantic models, `POST /incidents`, `GET /incidents/{id}`, PostgreSQL | ✅ Done |
 | Wed | AIENG-16 | Idempotency keys, structured errors, failure-path tests | ✅ Done |
 | Thu | AIENG-17 | Dockerfile, GitHub Actions (lint/test/build), AWS deploy, budget alert | ✅ Done (CI green, PR #1) |
-| Fri | AIENG-18 | E2E against deployed env, fix one real defect, Week 1 note | To do |
+| Fri | AIENG-18 | E2E against deployed env, fix one real defect, Week 1 note | ✅ Done |
 
 **W02 · LLM Application Engineering** (AIENG-3) — *exit: typed extraction that fails safely on malformed output/timeouts*
 
@@ -189,9 +189,9 @@ Hard dependencies to protect:
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
 
-## Current state (8 Oct 2026, Thu W01)
+## Current state (10 Oct 2026, end of W01)
 
-- Done: AIENG-2, AIENG-15, AIENG-16, AIENG-17 (W01 back on schedule). Next: AIENG-18 (Fri).
+- **W01 complete:** AIENG-2, 15, 16, 17, 18 done. Next: W02, starting with AIENG-19 (Mon 12 Oct).
 - API: `POST /incidents` (optional `Idempotency-Key`), `GET /incidents/{id}`, `/health`; RFC 9457 errors.
 - Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`).
 - Tests: 26 pytest tests against real Postgres (local 14, CI 17).
@@ -199,11 +199,12 @@ Hard dependencies to protect:
 - CI: GitHub Actions lint → test → build; green on `main`.
 - AWS: account secured (root MFA, IAM user `aniket-admin`, $25 budget + anomaly alerts, `aws login`).
   First deploy to Lightsail verified `/health` from the internet, then deleted (≈ $0.01). Steps: `docs/deploy-lightsail.md`.
+- API testing: Postman collection in `postman/` (8 requests, 31 assertions), runnable with Newman against local or AWS.
 - Notes: `docs/notes/python-async-vs-kotlin.md`, `docs/notes/deployment-docker-ci-aws.md`.
 
 ## Risks & gaps found in the tickets
 
-1. ~~Schedule slip in W01~~ — resolved: AIENG-15/16/17 done by Thu.
+1. ~~Schedule slip in W01~~ — resolved: W01 finished on time.
 2. **PREP partly open:** Postgres ✅, Docker ✅ (OrbStack), AWS + budget ✅. Still open: LLM API credit (needed W02), Neo4j Aura (W05), Langfuse (W11).
 3. ~~`__pycache__` committed~~ — resolved (`.gitignore` populated, files untracked).
 4. ~~README empty~~ — resolved (setup/run/test steps); keep it current for AIENG-77.
