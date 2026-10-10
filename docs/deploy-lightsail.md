@@ -73,7 +73,14 @@ ssh -i $KEY ubuntu@$IP 'cd ~/incidentops \
 
 ```bash
 curl http://$IP/health            # {"status":"ok"}
+
+# Full API check: runs every request and assertion in the Postman collection
+npx newman run postman/IncidentOps-AI.postman_collection.json --env-var baseUrl=http://$IP
 ```
+
+The IP changes on every new instance. A Lightsail static IP would keep it fixed, but an
+**unattached** static IP costs $0.005/hour (about $3.60/month), and ours would be unattached
+whenever the instance is deleted. Passing `baseUrl` as above avoids needing one.
 
 ## 6. Delete (always)
 

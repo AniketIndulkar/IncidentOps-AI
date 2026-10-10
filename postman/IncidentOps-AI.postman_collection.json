@@ -1,0 +1,380 @@
+{
+  "info": {
+    "name": "IncidentOps AI",
+    "description": "API collection for IncidentOps AI. Grows with each ticket.\n\nPick an environment (Local or AWS) to set `baseUrl`. Run the whole collection top to bottom with the Collection Runner: requests share `incidentId` and `idempotencyKey`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "incidentId",
+      "value": ""
+    },
+    {
+      "key": "idempotencyKey",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Incidents",
+      "item": [
+        {
+          "name": "Create incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Checkout API returning 502s\",\n  \"description\": \"Since 14:05 UTC roughly 30% of POST /checkout requests fail with 502.\",\n  \"service\": \"checkout-api\",\n  \"severity\": \"SEV2\",\n  \"environment\": \"production\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fresh key per run, reused by the next two requests.",
+                  "pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('server sets id, status and timestamps', () => {",
+                  "  pm.expect(body.id).to.match(/^[0-9a-f-]{36}$/);",
+                  "  pm.expect(body.status).to.eql('open');",
+                  "  pm.expect(body.created_at).to.be.a('string');",
+                  "  pm.expect(body.updated_at).to.be.a('string');",
+                  "});",
+                  "pm.test('Location header points to the incident', () => pm.expect(pm.response.headers.get('Location')).to.eql(`/incidents/${body.id}`));",
+                  "pm.test('not a replay', () => pm.expect(pm.response.headers.has('Idempotent-Replayed')).to.be.false);",
+                  "pm.collectionVariables.set('incidentId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create incident again (same key, same body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Checkout API returning 502s\",\n  \"description\": \"Since 14:05 UTC roughly 30% of POST /checkout requests fail with 502.\",\n  \"service\": \"checkout-api\",\n  \"severity\": \"SEV2\",\n  \"environment\": \"production\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('returns the original incident', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('incidentId')));",
+                  "pm.test('marked as replayed', () => pm.expect(pm.response.headers.get('Idempotent-Replayed')).to.eql('true'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create incident (same key, different body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Checkout API returning 502s\",\n  \"description\": \"Since 14:05 UTC roughly 30% of POST /checkout requests fail with 502.\",\n  \"service\": \"checkout-api\",\n  \"severity\": \"SEV1\",\n  \"environment\": \"production\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function expectProblem(status, code) {",
+                  "  pm.test(`status is ${status}`, () => pm.response.to.have.status(status));",
+                  "  pm.test('content type is problem+json', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  const body = pm.response.json();",
+                  "  pm.test(`code is ${code}`, () => pm.expect(body.code).to.eql(code));",
+                  "  pm.test('has title and status', () => { pm.expect(body.title).to.be.a('string'); pm.expect(body.status).to.eql(status); });",
+                  "  return body;",
+                  "}",
+                  "expectProblem(422, 'idempotency_key_reused');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get incident",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{incidentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{incidentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('id matches', () => pm.expect(body.id).to.eql(pm.collectionVariables.get('incidentId')));",
+                  "pm.test('fields round-trip', () => { pm.expect(body.service).to.eql('checkout-api'); pm.expect(body.severity).to.eql('SEV2'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown incident",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function expectProblem(status, code) {",
+                  "  pm.test(`status is ${status}`, () => pm.response.to.have.status(status));",
+                  "  pm.test('content type is problem+json', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  const body = pm.response.json();",
+                  "  pm.test(`code is ${code}`, () => pm.expect(body.code).to.eql(code));",
+                  "  pm.test('has title and status', () => { pm.expect(body.title).to.be.a('string'); pm.expect(body.status).to.eql(status); });",
+                  "  return body;",
+                  "}",
+                  "const body = expectProblem(404, 'incident_not_found');",
+                  "pm.test('instance is the request path', () => pm.expect(body.instance).to.eql('/incidents/00000000-0000-0000-0000-000000000000'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get incident with malformed id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/not-a-uuid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "not-a-uuid"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function expectProblem(status, code) {",
+                  "  pm.test(`status is ${status}`, () => pm.response.to.have.status(status));",
+                  "  pm.test('content type is problem+json', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  const body = pm.response.json();",
+                  "  pm.test(`code is ${code}`, () => pm.expect(body.code).to.eql(code));",
+                  "  pm.test('has title and status', () => { pm.expect(body.title).to.be.a('string'); pm.expect(body.status).to.eql(status); });",
+                  "  return body;",
+                  "}",
+                  "expectProblem(422, 'validation_error');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create incident (invalid body)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"description\": \"password=hunter2\",\n  \"service\": \"BAD NAME!\",\n  \"severity\": \"CRITICAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function expectProblem(status, code) {",
+                  "  pm.test(`status is ${status}`, () => pm.response.to.have.status(status));",
+                  "  pm.test('content type is problem+json', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  const body = pm.response.json();",
+                  "  pm.test(`code is ${code}`, () => pm.expect(body.code).to.eql(code));",
+                  "  pm.test('has title and status', () => { pm.expect(body.title).to.be.a('string'); pm.expect(body.status).to.eql(status); });",
+                  "  return body;",
+                  "}",
+                  "const body = expectProblem(422, 'validation_error');",
+                  "pm.test('lists a problem per field', () => {",
+                  "  const fields = body.errors.map(e => e.loc.join('.'));",
+                  "  pm.expect(fields).to.include.members(['body.title', 'body.service', 'body.severity', 'body.environment']);",
+                  "});",
+                  "pm.test('does not echo submitted values', () => pm.expect(pm.response.text()).to.not.include('hunter2'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
