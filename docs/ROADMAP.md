@@ -207,7 +207,7 @@ Hard dependencies to protect:
 ## Risks & gaps found in the tickets
 
 1. ~~Schedule slip in W01~~ — resolved: W01 finished on time.
-2. **PREP partly open:** Postgres ✅, Docker ✅ (OrbStack), AWS + budget ✅. Still open: LLM API credit (needed W02), Neo4j Aura (W05), Langfuse (W11).
+2. **PREP partly open:** Postgres ✅, Docker ✅ (OrbStack), AWS + budget ✅. LLM API ✅ (OpenAI, existing credit). Still open: Neo4j Aura (W05), Langfuse (W11).
 3. ~~`__pycache__` committed~~ — resolved (`.gitignore` populated, files untracked).
 4. ~~README empty~~ — resolved (setup/run/test steps); keep it current for AIENG-77.
 5. **Heavy weeks:** W09 (3 integrations + Text-to-SQL) and W10 (RBAC + data permissions + red-team) are dense for 10h each. Pre-decide what drops first (candidate: legacy SOAP adapter AIENG-58 → known limitation).

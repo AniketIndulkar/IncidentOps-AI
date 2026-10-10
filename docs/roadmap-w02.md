@@ -23,28 +23,32 @@ incident text ──▶ provider layer ──▶ LLM ──▶ typed IncidentExt
 - PostgreSQL + Alembic, 26 tests, CI (lint → test → build), Docker image
 - Postman collection (8 requests) in `postman/`
 
-## Before Monday: two things only you can do
+## Before Monday: one thing only you can do
 
 | # | Task | Why |
 |---|---|---|
-| 1 | **Pick the LLM provider and buy credit** (PREP item, still open; budget £20–30) | Needed from Tuesday (AIENG-20). Monday is reading and design only. |
-| 2 | **Put the API key in `.env`** (git-ignored), never in code, chat or CI | The repo is public. |
+| 1 | **Create an OpenAI API key and put it in `.env`** (git-ignored) as `OPENAI_API_KEY`, never in code, chat or CI | Needed from Tuesday (AIENG-20). The repo is public. |
 
-**Provider recommendation: Claude (Anthropic API).** Reasons: structured outputs take a Pydantic
-model directly, strict tool schemas, and parallel tool calls are on by default. The provider layer
-we build is provider-neutral, so this choice is not permanent (W11 swaps in a gateway).
+**Provider: OpenAI** (decided 10 Oct; existing account credit covers the PREP "LLM API credit" item).
+It supports what this week needs: structured outputs from a Pydantic model, strict function-tool
+schemas, and parallel tool calls. The provider layer we build is provider-neutral, so this choice is
+not permanent (W11 swaps in a gateway).
 
-**Model choice is yours.** Current Claude models and prices per million tokens:
+**Recommended account safety steps** (OpenAI dashboard, same idea as the AWS budget):
 
-| Model | ID | Input | Output | One extraction call (≈1.5k in, 0.7k out) |
-|---|---|---|---|---|
-| Opus 5.5 | `claude-opus-5-5` | $4.00 | $20.00 | ≈ $0.02 |
-| Sonnet 5.5 | `claude-sonnet-5-5` | $2.00 | $10.00 | ≈ $0.01 |
-| Haiku 5.5 | `claude-haiku-5-5` | $0.10 | $0.50 | ≈ $0.0005 |
+- Create a **project-scoped key** for IncidentOps, not a key with access to the whole account.
+- Set a **monthly spend limit** and an email alert on that project.
+- Turn **auto-recharge off**, so spend is capped by the prepaid balance.
 
-The plan below uses **`claude-opus-5-5`** as the default and keeps the model name in config, so
-switching is a one-line change. A whole week of development (a few hundred calls) costs a few
-dollars even on Opus. Tests and CI never call a real model, so they cost nothing.
+**Model choice: decide on Monday** as part of AIENG-19, from OpenAI's official pricing page.
+Model names and prices change often and third-party price lists disagree, so none are fixed here.
+Guidance:
+
+- Extraction is a small, well-specified task: a **mid or small tier** model is the sensible start.
+- One extraction call is roughly 1.5k input and 0.7k output tokens; a week of development is a few
+  hundred calls, so the cost is small on any tier.
+- The model name lives in config (`INCIDENTOPS_LLM_MODEL`), so switching is a one-line change.
+- Tests and CI never call a real model, so they cost nothing.
 
 ## Day by day
 
@@ -55,7 +59,8 @@ Each ticket is timeboxed to **2 hours**; unfinished work rolls forward.
 No code that calls an LLM today.
 
 - **Read:** *AI Engineering* (Chip Huyen), the sections on model interfaces and structured outputs;
-  then the provider's docs on structured outputs, tool use and errors.
+  then OpenAI's docs on structured outputs, function calling, errors and rate limits, and the
+  pricing page (pick the model).
 - **Design:** a small interface the rest of the app depends on, instead of the vendor SDK:
 
   ```
@@ -74,8 +79,8 @@ No code that calls an LLM today.
 
 - **Schemas** (nested Pydantic, `src/incidentops_ai/extraction/models.py`): title, service, symptoms,
   error codes, environment, severity candidate, entities, **missing information**.
-- **Provider:** first real implementation (`AnthropicProvider`, async client) behind the Monday interface,
-  using strict structured output (`messages.parse` with the Pydantic model).
+- **Provider:** first real implementation (`OpenAIProvider`, async client from the official `openai`
+  SDK) behind the Monday interface, using strict structured output parsed into the Pydantic model.
 - **Prompt v1** stored as a file with a version id.
 - **Dataset:** 10 sample incident reports in `evals/extraction/samples.jsonl` (varied: clear, vague,
   missing service, multiple error codes, noisy logs).
@@ -128,7 +133,7 @@ No code that calls an LLM today.
 
 ```
 src/incidentops_ai/
-  llm/            provider interface, AnthropicProvider, FakeProvider, retry, errors, config
+  llm/            provider interface, OpenAIProvider, FakeProvider, retry, errors, config
   extraction/     schemas, extraction service, prompt loader
   tools/          read-only tool + argument validation
 prompts/extract_incident/v1.md
@@ -144,7 +149,8 @@ postman/          + extraction request
 
 | Decision | Recommendation | Why |
 |---|---|---|
-| Provider | Claude via the official `anthropic` SDK | See above; hidden behind our interface |
+| Provider | OpenAI via the official `openai` SDK (decided) | Existing credit; hidden behind our interface |
+| Model | Pick Monday from the official pricing page; start mid/small tier | Extraction is a simple task; name is in config |
 | Structured output | Native structured outputs with the Pydantic model, not "please return JSON" prompts | Schema-valid by construction; fewer failure paths |
 | Retries | Our own bounded retry; SDK retries off | Explicit, countable, testable (the point of AIENG-21) |
 | Tests | Fake provider + mocked HTTP; no real calls in CI | Free, fast, deterministic; no key in a public repo |
@@ -154,12 +160,13 @@ postman/          + extraction request
 
 ## Risks
 
-1. **No API key by Tuesday** blocks AIENG-20. Mitigation: build the schemas, fake provider and tests first; real calls when the key arrives.
+1. **No API key in `.env` by Tuesday** blocks AIENG-20. Mitigation: build the schemas, fake provider and tests first; real calls when the key is there.
 2. **Thursday is overloaded** (tool, parallel calls, new table, endpoint). Mitigation: endpoint is the first thing to slip to Friday.
 3. **Key leak in a public repo.** Mitigation: `.env` only, GitHub push protection on, CI has no secrets.
 4. **Structured outputs don't remove all failures:** truncation, refusals, timeouts and semantically wrong values still happen. AIENG-21 covers these.
 5. **Scope creep into agents.** W02 is single calls and one tool; orchestration is W07.
-6. **Cost drift.** Mitigation: `max_tokens` cap, attempt cap, token counts logged per run from Thursday.
+6. **Cost drift.** Mitigation: project spend limit, auto-recharge off, output-token cap, attempt cap, token counts logged per run from Thursday.
+7. **SDK details differ from this plan.** The exact structured-output call and SDK retry/timeout defaults are confirmed in Monday's reading before any code is written.
 
 ## Carried into later weeks
 
