@@ -239,3 +239,18 @@ async def test_deleting_an_incident_keeps_its_run_history(settings, session_fact
 
     [run] = await runs(session_factory)
     assert run["incident_id"] is None and run["status"] == "succeeded"
+
+
+async def test_blank_key_and_model_count_as_not_configured():
+    blank = Settings(_env_file=None, OPENAI_API_KEY="", llm_model="  ")
+
+    assert blank.openai_api_key is None and blank.llm_model is None
+    async with app_client(
+        blank.model_copy(
+            update={"database_url": "postgresql+asyncpg://localhost:5432/incidentops_test"}
+        ),
+        None,
+    ) as client:
+        resp = await client.post(f"/incidents/{uuid.uuid4()}/extraction")
+
+    assert resp.status_code == 503 and resp.json()["code"] == "llm_not_configured"

@@ -1,4 +1,4 @@
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,3 +21,10 @@ class Settings(BaseSettings):
     llm_timeout_s: float = 30.0
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
+
+    @field_validator("openai_api_key", "llm_model", mode="before")
+    @classmethod
+    def _blank_means_unset(cls, value):
+        # docker compose passes VAR="" when the variable is not set; that is "not configured",
+        # not an empty key to send to the provider.
+        return None if isinstance(value, str) and not value.strip() else value
