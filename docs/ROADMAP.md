@@ -206,6 +206,7 @@ Hard dependencies to protect:
 - Postman collection in `postman/` (11 requests).
 - Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
 - Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix.
+- Week write-up: [notes/week-02-llm-application-engineering.md](notes/week-02-llm-application-engineering.md) (every W02 decision, with why and why not).
 
 ### What W02 taught us
 
