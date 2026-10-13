@@ -34,3 +34,31 @@ Totals: 10,355 input tokens, 6,220 output tokens. Latency 4.0–11.3 s per call 
   `POST /incidents` request; extraction should be its own call (AIENG-22) or a background step.
 - **Not measured:** correctness of symptoms, error codes and entities. Only "parses" and
   "service matches" are checked. Proper scoring is W11 (AIENG-64/65).
+
+## Second run, same day: after AIENG-21 (retry layer + strict validation)
+
+**Result: 10/10 valid, service 10/10, every sample succeeded on the first try** (no retries used).
+Totals: 10,355 input tokens, 5,914 output tokens. Latency 5.4–17.7 s.
+
+| id | sev (run 1 → run 2) | symptoms | error codes | missing | out | ms | tries |
+|---|---|---|---|---|---|---|---|
+| s01-clear-502 | SEV2 → SEV2 | 2 → 2 | 1 → 1 | 2 → 3 | 623 | 7527 | 1 |
+| s02-vague | SEV3 → SEV3 | 1 → 1 | 0 → 0 | 5 → 5 | 400 | 5366 | 1 |
+| s03-db-pool | SEV2 → SEV2 | 1 → 1 | 1 → 1 | 3 → 4 | 713 | 7970 | 1 |
+| s04-staging-oom | SEV4 → SEV4 | 1 → 1 | 1 → 1 | 3 → 2 | 551 | 6184 | 1 |
+| s05-multi-codes | **SEV3 → SEV2** | 3 → 2 | 4 → 4 | 3 → 3 | 639 | 6358 | 1 |
+| s06-no-service | SEV2 → SEV2 | 1 → 1 | 1 → 1 | 5 → 4 | 514 | 5726 | 1 |
+| s07-noisy-log | SEV2 → SEV2 | 3 → 4 | 1 → 1 | 4 → 3 | 900 | 17658 | 1 |
+| s08-cosmetic | SEV4 → SEV4 | 1 → 1 | 0 → 0 | 1 → 1 | 292 | 11039 | 1 |
+| s09-injection | SEV2 → SEV2 | 1 → 1 | 0 → 0 | 2 → 3 | 753 | 14203 | 1 |
+| s10-dev-cert | SEV3 → SEV3 | 1 → 1 | 1 → 1 | 2 → 2 | 529 | 9338 | 1 |
+
+### What the two runs show together
+
+- **Strict validation holds on real output:** no reply was rejected for a wrong type.
+- **Stable:** service, environment and error-code counts were identical in both runs.
+- **Not deterministic:** same prompt, same model, same input, different answers. s05 moved from
+  SEV3 to SEV2, and symptom and follow-up-question counts shifted by one on several samples.
+  A single run is not evidence of quality; W11 evals need repeated runs and expected values.
+- **Latency varies a lot:** 4–11 s in run 1, 5–18 s in run 2 (s07: 11.3 s → 17.7 s). Still inside
+  the 30 s per-attempt timeout, but close enough that a timeout plus one retry is realistic.
