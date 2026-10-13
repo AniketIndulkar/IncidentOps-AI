@@ -28,7 +28,8 @@ class ModelConfig(BaseModel):
     model: str
     max_output_tokens: int = 2000
     timeout_s: float = 30.0  # per attempt
-    max_attempts: int = 3  # total tries including the first (used from AIENG-21)
+    max_attempts: int = 3  # total tries including the first
+    total_timeout_s: float = 60.0  # hard cap on one call across all attempts and waits
     reasoning_effort: str | None = None
 
 
@@ -51,12 +52,14 @@ class RunMetadata(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     request_id: str | None = None
+    attempt_statuses: list[LLMStatus] = []  # one entry per attempt, in order
 
 
 class StructuredResult[T: BaseModel](BaseModel):
     status: LLMStatus
     value: T | None = None  # set only when status is SUCCEEDED
     error_detail: str | None = None  # short category text; never model or user content
+    retry_after_s: float | None = None  # provider's Retry-After hint, when it sent one
     metadata: RunMetadata
 
 

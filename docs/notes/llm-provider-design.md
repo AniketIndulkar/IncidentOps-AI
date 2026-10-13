@@ -182,10 +182,35 @@ class LLMStatus(StrEnum):
 **Rule: a result is a value, not an exception.** Callers must check `status`. A failed call returns
 `value=None`; it never returns partly filled or guessed data ("no coercion", AIENG-21).
 
-### Retry rule (implemented in AIENG-21)
+### Retry rule (implemented in AIENG-21, `llm/retry.py`)
 
-| Failure | Action |
+`RetryingProvider` wraps any provider. `OpenAIProvider` itself makes exactly one attempt.
+
+| Result of an attempt | Action |
 |---|---|
+| `timed_out`, `rate_limited`, `provider_error` | Retry. Wait = the provider's `Retry-After` if sent, else exponential backoff with jitter (0.5 s, 1 s, 2 s … capped at 8 s, each scaled to 50–100%) |
+| `invalid_output`, `truncated` | **One** extra try in total, no wait. A truncated retry doubles the output cap |
+| `rejected`, `refused` | Never retried: a retry cannot fix our own bad request, a bad key, no quota, or a refusal |
+
+Three limits apply together, so a call cannot run away:
+
+- **attempts:** at most `max_attempts` (default 3)
+- **time:** at most `total_timeout_s` (default 60 s) across all attempts and waits; an attempt's
+  own timeout is cut down to what is left
+- **patience:** a `Retry-After` longer than 30 s means give up now and report `rate_limited`
+
+The final result keeps the **real last status** (not a generic error) and records
+`attempts`, `attempt_statuses` (one per try), and tokens and latency summed across tries.
+
+**No coercion.** Replies are validated in Pydantic strict mode: `"true"` is not accepted for a
+boolean and `42` is not accepted for a string. A reply with a wrong type is `invalid_output`.
+
+**Two SDK gaps found by fault injection** (both now mapped to `provider_error`):
+
+- HTTP 200 with a non-JSON body (a proxy's HTML error page): the SDK returns a plain `str`.
+- HTTP 200 with broken JSON: the SDK raises a bare `json.JSONDecodeError`, not an OpenAI error.
+
+---|---|
 | Timeout, connection error, 429 (rate), 5xx, 409 | Retry with exponential backoff and jitter, honour `Retry-After`, stop at `max_attempts` |
 | Truncated or invalid output | One extra attempt at most |
 | 400, 401, 403, 404, 422, quota exhausted, refusal | No retry |

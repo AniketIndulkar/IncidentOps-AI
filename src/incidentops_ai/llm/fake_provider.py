@@ -20,10 +20,23 @@ class RecordedCall:
     config: ModelConfig
 
 
-class FakeProvider:
-    """Returns `replies` in order: a model instance means success, an LLMStatus means that failure."""
+@dataclass(frozen=True)
+class Fail:
+    """A fully scripted reply, for when a test needs more than a bare status."""
 
-    def __init__(self, replies: list[BaseModel | LLMStatus]) -> None:
+    status: LLMStatus
+    retry_after_s: float | None = None
+    value: BaseModel | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    latency_ms: int = 0
+
+
+class FakeProvider:
+    """Returns `replies` in order: a model instance means success, an LLMStatus means that
+    failure, a `Fail` gives full control."""
+
+    def __init__(self, replies: list[BaseModel | LLMStatus | Fail]) -> None:
         self._replies = list(replies)
         self.calls: list[RecordedCall] = []
 
@@ -32,16 +45,24 @@ class FakeProvider:
     ) -> StructuredResult[T]:
         self.calls.append(RecordedCall(prompt, schema, config))
         reply = self._replies.pop(0)
-        metadata = RunMetadata(
-            provider="fake",
-            model=config.model,
-            prompt_name=prompt.name,
-            prompt_version=prompt.version,
-            attempts=1,
-            latency_ms=0,
-        )
         if isinstance(reply, LLMStatus):
-            return StructuredResult[schema](
-                status=reply, error_detail="scripted", metadata=metadata
-            )
-        return StructuredResult[schema](status=LLMStatus.SUCCEEDED, value=reply, metadata=metadata)
+            reply = Fail(reply)
+        elif not isinstance(reply, Fail):
+            reply = Fail(LLMStatus.SUCCEEDED, value=reply)
+        return StructuredResult[schema](
+            status=reply.status,
+            value=reply.value,
+            error_detail=None if reply.status is LLMStatus.SUCCEEDED else "scripted",
+            retry_after_s=reply.retry_after_s,
+            metadata=RunMetadata(
+                provider="fake",
+                model=config.model,
+                prompt_name=prompt.name,
+                prompt_version=prompt.version,
+                attempts=1,
+                latency_ms=reply.latency_ms,
+                input_tokens=reply.input_tokens,
+                output_tokens=reply.output_tokens,
+                attempt_statuses=[reply.status],
+            ),
+        )

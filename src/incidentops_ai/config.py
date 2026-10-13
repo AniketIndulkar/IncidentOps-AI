@@ -20,3 +20,4 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 2000
     llm_timeout_s: float = 30.0
     llm_max_attempts: int = 3
+    llm_total_timeout_s: float = 60.0

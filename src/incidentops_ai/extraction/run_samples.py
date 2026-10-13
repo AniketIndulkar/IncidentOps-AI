@@ -13,8 +13,8 @@ from pathlib import Path
 
 from incidentops_ai.config import Settings
 from incidentops_ai.extraction.service import extract_incident
-from incidentops_ai.llm.openai_provider import OpenAIProvider
-from incidentops_ai.llm.provider import LLMStatus, ModelConfig
+from incidentops_ai.llm.factory import LLMNotConfiguredError, build_model_config, build_provider
+from incidentops_ai.llm.provider import LLMStatus
 
 DEFAULT_SAMPLES = Path("evals/extraction/samples.jsonl")
 CONCURRENCY = 3
@@ -22,17 +22,14 @@ CONCURRENCY = 3
 
 async def main(path: Path) -> int:
     settings = Settings()
-    if settings.openai_api_key is None or not settings.llm_model:
-        print("Set OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL in .env first.", file=sys.stderr)
+    try:
+        provider = build_provider(settings)
+        config = build_model_config(settings)
+    except LLMNotConfiguredError as exc:
+        print(f"{exc} Add it to .env first.", file=sys.stderr)
         return 2
 
     samples = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-    provider = OpenAIProvider(settings.openai_api_key.get_secret_value())
-    config = ModelConfig(
-        model=settings.llm_model,
-        max_output_tokens=settings.llm_max_output_tokens,
-        timeout_s=settings.llm_timeout_s,
-    )
     limit = asyncio.Semaphore(CONCURRENCY)
 
     async def run(sample: dict):
@@ -44,7 +41,7 @@ async def main(path: Path) -> int:
     print(f"model={config.model}  samples={len(samples)}\n")
     header = (
         f"{'id':<16}{'status':<16}{'service':<22}{'svc ok':<8}{'env':<13}{'sev':<6}"
-        f"{'sym':>4}{'err':>4}{'miss':>5}{'in':>7}{'out':>6}{'ms':>7}"
+        f"{'sym':>4}{'err':>4}{'miss':>5}{'in':>7}{'out':>6}{'ms':>7}{'tries':>6}"
     )
     print(header)
     print("-" * len(header))
@@ -56,7 +53,8 @@ async def main(path: Path) -> int:
         tokens_out += meta.output_tokens or 0
         if result.status is not LLMStatus.SUCCEEDED or result.value is None:
             failed += 1
-            print(f"{sample['id']:<16}{result.status:<16}{result.error_detail or ''}")
+            tried = " -> ".join(meta.attempt_statuses)
+            print(f"{sample['id']:<16}{result.status:<16}{result.error_detail or ''}  [{tried}]")
             continue
         v = result.value
         service_ok = "yes" if v.service.name == sample.get("expected_service") else "NO"
@@ -64,7 +62,7 @@ async def main(path: Path) -> int:
             f"{sample['id']:<16}{result.status:<16}{v.service.name or '-':<22}{service_ok:<8}"
             f"{v.environment or '-':<13}{v.severity_candidate.level:<6}"
             f"{len(v.symptoms):>4}{len(v.error_codes):>4}{len(v.missing_information):>5}"
-            f"{meta.input_tokens or 0:>7}{meta.output_tokens or 0:>6}{meta.latency_ms:>7}"
+            f"{meta.input_tokens or 0:>7}{meta.output_tokens or 0:>6}{meta.latency_ms:>7}{meta.attempts:>6}"
         )
     print(
         f"\n{len(samples) - failed}/{len(samples)} parsed into valid typed results  "

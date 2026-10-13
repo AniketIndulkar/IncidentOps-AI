@@ -1,9 +1,10 @@
 """OpenAI implementation of LLMProvider. The only module that imports `openai`.
 
-One attempt per call for now: SDK retries are switched off so that retrying is explicit and
-countable in our own layer (AIENG-21). Every vendor exception is translated to an LLMStatus.
+One attempt per call: SDK retries are switched off so that retrying is explicit and countable
+in our own layer (see retry.RetryingProvider). Every vendor exception is translated to an LLMStatus.
 """
 
+import json
 import time
 
 import httpx2
@@ -45,13 +46,19 @@ class OpenAIProvider:
         started = time.perf_counter()
 
         def result(
-            status: LLMStatus, *, value: T | None = None, detail: str | None = None, response=None
+            status: LLMStatus,
+            *,
+            value: T | None = None,
+            detail: str | None = None,
+            response=None,
+            retry_after_s: float | None = None,
         ) -> StructuredResult[T]:
             usage = getattr(response, "usage", None)
             return StructuredResult[schema](
                 status=status,
                 value=value,
                 error_detail=detail,
+                retry_after_s=retry_after_s,
                 metadata=RunMetadata(
                     provider="openai",
                     model=getattr(response, "model", None) or config.model,
@@ -62,6 +69,7 @@ class OpenAIProvider:
                     input_tokens=getattr(usage, "input_tokens", None),
                     output_tokens=getattr(usage, "output_tokens", None),
                     request_id=getattr(response, "_request_id", None),
+                    attempt_statuses=[status],
                 ),
             )
 
@@ -90,12 +98,22 @@ class OpenAIProvider:
         except openai.RateLimitError as exc:
             if getattr(exc, "code", None) == "insufficient_quota":
                 return result(LLMStatus.REJECTED, detail="quota exhausted")
-            return result(LLMStatus.RATE_LIMITED, detail="rate limited")
+            return result(
+                LLMStatus.RATE_LIMITED, detail="rate limited", retry_after_s=_retry_after(exc)
+            )
         except _REJECTED as exc:
             return result(LLMStatus.REJECTED, detail=f"request rejected (HTTP {exc.status_code})")
         except openai.APIStatusError as exc:
             status = LLMStatus.PROVIDER_ERROR if exc.status_code >= 500 else LLMStatus.REJECTED
             return result(status, detail=f"HTTP {exc.status_code}")
+        except (openai.OpenAIError, json.JSONDecodeError):
+            # Includes a 200 whose body is not valid JSON: the SDK raises a bare JSONDecodeError.
+            return result(LLMStatus.PROVIDER_ERROR, detail="unreadable provider response")
+
+        if not isinstance(response, openai.types.responses.Response):
+            # A 200 with a non-JSON body (e.g. a proxy's HTML error page) comes back from the SDK
+            # as a plain string instead of raising.
+            return result(LLMStatus.PROVIDER_ERROR, detail="unreadable provider response")
 
         if response.status == "incomplete":
             reason = getattr(response.incomplete_details, "reason", None)
@@ -111,7 +129,9 @@ class OpenAIProvider:
             return result(LLMStatus.REFUSED, detail="model refused", response=response)
 
         try:
-            value = schema.model_validate_json(response.output_text)
+            # strict=True: no silent conversions ("true" -> True, 42 -> "42"). A reply with the
+            # wrong type is a failed reply, not something to quietly repair.
+            value = schema.model_validate_json(response.output_text, strict=True)
         except ValidationError:
             # Detail is deliberately generic: the validation message would echo model output,
             # which may contain incident text.
@@ -137,6 +157,14 @@ def _strict_format(schema: type[BaseModel]) -> dict:
         if definition.get("additionalProperties") is not False:
             raise TypeError(f"{schema.__name__}: models must set extra='forbid'")
     return {"type": "json_schema", "name": schema.__name__, "schema": json_schema, "strict": True}
+
+
+def _retry_after(exc: openai.APIStatusError) -> float | None:
+    """Retry-After in seconds, when the provider sent a plain number."""
+    try:
+        return float(exc.response.headers["retry-after"])
+    except (KeyError, ValueError):
+        return None
 
 
 def _refused(response) -> bool:
