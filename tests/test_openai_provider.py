@@ -330,3 +330,125 @@ async def test_refusal_is_not_retried():
     result, seen, _ = await retrying(scripted(refusal, ok(GOOD)))
 
     assert result.status is LLMStatus.REFUSED and len(seen) == 1
+
+
+# --- AIENG-22: tool calls through the real SDK ------------------------------------------------
+
+from incidentops_ai.llm.provider import ToolOutput, ToolSpec
+
+
+class LookupArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    service: str
+    limit: int
+
+
+LOOKUP = ToolSpec(
+    name="get_recent_incidents", description="Recent incidents.", arguments=LookupArgs
+)
+
+
+def tool_response(output: list[dict]) -> dict:
+    body = response_body([])
+    body["output"] = output
+    return body
+
+
+def function_call(call_id: str, service: str) -> dict:
+    return {
+        "type": "function_call",
+        "id": f"fc_{call_id}",
+        "call_id": call_id,
+        "name": "get_recent_incidents",
+        "arguments": json.dumps({"service": service, "limit": 5}),
+        "status": "completed",
+    }
+
+
+REASONING = {"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "gAAA-opaque"}
+
+
+async def test_tool_turn_parses_parallel_calls_and_sends_strict_tool_schema():
+    provider, seen = provider_with(
+        lambda _: ok(
+            tool_response(
+                [REASONING, function_call("c1", "checkout-api"), function_call("c2", "pay")]
+            )
+        )
+    )
+
+    turn = await provider.tool_call(prompt=PROMPT, tools=[LOOKUP], config=CONFIG)
+
+    assert turn.status is LLMStatus.SUCCEEDED and turn.final_text is None
+    assert [(c.call_id, c.name) for c in turn.calls] == [
+        ("c1", "get_recent_incidents"),
+        ("c2", "get_recent_incidents"),
+    ]
+    assert json.loads(turn.calls[0].arguments_json) == {"service": "checkout-api", "limit": 5}
+    assert turn.metadata.prompt_version == "v1" and turn.metadata.input_tokens == 42
+
+    sent = json.loads(seen[0].content)
+    assert sent["parallel_tool_calls"] is True
+    assert sent["store"] is False
+    assert sent["include"] == ["reasoning.encrypted_content"]
+    assert sent["input"] == [{"role": "user", "content": "pay is down!"}]
+    [tool] = sent["tools"]
+    assert (tool["type"], tool["name"], tool["strict"]) == (
+        "function",
+        "get_recent_incidents",
+        True,
+    )
+    assert tool["parameters"]["additionalProperties"] is False
+    assert set(tool["parameters"]["required"]) == {"service", "limit"}
+
+
+async def test_second_turn_sends_reasoning_calls_and_outputs_back_then_gets_the_answer():
+    provider, seen = provider_with(
+        scripted(
+            ok(tool_response([REASONING, function_call("c1", "checkout-api")])),
+            ok(response_body([text_part("One related incident: abc.")])),
+        )
+    )
+
+    first = await provider.tool_call(prompt=PROMPT, tools=[LOOKUP], config=CONFIG)
+    final = await provider.tool_call(
+        prompt=PROMPT,
+        tools=[LOOKUP],
+        config=CONFIG,
+        transcript=first.transcript,
+        outputs=[ToolOutput(call_id="c1", output='{"result": []}')],
+    )
+
+    assert final.status is LLMStatus.SUCCEEDED
+    assert final.calls == [] and final.final_text == "One related incident: abc."
+    sent = json.loads(seen[1].content)["input"]
+    assert [item.get("type", item.get("role")) for item in sent] == [
+        "user",
+        "reasoning",
+        "function_call",
+        "function_call_output",
+    ]
+    assert sent[1]["encrypted_content"] == "gAAA-opaque"
+    assert sent[2]["call_id"] == "c1"
+    assert sent[3] == {"type": "function_call_output", "call_id": "c1", "output": '{"result": []}'}
+
+
+async def test_tool_turn_failures_use_the_same_statuses_and_retry_rules():
+    provider, _ = provider_with(lambda _: error(429, "rate_limit_exceeded", {"retry-after": "4"}))
+    limited = await provider.tool_call(prompt=PROMPT, tools=[LOOKUP], config=CONFIG)
+    assert limited.status is LLMStatus.RATE_LIMITED and limited.retry_after_s == 4.0
+    assert limited.calls == []
+
+    inner, seen = provider_with(
+        scripted(error(503), ok(tool_response([function_call("c1", "checkout-api")])))
+    )
+
+    async def no_sleep(_):
+        return None
+
+    turn = await RetryingProvider(inner, sleep=no_sleep).tool_call(
+        prompt=PROMPT, tools=[LOOKUP], config=CONFIG
+    )
+    assert turn.status is LLMStatus.SUCCEEDED and len(turn.calls) == 1
+    assert turn.metadata.attempts == 2 and len(seen) == 2

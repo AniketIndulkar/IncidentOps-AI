@@ -32,3 +32,4 @@ npx newman run postman/IncidentOps-AI.postman_collection.json --env-var baseUrl=
 |---|---|
 | Health | `GET /health` |
 | Incidents | create, retry with the same key (replay), same key with a different body (422), get, unknown id (404), malformed id (422), invalid body (422, no input echoed) |
+| Analysis (LLM) | extract structured data, find related incidents (tool calls), extraction for an unknown incident. **With an API key on the server these make paid model calls and take several seconds;** without one the server answers 503 and the checks are skipped |

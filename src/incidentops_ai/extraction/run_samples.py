@@ -12,8 +12,9 @@ import sys
 from pathlib import Path
 
 from incidentops_ai.config import Settings
+from incidentops_ai.errors import LLMNotConfiguredError
 from incidentops_ai.extraction.service import extract_incident
-from incidentops_ai.llm.factory import LLMNotConfiguredError, build_model_config, build_provider
+from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMStatus
 
 DEFAULT_SAMPLES = Path("evals/extraction/samples.jsonl")
@@ -26,7 +27,7 @@ async def main(path: Path) -> int:
         provider = build_provider(settings)
         config = build_model_config(settings)
     except LLMNotConfiguredError as exc:
-        print(f"{exc} Add it to .env first.", file=sys.stderr)
+        print(f"{exc.message} Add it to .env first.", file=sys.stderr)
         return 2
 
     samples = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]

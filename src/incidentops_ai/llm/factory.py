@@ -1,13 +1,10 @@
 """Builds the provider and model config the app uses, from Settings."""
 
 from incidentops_ai.config import Settings
+from incidentops_ai.errors import LLMNotConfiguredError
 from incidentops_ai.llm.openai_provider import OpenAIProvider
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
 from incidentops_ai.llm.retry import RetryingProvider
-
-
-class LLMNotConfiguredError(RuntimeError):
-    pass
 
 
 def build_provider(settings: Settings) -> LLMProvider:

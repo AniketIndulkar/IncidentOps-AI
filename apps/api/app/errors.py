@@ -18,7 +18,13 @@ from pydantic import BaseModel
 from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from incidentops_ai.errors import ConflictError, DomainError, NotFoundError
+from incidentops_ai.errors import (
+    ConflictError,
+    DomainError,
+    LLMCallFailedError,
+    LLMNotConfiguredError,
+    NotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +79,18 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     # 422, not 409: the request is well-formed but semantically invalid for this key
     # (matches the IETF Idempotency-Key draft). 409 is reserved for "retry later" conflicts.
     ConflictError: 422,
+    LLMNotConfiguredError: 503,
+}
+
+# Why an LLM call failed decides the HTTP status, so clients know whether retrying can help.
+_LLM_STATUS = {
+    "timed_out": 504,  # provider too slow; retrying later may work
+    "rate_limited": 503,
+    "provider_error": 502,
+    "invalid_output": 502,  # the model answered, but not in a usable form
+    "truncated": 502,
+    "refused": 422,  # the model declined this content; retrying the same text will not help
+    "rejected": 500,  # our own configuration is wrong (key, model, quota)
 }
 
 _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
@@ -81,6 +99,15 @@ _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
 async def _domain_error(request: Request, exc: DomainError) -> JSONResponse:
     status = next((_DOMAIN_STATUS[cls] for cls in type(exc).__mro__ if cls in _DOMAIN_STATUS), 400)
     return problem_response(request, status, exc.code, exc.message)
+
+
+async def _llm_call_failed(request: Request, exc: LLMCallFailedError) -> JSONResponse:
+    headers = None
+    if exc.status == "rate_limited":
+        headers = {"Retry-After": str(int(exc.retry_after_s or 30))}
+    return problem_response(
+        request, _LLM_STATUS.get(exc.status, 502), exc.code, exc.message, headers=headers
+    )
 
 
 async def _validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -116,6 +143,7 @@ async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
 
 
 def register_error_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(LLMCallFailedError, _llm_call_failed)
     app.add_exception_handler(DomainError, _domain_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     app.add_exception_handler(StarletteHTTPException, _http_error)

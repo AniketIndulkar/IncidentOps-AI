@@ -14,7 +14,7 @@ What is retried:
 import asyncio
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 
 from pydantic import BaseModel
 
@@ -24,6 +24,9 @@ from incidentops_ai.llm.provider import (
     ModelConfig,
     Prompt,
     StructuredResult,
+    ToolOutput,
+    ToolSpec,
+    ToolTurn,
 )
 
 BASE_DELAY_S = 0.5
@@ -51,6 +54,31 @@ class RetryingProvider:
     async def generate_structured[T: BaseModel](
         self, *, prompt: Prompt, schema: type[T], config: ModelConfig
     ) -> StructuredResult[T]:
+        return await self._run(
+            config,
+            lambda cfg: self._inner.generate_structured(prompt=prompt, schema=schema, config=cfg),
+        )
+
+    async def tool_call(
+        self,
+        *,
+        prompt: Prompt,
+        tools: Sequence[ToolSpec],
+        config: ModelConfig,
+        transcript: list[dict] | None = None,
+        outputs: Sequence[ToolOutput] = (),
+    ) -> ToolTurn:
+        # Safe to repeat: a turn only asks the model what to do next; it runs no tool itself.
+        return await self._run(
+            config,
+            lambda cfg: self._inner.tool_call(
+                prompt=prompt, tools=tools, config=cfg, transcript=transcript, outputs=outputs
+            ),
+        )
+
+    async def _run[R: (StructuredResult, ToolTurn)](
+        self, config: ModelConfig, attempt: Callable[[ModelConfig], Awaitable[R]]
+    ) -> R:
         deadline = self._clock() + config.total_timeout_s
         attempt_config = config
         bad_output_retry_used = False
@@ -67,9 +95,7 @@ class RetryingProvider:
                     update={"timeout_s": max(remaining, 0.1)}
                 )
 
-            result = await self._inner.generate_structured(
-                prompt=prompt, schema=schema, config=attempt_config
-            )
+            result = await attempt(attempt_config)
             statuses.append(result.status)
             latency_ms += result.metadata.latency_ms
             input_tokens = _add(input_tokens, result.metadata.input_tokens)
@@ -104,7 +130,7 @@ class RetryingProvider:
         return result.model_copy(update={"metadata": metadata})
 
     def _delay_before_retry(
-        self, result: StructuredResult, attempts_made: int, bad_output_retry_used: bool
+        self, result: StructuredResult | ToolTurn, attempts_made: int, bad_output_retry_used: bool
     ) -> float | None:
         """Seconds to wait before trying again, or None if this result must not be retried."""
         if result.status in _TRANSIENT:

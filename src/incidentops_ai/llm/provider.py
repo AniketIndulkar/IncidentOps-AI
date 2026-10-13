@@ -63,10 +63,59 @@ class StructuredResult[T: BaseModel](BaseModel):
     metadata: RunMetadata
 
 
+class ToolSpec(BaseModel):
+    """A function the model may ask us to run. `arguments` is the Pydantic model of its inputs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    description: str
+    arguments: type[BaseModel]
+
+
+class ToolCall(BaseModel):
+    """What the model asked for. Arguments are raw JSON text: not yet validated, not yet trusted."""
+
+    call_id: str
+    name: str
+    arguments_json: str
+
+
+class ToolOutput(BaseModel):
+    call_id: str
+    output: str  # JSON text sent back to the model
+
+
+class ToolTurn(BaseModel):
+    """One model turn in a tool conversation: either tool calls to run, or a final answer."""
+
+    status: LLMStatus
+    calls: list[ToolCall] = []
+    final_text: str | None = None
+    # Provider-specific conversation so far. Opaque to callers: pass it back unchanged.
+    transcript: list[dict] = []
+    error_detail: str | None = None
+    retry_after_s: float | None = None
+    metadata: RunMetadata
+
+
 class LLMProvider(Protocol):
     async def generate_structured[T: BaseModel](
         self, *, prompt: Prompt, schema: type[T], config: ModelConfig
     ) -> StructuredResult[T]: ...
+
+    async def tool_call(
+        self,
+        *,
+        prompt: Prompt,
+        tools: Sequence[ToolSpec],
+        config: ModelConfig,
+        transcript: list[dict] | None = None,
+        outputs: Sequence[ToolOutput] = (),
+    ) -> ToolTurn:
+        """Ask the model to continue. First call: no transcript. Later calls: the previous
+        turn's transcript plus the outputs of the tool calls it asked for."""
+        ...
 
 
 __all__: Sequence[str] = (
@@ -76,4 +125,8 @@ __all__: Sequence[str] = (
     "Prompt",
     "RunMetadata",
     "StructuredResult",
+    "ToolCall",
+    "ToolOutput",
+    "ToolSpec",
+    "ToolTurn",
 )

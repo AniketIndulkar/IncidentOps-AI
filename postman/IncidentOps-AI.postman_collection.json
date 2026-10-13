@@ -375,6 +375,139 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Analysis (LLM)",
+      "description": "LLM-backed endpoints. Run the Incidents folder first so `incidentId` is set. With an API key configured on the server these make paid model calls and take several seconds.",
+      "item": [
+        {
+          "name": "Extract structured data",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{incidentId}}/extraction",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{incidentId}}",
+                "extraction"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// These requests call a real LLM when the server has OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL set:",
+                  "// each run costs a little money and takes several seconds. Without them the server answers 503.",
+                  "if (pm.response.code === 503 && pm.response.json().code === 'llm_not_configured') {",
+                  "  pm.test('LLM not configured on this server (skipped)', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  return;",
+                  "}",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns a typed extraction', () => {",
+                  "  pm.expect(body.extraction.title).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.extraction.service).to.have.keys(['name', 'stated_explicitly']);",
+                  "  pm.expect(['SEV1', 'SEV2', 'SEV3', 'SEV4']).to.include(body.extraction.severity_candidate.level);",
+                  "  pm.expect(body.extraction.missing_information).to.be.an('array');",
+                  "});",
+                  "pm.test('run records prompt version, model and usage', () => {",
+                  "  pm.expect(body.run_id).to.match(/^[0-9a-f-]{36}$/);",
+                  "  pm.expect(body.run.prompt_name).to.eql('extract_incident');",
+                  "  pm.expect(body.run.prompt_version).to.be.a('string');",
+                  "  pm.expect(body.run.model).to.be.a('string');",
+                  "  pm.expect(body.run.attempts).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Find related incidents (tool calls)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{incidentId}}/related-incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{incidentId}}",
+                "related-incidents"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// These requests call a real LLM when the server has OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL set:",
+                  "// each run costs a little money and takes several seconds. Without them the server answers 503.",
+                  "if (pm.response.code === 503 && pm.response.json().code === 'llm_not_configured') {",
+                  "  pm.test('LLM not configured on this server (skipped)', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  return;",
+                  "}",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns a summary', () => pm.expect(body.summary).to.be.a('string').and.not.empty);",
+                  "pm.test('every requested tool call is listed with its outcome', () => {",
+                  "  pm.expect(body.tool_calls).to.be.an('array');",
+                  "  body.tool_calls.forEach(c => {",
+                  "    pm.expect(c.name).to.eql('get_recent_incidents');",
+                  "    pm.expect(c.executed).to.be.a('boolean');",
+                  "  });",
+                  "});",
+                  "pm.test('run records the prompt version', () => pm.expect(body.run.prompt_name).to.eql('related_incidents'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Extraction for unknown incident",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/00000000-0000-0000-0000-000000000000/extraction",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "00000000-0000-0000-0000-000000000000",
+                "extraction"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// These requests call a real LLM when the server has OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL set:",
+                  "// each run costs a little money and takes several seconds. Without them the server answers 503.",
+                  "if (pm.response.code === 503 && pm.response.json().code === 'llm_not_configured') {",
+                  "  pm.test('LLM not configured on this server (skipped)', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  return;",
+                  "}",
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code is incident_not_found', () => pm.expect(pm.response.json().code).to.eql('incident_not_found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

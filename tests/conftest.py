@@ -6,7 +6,7 @@ from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.main import create_app
 from incidentops_ai.config import Settings
@@ -19,7 +19,8 @@ TEST_DATABASE_URL = os.environ.get(
 
 @pytest.fixture(scope="session")
 def settings() -> Settings:
-    return Settings(database_url=TEST_DATABASE_URL)
+    # _env_file=None: tests must never pick up the real API key or model from .env.
+    return Settings(_env_file=None, database_url=TEST_DATABASE_URL, llm_model="fake-model")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -35,7 +36,7 @@ def migrated_db(settings: Settings) -> None:
 async def clean_tables(settings: Settings) -> AsyncIterator[None]:
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE incidents CASCADE"))
+        await conn.execute(text("TRUNCATE incidents, llm_runs CASCADE"))
     await engine.dispose()
     yield
 
@@ -47,3 +48,10 @@ async def client(settings: Settings) -> AsyncIterator[AsyncClient]:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c
+
+
+@pytest.fixture
+async def session_factory(settings: Settings) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
+    engine = create_async_engine(settings.database_url)
+    yield async_sessionmaker(engine, expire_on_commit=False)
+    await engine.dispose()

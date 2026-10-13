@@ -215,6 +215,49 @@ boolean and `42` is not accepted for a string. A reply with a wrong type is `inv
 | Truncated or invalid output | One extra attempt at most |
 | 400, 401, 403, 404, 422, quota exhausted, refusal | No retry |
 
+### Tool calling (implemented in AIENG-22)
+
+```
+model turn ──▶ tool calls requested ──▶ validation gate ──▶ run valid calls in parallel
+     ▲                                        │ rejected: never run                │
+     └──────────── all results (and rejections) sent back in one batch ◀───────────┘
+```
+
+- **`tool_call` is one model turn.** It returns either tool calls to run or a final answer, plus an
+  opaque `transcript` to pass back with the tool outputs on the next turn.
+- **The model's tool call is untrusted input**, like an HTTP request body. `ToolRegistry` checks:
+  the tool name is registered, and the arguments are valid JSON for the tool's Pydantic model in
+  strict mode (`"5"` is not accepted for an integer). A rejected call is **never executed**; the
+  model gets an error naming the field, without echoing the value, and may correct itself.
+- **Parallel:** all calls of one turn run with `asyncio.gather`; results go back in one batch, in
+  request order. Each call opens its own DB session (a session must not be shared across tasks).
+- **Bounded:** `run_tool_loop` stops after 3 model turns (`invalid_output`, "no final answer").
+- **A tool crash is a result, not an exception:** the model is told the tool failed; the error
+  text is logged server-side only.
+- **Stateless on the provider side:** `store=False`, so the model's reasoning items are requested
+  as encrypted content and sent back with the transcript.
+- **The one tool:** `get_recent_incidents(service, limit 1–10)`, read-only, returns titles and
+  status fields, never descriptions.
+
+### Run records (`llm_runs` table)
+
+Every LLM operation writes one row, success or failure: operation, incident, provider, model,
+prompt name and version, status, attempts and per-attempt statuses, tokens, latency, request id,
+the tool calls requested (run or rejected), and the validated output when there is one.
+
+### API
+
+| Endpoint | Does |
+|---|---|
+| `POST /incidents/{id}/extraction` | Structured extraction of the stored incident text |
+| `POST /incidents/{id}/related-incidents` | Tool conversation: which earlier incidents look related |
+
+A failed run returns a problem response with code `llm_<status>` and the recorded run id; it never
+returns partial data. HTTP status tells the client whether retrying can help: 504 timed out,
+503 rate limited (with `Retry-After`) or not configured, 502 provider error or unusable output,
+422 refused, 500 our configuration is wrong. Neither endpoint holds a DB connection while waiting
+for the model.
+
 ---
 
 ## 4. Where things live
@@ -225,6 +268,12 @@ src/incidentops_ai/llm/
   openai_provider.py  OpenAIProvider: the only file that imports `openai`
   fake_provider.py    FakeProvider: scripted replies and failures for tests
   retry.py            bounded retry with backoff (AIENG-21)
+  tool_loop.py        bounded tool conversation (AIENG-22)
+  runs.py             llm_runs table and repository
+  factory.py          builds provider + config from Settings
+src/incidentops_ai/tools/
+  registry.py         validation gate + parallel execution
+  recent_incidents.py the read-only tool
   prompts.py          loads prompts/<name>/<version>.md
 src/incidentops_ai/prompts/
   extract_incident/v1.md   inside the package, so it ships in the Docker image
