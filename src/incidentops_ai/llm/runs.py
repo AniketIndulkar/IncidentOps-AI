@@ -41,8 +41,9 @@ class LLMRunRow(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     latency_ms: Mapped[int] = mapped_column(Integer)
     request_id: Mapped[str | None] = mapped_column(String(128))
-    tool_calls: Mapped[list[dict] | None] = mapped_column(JSONB)  # requested calls, run or rejected
-    output: Mapped[dict | None] = mapped_column(JSONB)  # the validated result, when there is one
+    # none_as_null: store a real SQL NULL, not the JSON value null, so `IS NULL` works in queries.
+    tool_calls: Mapped[list[dict] | None] = mapped_column(JSONB(none_as_null=True))
+    output: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))  # validated result
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

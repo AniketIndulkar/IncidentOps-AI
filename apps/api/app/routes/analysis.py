@@ -80,7 +80,7 @@ async def related_incidents(
     """Ask the model which earlier incidents look related. It looks them up with a read-only
     tool; every tool call it requested, run or rejected, is returned and recorded."""
     incident = await _load(sessions, incident_id)
-    registry = ToolRegistry([make_recent_incidents_tool(sessions)])
+    registry = ToolRegistry([make_recent_incidents_tool(sessions, exclude_id=incident.id)])
     result = await find_related_incidents(llm, registry, _report_text(incident), config)
 
     async with sessions() as session:

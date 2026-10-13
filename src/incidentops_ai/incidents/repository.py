@@ -72,12 +72,14 @@ class IncidentRepository:
             raise IncidentNotFoundError(f"Incident {incident_id} does not exist.")
         return IncidentRead.model_validate(row)
 
-    async def list_recent_by_service(self, service: str, limit: int) -> list[IncidentRead]:
+    async def list_recent_by_service(
+        self, service: str, limit: int, *, exclude_id: uuid.UUID | None = None
+    ) -> list[IncidentRead]:
+        query = select(IncidentRow).where(IncidentRow.service == service)
+        if exclude_id is not None:
+            query = query.where(IncidentRow.id != exclude_id)
         rows = await self._session.scalars(
-            select(IncidentRow)
-            .where(IncidentRow.service == service)
-            .order_by(IncidentRow.created_at.desc())
-            .limit(limit)
+            query.order_by(IncidentRow.created_at.desc()).limit(limit)
         )
         return [IncidentRead.model_validate(row) for row in rows]
 

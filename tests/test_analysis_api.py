@@ -188,6 +188,7 @@ async def test_related_incidents_runs_parallel_tool_calls_and_records_them(
     # The valid lookup really read the database and its result went back to the model.
     sent_back = provider.tool_calls[1].outputs
     assert earlier["id"] in sent_back[0].output
+    assert incident["id"] not in sent_back[0].output  # never "related" to itself
     assert "invalid arguments" in sent_back[1].output
 
     [run] = await runs(session_factory)
@@ -226,6 +227,23 @@ async def test_failed_tool_conversation_is_recorded_with_the_calls_that_ran(
     [run] = await runs(session_factory)
     assert run["status"] == "timed_out" and run["output"] is None
     assert len(run["tool_calls"]) == 1
+
+
+async def test_missing_json_values_are_sql_null_not_json_null(settings, session_factory):
+    async with app_client(settings, FakeProvider([LLMStatus.TIMED_OUT])) as client:
+        incident = (await client.post("/incidents", json=INCIDENT)).json()
+        await client.post(f"/incidents/{incident['id']}/extraction")
+
+    async with session_factory() as session:
+        row = (
+            await session.execute(
+                text(
+                    "SELECT tool_calls IS NULL AS no_tools, output IS NULL AS no_output FROM llm_runs"
+                )
+            )
+        ).one()
+
+    assert row.no_tools and row.no_output
 
 
 async def test_deleting_an_incident_keeps_its_run_history(settings, session_factory):

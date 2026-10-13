@@ -1,6 +1,7 @@
 """Read-only tool: recent incidents for one service, from our own database."""
 
 import re
+import uuid
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict
@@ -45,13 +46,17 @@ SPEC = ToolSpec(
 )
 
 
-def make_recent_incidents_tool(session_factory: async_sessionmaker[AsyncSession]) -> Tool:
+def make_recent_incidents_tool(
+    session_factory: async_sessionmaker[AsyncSession], *, exclude_id: uuid.UUID | None = None
+) -> Tool:
+    """`exclude_id`: the incident being analysed, so it is never reported as related to itself."""
+
     async def handler(args: GetRecentIncidentsArgs) -> list[dict]:
         # Own session per call: tool calls run concurrently, and a session must not be shared
         # between concurrent tasks.
         async with session_factory() as session:
             incidents = await IncidentRepository(session).list_recent_by_service(
-                args.service, args.limit
+                args.service, args.limit, exclude_id=exclude_id
             )
         # Titles only, never descriptions: less sensitive text sent to the model, and less room
         # for text planted in an old incident to steer it.
