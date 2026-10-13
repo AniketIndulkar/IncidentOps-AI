@@ -87,7 +87,9 @@ async def test_extraction_returns_typed_result_and_persists_run_metadata(setting
     assert (run["prompt_name"], run["prompt_version"]) == ("extract_incident", "v1")
     assert (run["input_tokens"], run["output_tokens"], run["latency_ms"]) == (900, 300, 4200)
     assert (run["attempts"], run["attempt_statuses"]) == (1, ["succeeded"])
-    assert run["output"]["severity_candidate"]["level"] == "SEV2"
+    assert run["output"]["extraction"]["severity_candidate"]["level"] == "SEV2"
+    assert run["output"]["review"] == {"required": False, "reasons": []}
+    assert body["review"] == {"required": False, "reasons": []}
     assert run["tool_calls"] is None
 
 

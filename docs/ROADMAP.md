@@ -69,11 +69,11 @@ Client ──▶  FastAPI ingress (typed API, idempotency, structured errors)
 
 Detailed day-by-day plan: [roadmap-w02.md](roadmap-w02.md).
 
-- AIENG-19 Provider abstraction: `generate_structured` / `tool_call` + model config.
-- AIENG-20 Nested extraction schema (title, service, symptoms, error codes, env, severity, entities, missing info); 10 samples parse.
-- AIENG-21 Fault injection (bad JSON, schema mismatch, timeout, 429); bounded retry; explicit failure states, no coercion.
-- AIENG-22 One read-only tool, arg validation, parallel tool calls, persisted prompt/model version per run.
-- AIENG-23 Failure matrix + **ADR-001: retry vs fallback vs human review vs rejection**.
+- ✅ AIENG-19 Provider abstraction: `generate_structured` / `tool_call` + model config.
+- ✅ AIENG-20 Nested extraction schema (title, service, symptoms, error codes, env, severity, entities, missing info); 10 samples parse.
+- ✅ AIENG-21 Fault injection (bad JSON, schema mismatch, timeout, 429); bounded retry; explicit failure states, no coercion.
+- ✅ AIENG-22 One read-only tool, arg validation, parallel tool calls, persisted prompt/model version per run.
+- ✅ AIENG-23 Failure matrix + **ADR-001: retry vs fallback vs human review vs rejection**.
 
 ### Phase 2 — Retrieval (W03–W04, 19–30 Oct) → **v0.1**
 
@@ -191,18 +191,32 @@ Hard dependencies to protect:
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
 
-## Current state (10 Oct 2026, end of W01)
+## Current state (13 Oct 2026, W02 complete)
 
-- **W01 complete:** AIENG-2, 15, 16, 17, 18 done. Next: W02, starting with AIENG-19 (Mon 12 Oct).
-- API: `POST /incidents` (optional `Idempotency-Key`), `GET /incidents/{id}`, `/health`; RFC 9457 errors.
-- Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`).
-- Tests: 26 pytest tests against real Postgres (local 14, CI 17).
-- Docker: multi-stage image (non-root, healthcheck, migrations on start); `docker-compose.yml` with API + Postgres.
-- CI: GitHub Actions lint → test → build; green on `main`.
-- AWS: account secured (root MFA, IAM user `aniket-admin`, $25 budget + anomaly alerts, `aws login`).
-  First deploy to Lightsail verified `/health` from the internet, then deleted (≈ $0.01). Steps: `docs/deploy-lightsail.md`.
-- API testing: Postman collection in `postman/` (8 requests, 31 assertions), runnable with Newman against local or AWS.
-- Notes: `docs/notes/python-async-vs-kotlin.md`, `docs/notes/deployment-docker-ci-aws.md`.
+- **W01 and W02 complete:** AIENG-2, 15–23 done. W02 finished on Tue 13 Oct, three days early. Next: W03, AIENG-24.
+- API: incidents (`POST`, `GET`, idempotency keys), `POST /incidents/{id}/extraction`,
+  `POST /incidents/{id}/related-incidents`, `/health`; RFC 9457 errors.
+- LLM: provider layer (`LLMProvider`; OpenAI and fake implementations), strict structured output,
+  bounded retry, tool calling with a validation gate and parallel execution, rule-based review flag.
+  Model in use: `gpt-6-luna`. Prompts versioned in the package (`extract_incident/v1`, `related_incidents/v1`).
+- Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`, `llm_runs`).
+- Tests: 143 pytest tests against real Postgres, all offline (no API key, no model calls in CI).
+- Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`).
+- Docker, CI (lint → test → build, green on `main` as of W01), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
+- Postman collection in `postman/` (11 requests).
+- Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
+- Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix.
+
+### What W02 taught us
+
+- The SDK's defaults (2 silent retries, 600 s timeout) are wrong for a request path; we own both.
+- Tests and fault injection found five real defects before any user did: a reply cut off at the token cap
+  reported as "invalid", `"true"` silently coerced to a boolean, an HTML error page with status 200
+  crashing the provider, broken JSON escaping as a raw exception, and tests able to read the real API key.
+- The real-model check found two more: an incident reported as related to itself, and JSON `null`
+  stored where SQL `NULL` was meant.
+- The model is not deterministic: the same input gave SEV3 in one run and SEV2 in the next.
+- Calls take 4–18 s, so LLM analysis is its own endpoint, never part of creating an incident.
 
 ## Risks & gaps found in the tickets
 
@@ -216,6 +230,10 @@ Hard dependencies to protect:
 8. **Data permissions retrofit (W10)** touches every retriever. Carry a `tenant_id`/ACL field in chunk metadata from W03 to make W10 cheap.
 9. **AWS Paid plan, no hard spending cap.** Account moved to Paid when Identity Center/Organizations were enabled (now removed). Mitigation: budget + anomaly alerts, fixed-price Lightsail, delete resources after every session; never enable Organizations/Identity Center.
 10. **Idempotency keys are global and never expire.** Scope per user once auth lands (AIENG-60) and add TTL cleanup (W12, AIENG-71).
+11. **Single LLM provider, no fallback.** A provider outage disables analysis (ADR-001). Second provider and gateway: W11 (AIENG-66).
+12. **LLM endpoints are unauthenticated and not idempotent.** Each `POST …/extraction` is a paid model call; anyone who can reach a deployed API with a key configured can spend money. Do not deploy with `OPENAI_API_KEY` set until auth (AIENG-60) or at least a rate limit exists.
+13. **Extraction ignores the stored fields.** The endpoint sends only title and description, so a stored environment can come back as "not stated". Fix with prompt `v2` and compare against the baseline.
+14. **Eval set is tiny and unscored.** 10 samples, service name checked only. Expected values and repeated runs come in W11 (AIENG-64, 65).
 11. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
 
 ## Weekly cadence

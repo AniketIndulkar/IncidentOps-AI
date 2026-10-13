@@ -3,6 +3,12 @@
 Source: Jira epic **AIENG-3** and tasks **AIENG-19 to AIENG-23**, read 10 Oct 2026. All six are To Do.
 Overall plan: [ROADMAP.md](ROADMAP.md).
 
+> **Status, 13 Oct 2026: complete.** All five tickets done on Tuesday, three days early.
+> What was built and learned: [ROADMAP.md, "Current state"](ROADMAP.md). Decisions:
+> [ADR-001](adr/001-llm-failure-handling.md). Two changes from this plan: prompts live inside
+> the package (`src/incidentops_ai/prompts/`), and a second endpoint
+> (`POST /incidents/{id}/related-incidents`) was added so the tool path is reachable.
+
 ## Goal of the week
 
 Turn free-text incident reports into **typed, validated data** using an LLM, and make every way

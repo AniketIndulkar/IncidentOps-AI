@@ -9,6 +9,7 @@ from app.deps import LLM, LLMConfig, SessionFactory
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.errors import LLMCallFailedError
 from incidentops_ai.extraction.models import IncidentExtraction
+from incidentops_ai.extraction.review import ReviewDecision, assess
 from incidentops_ai.extraction.service import extract_incident
 from incidentops_ai.incidents.models import IncidentRead
 from incidentops_ai.incidents.repository import IncidentRepository
@@ -30,6 +31,7 @@ class ExtractionResponse(BaseModel):
     run_id: uuid.UUID
     incident_id: uuid.UUID
     extraction: IncidentExtraction
+    review: ReviewDecision  # whether a human should confirm this result, and why
     run: RunMetadata
 
 
@@ -57,6 +59,7 @@ async def extract(incident_id: uuid.UUID, sessions: SessionFactory, llm: LLM, co
     incident = await _load(sessions, incident_id)
     result = await extract_incident(llm, _report_text(incident), config)
 
+    review = assess(result.value) if result.value else None
     async with sessions() as session:
         run_id = await LLMRunRepository(session).record(
             operation="extract_incident",
@@ -64,12 +67,23 @@ async def extract(incident_id: uuid.UUID, sessions: SessionFactory, llm: LLM, co
             status=result.status,
             metadata=result.metadata,
             error_detail=result.error_detail,
-            output=result.value.model_dump(mode="json") if result.value else None,
+            output=(
+                {
+                    "extraction": result.value.model_dump(mode="json"),
+                    "review": review.model_dump(mode="json"),
+                }
+                if result.value and review
+                else None
+            ),
         )
-    if result.status is not LLMStatus.SUCCEEDED or result.value is None:
+    if result.status is not LLMStatus.SUCCEEDED or result.value is None or review is None:
         raise LLMCallFailedError(result.status, run_id, "Extraction", result.retry_after_s)
     return ExtractionResponse(
-        run_id=run_id, incident_id=incident.id, extraction=result.value, run=result.metadata
+        run_id=run_id,
+        incident_id=incident.id,
+        extraction=result.value,
+        review=review,
+        run=result.metadata,
     )
 
 
