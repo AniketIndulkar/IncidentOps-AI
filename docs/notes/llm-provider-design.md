@@ -44,7 +44,7 @@ Checked against the installed package `openai` **3.29.0** (not from memory).
 | Need | SDK fact |
 |---|---|
 | Async client | `AsyncOpenAI(api_key=..., project=..., timeout=..., max_retries=...)` |
-| Structured output | `await client.responses.parse(model=..., input=..., instructions=..., text_format=MyPydanticModel)` → `response.output_parsed` is a `MyPydanticModel` (or `None`) |
+| Structured output | `responses.parse(..., text_format=MyPydanticModel)` exists, but we use `responses.create(..., text={"format": {type: json_schema, strict: true, schema}})` and validate `response.output_text` ourselves (see the note below) |
 | Output cap | `max_output_tokens=` |
 | Finished or not | `response.status`: `completed`, `incomplete`, `failed`, …; `response.incomplete_details.reason`: `max_output_tokens`, `content_filter`, … |
 | Refusal | an output content part of type `refusal` (`ResponseOutputRefusal`) instead of text |
@@ -71,7 +71,14 @@ Checked against the installed package `openai` **3.29.0** (not from memory).
 | `LengthFinishReasonError` | Output cut off at the token cap while parsing | Once, with a higher cap, at most |
 | `ContentFilterFinishReasonError` | Output blocked by the content filter | No |
 
-**Two decisions that follow from this:**
+**Found while implementing (AIENG-20):** `responses.parse` validates the reply *before* returning,
+so a reply cut off at the token cap raises a validation error and the response (status, token
+usage, request id) is lost. Calling `responses.create` with a strict JSON Schema and validating
+ourselves lets us tell `truncated` from `invalid_output` and keep the metadata for failed replies.
+The provider also checks that the schema is strict-compatible (all fields required, no extras)
+before sending it.
+
+**Two more decisions that follow from this:**
 
 - We set **`max_retries=0`** on the SDK client and do retries in our own layer. Otherwise the SDK
   retries silently and we cannot count attempts, test them, or cap total time.
@@ -194,15 +201,15 @@ src/incidentops_ai/llm/
   fake_provider.py    FakeProvider: scripted replies and failures for tests
   retry.py            bounded retry with backoff (AIENG-21)
   prompts.py          loads prompts/<name>/<version>.md
-prompts/
-  extract_incident/v1.md
+src/incidentops_ai/prompts/
+  extract_incident/v1.md   inside the package, so it ships in the Docker image
 ```
 
 **Rule:** `import openai` appears in exactly one file. If another file needs it, the abstraction has leaked.
 
 ## 5. Prompts and versions
 
-- A prompt is a file: `prompts/extract_incident/v1.md`.
+- A prompt is a file: `src/incidentops_ai/prompts/extract_incident/v1.md`.
 - A change to the text means a **new file** (`v2.md`), never an edit to `v1.md`.
 - Every run records `prompt_name` + `prompt_version` + `model`, so results can be compared later
   (W11 evals) and a regression can be traced to the change that caused it.
@@ -211,7 +218,7 @@ prompts/
 
 | Setting | Env var | Notes |
 |---|---|---|
-| API key | `OPENAI_API_KEY` | In `.env` only. Read by the SDK itself; never logged, never in `Settings.__repr__` |
+| API key | `OPENAI_API_KEY` | In `.env` only. Loaded by `Settings` as a `SecretStr` (hidden in logs and reprs) and passed to the client once |
 | Model | `INCIDENTOPS_LLM_MODEL` | No default in code: startup fails clearly if it is missing |
 | Timeout | `INCIDENTOPS_LLM_TIMEOUT_S` | Default 30 |
 | Max attempts | `INCIDENTOPS_LLM_MAX_ATTEMPTS` | Default 3 |
