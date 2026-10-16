@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,6 +32,10 @@ class Settings(BaseSettings):
     # stored with the index; changing either means re-embedding the corpus.
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1)
+    # W04: dense + BM25 fused by reciprocal rank beat dense alone by the rule fixed in advance; the
+    # reranker did not earn its cost (evals/retrieval/runs/2026-10-16-hybrid-findings.md). It needs
+    # the optional "rerank" extra: uv sync --extra rerank.
+    retrieval_stack: Literal["dense", "hybrid", "hybrid-rerank"] = "hybrid"
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 

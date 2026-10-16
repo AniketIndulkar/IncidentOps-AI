@@ -4,8 +4,23 @@ Source: Jira epic **AIENG-5** and tasks **AIENG-29 to AIENG-33**, read 16 Oct 20
 Overall plan: [ROADMAP.md](ROADMAP.md). Built early, like W02 and W03, on branch
 `feat/w04-hybrid-rerank-diagnosis` (cut from the W03 tip).
 
-> **Status, 16 Oct 2026: design only. Nothing is built.** This document is the thing to approve or
-> correct before code starts.
+> **Status, 16 Oct 2026: design approved; BM25, RRF, the reranker and the comparison are built and
+> measured (AIENG-29 to 31, part of 33). Cited diagnosis (AIENG-32) is in progress.** The design
+> below is unchanged from when it was approved.
+>
+> **Result:** by the rule fixed below, the default stack is **hybrid** (dense + BM25, RRF); the
+> reranker is not adopted. Hybrid beats dense by +0.006 MRR on `fixed-2000-200` and +0.029 on
+> `section-1500`+header (a net of about one question). The reranker lowers MRR on both decision
+> configs (−0.006, −0.029) and, as pre-registered, is too heavy to run locally (p95 423 to 715 ms,
+> 1.3 GB added), so no move to AWS is needed. Findings:
+> [hybrid-findings](../evals/retrieval/runs/2026-10-16-hybrid-findings.md).
+>
+> Changes from this plan: (1) the reranker runs through ONNX (`fastembed`, model
+> `Xenova/ms-marco-MiniLM-L-6-v2`, the ONNX export of the planned model), so no torch;
+> (2) `--rerank-depth` and `--rerank-batch-size` were added to run the depth sweep the design asks for
+> and the smaller-batch fallback; (3) the benchmark times question embeddings live while chunk
+> vectors stay cached, otherwise the cache would hide the dense latency; (4) truncation of reranker
+> input is counted exactly from the model's tokenizer.
 
 ## Goal of the week
 
