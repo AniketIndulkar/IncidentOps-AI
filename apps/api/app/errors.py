@@ -27,6 +27,7 @@ from incidentops_ai.errors import (
     NotFoundError,
     RateLimitExceededError,
     RequestInProgressError,
+    RetrievalFailedError,
     RetryLaterError,
     UnauthorizedError,
 )
@@ -85,6 +86,7 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     # (matches the IETF Idempotency-Key draft). 409 is reserved for "retry later" conflicts.
     ConflictError: 422,
     LLMNotConfiguredError: 503,
+    RetrievalFailedError: 502,  # a dependency (embedding API, reranker) failed, not the caller
     UnauthorizedError: 401,
     RateLimitExceededError: 429,
     RequestInProgressError: 409,  # the "retry later" conflict the 422 comment above leaves free

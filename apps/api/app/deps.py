@@ -13,6 +13,7 @@ from incidentops_ai.errors import (
 )
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
+from incidentops_ai.retrieval.retriever import Retriever
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -48,6 +49,13 @@ def get_llm_config(request: Request) -> ModelConfig:
     if config is None:
         raise LLMNotConfiguredError("LLM features are off: INCIDENTOPS_LLM_MODEL is not set.")
     return config
+
+
+def get_retriever(request: Request) -> Retriever:
+    retriever = request.app.state.retriever
+    if retriever is None:
+        raise LLMNotConfiguredError("Evidence retrieval is off: OPENAI_API_KEY is not configured.")
+    return retriever
 
 
 def _idempotency_header(description: str):
@@ -105,3 +113,4 @@ async def enforce_llm_rate_limit(request: Request) -> None:
 SessionFactory = Annotated[async_sessionmaker[AsyncSession], Depends(get_session_factory)]
 LLM = Annotated[LLMProvider, Depends(get_llm_provider)]
 LLMConfig = Annotated[ModelConfig, Depends(get_llm_config)]
+Retrieval = Annotated[Retriever, Depends(get_retriever)]
