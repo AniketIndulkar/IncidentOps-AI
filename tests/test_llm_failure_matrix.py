@@ -231,7 +231,7 @@ MATRIX = [
 
 
 @pytest.mark.parametrize("row", MATRIX, ids=lambda row: row.name)
-async def test_failure_matrix(row: Row, settings, session_factory):
+async def test_failure_matrix(row: Row, settings, session_factory, llm_headers):
     queue = list(row.faults)
     seen: list[httpx2.Request] = []
 
@@ -256,7 +256,9 @@ async def test_failure_matrix(row: Row, settings, session_factory):
     app = create_app(settings, llm_provider=provider)
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client,
+        AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://t", headers=llm_headers
+        ) as client,
     ):
         incident = (await client.post("/incidents", json=INCIDENT)).json()
         resp = await client.post(f"/incidents/{incident['id']}/extraction")
@@ -284,7 +286,7 @@ async def test_failure_matrix(row: Row, settings, session_factory):
     assert run["status"] == row.run_status
     assert run["attempts"] == row.attempts
     assert len(run["attempt_statuses"]) == row.attempts
-    assert (run["prompt_name"], run["prompt_version"]) == ("extract_incident", "v1")
+    assert (run["prompt_name"], run["prompt_version"]) == ("extract_incident", "v2")
     assert (run["output"] is not None) == (row.code is None)
     if row.code is not None:
         assert str(run["id"]) in body["detail"]
@@ -331,7 +333,7 @@ LOW_CONFIDENCE = [
     ("name", "changes", "reasons"), LOW_CONFIDENCE, ids=[c[0] for c in LOW_CONFIDENCE]
 )
 async def test_low_confidence_results_succeed_but_are_flagged_for_review(
-    name, changes, reasons, settings, session_factory
+    name, changes, reasons, settings, session_factory, llm_headers
 ):
     extraction = {**GOOD_EXTRACTION, **changes}
     provider = RetryingProvider(
@@ -345,7 +347,9 @@ async def test_low_confidence_results_succeed_but_are_flagged_for_review(
     app = create_app(settings, llm_provider=provider)
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client,
+        AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://t", headers=llm_headers
+        ) as client,
     ):
         incident = (await client.post("/incidents", json=INCIDENT)).json()
         resp = await client.post(f"/incidents/{incident['id']}/extraction")
@@ -359,7 +363,7 @@ async def test_low_confidence_results_succeed_but_are_flagged_for_review(
     assert run["output"]["review"] == {"required": True, "reasons": reasons}
 
 
-async def test_complete_unambiguous_result_needs_no_review(settings):
+async def test_complete_unambiguous_result_needs_no_review(settings, llm_headers):
     provider = RetryingProvider(
         OpenAIProvider(
             "k", http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: OK))
@@ -368,7 +372,9 @@ async def test_complete_unambiguous_result_needs_no_review(settings):
     app = create_app(settings, llm_provider=provider)
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client,
+        AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://t", headers=llm_headers
+        ) as client,
     ):
         incident = (await client.post("/incidents", json=INCIDENT)).json()
         resp = await client.post(f"/incidents/{incident['id']}/extraction")

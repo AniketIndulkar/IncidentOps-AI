@@ -23,6 +23,7 @@ from incidentops_ai.llm.provider import (
     LLMStatus,
     ModelConfig,
     Prompt,
+    RunMetadata,
     StructuredResult,
     ToolOutput,
     ToolSpec,
@@ -50,6 +51,9 @@ class RetryingProvider:
         self._sleep = sleep
         self._clock = clock
         self._rand = rand
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
 
     async def generate_structured[T: BaseModel](
         self, *, prompt: Prompt, schema: type[T], config: ModelConfig
@@ -82,10 +86,8 @@ class RetryingProvider:
         deadline = self._clock() + config.total_timeout_s
         attempt_config = config
         bad_output_retry_used = False
-        statuses: list[LLMStatus] = []
-        latency_ms = 0
-        input_tokens: int | None = None
-        output_tokens: int | None = None
+        total: RunMetadata | None = None
+        tries = 0
 
         while True:
             # Never let one attempt outlive the overall budget.
@@ -96,17 +98,11 @@ class RetryingProvider:
                 )
 
             result = await attempt(attempt_config)
-            statuses.append(result.status)
-            latency_ms += result.metadata.latency_ms
-            input_tokens = _add(input_tokens, result.metadata.input_tokens)
-            output_tokens = _add(output_tokens, result.metadata.output_tokens)
+            tries += 1
+            total = result.metadata if total is None else total.combine(result.metadata)
 
-            delay = self._delay_before_retry(result, len(statuses), bad_output_retry_used)
-            if (
-                delay is None
-                or len(statuses) >= config.max_attempts
-                or self._clock() + delay >= deadline
-            ):
+            delay = self._delay_before_retry(result, tries, bad_output_retry_used)
+            if delay is None or tries >= config.max_attempts or self._clock() + delay >= deadline:
                 break
 
             if result.status in _BAD_OUTPUT:
@@ -118,16 +114,8 @@ class RetryingProvider:
             if delay > 0:
                 await self._sleep(delay)
 
-        metadata = result.metadata.model_copy(
-            update={
-                "attempts": len(statuses),
-                "attempt_statuses": statuses,
-                "latency_ms": latency_ms,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-            }
-        )
-        return result.model_copy(update={"metadata": metadata})
+        # These tries were all of one model call, so here `attempts` counts them, not the max.
+        return result.model_copy(update={"metadata": total.model_copy(update={"attempts": tries})})
 
     def _delay_before_retry(
         self, result: StructuredResult | ToolTurn, attempts_made: int, bad_output_retry_used: bool
@@ -143,9 +131,3 @@ class RetryingProvider:
         if result.status in _BAD_OUTPUT and not bad_output_retry_used:
             return 0.0  # the provider is healthy; no reason to wait
         return None
-
-
-def _add(total: int | None, more: int | None) -> int | None:
-    if more is None:
-        return total
-    return (total or 0) + more

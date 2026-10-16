@@ -47,12 +47,33 @@ class RunMetadata(BaseModel):
     model: str  # the model that actually answered, when known
     prompt_name: str
     prompt_version: str
+    # Tries the hardest single model call needed, first one included (1 = no retry). Never above
+    # ModelConfig.max_attempts, however many model turns a tool conversation took.
     attempts: int
     latency_ms: int
     input_tokens: int | None = None
     output_tokens: int | None = None
     request_id: str | None = None
-    attempt_statuses: list[LLMStatus] = []  # one entry per attempt, in order
+    attempt_statuses: list[LLMStatus] = []  # one entry per request sent, in order
+
+    def combine(self, later: "RunMetadata") -> "RunMetadata":
+        """Totals for this call followed by `later`. The only place cost is added up, so a new
+        field cannot be summed in one caller and forgotten in another. Names come from `later`
+        (its model and request id are the most recent); `attempts` is the larger of the two."""
+        return later.model_copy(
+            update={
+                "attempts": max(self.attempts, later.attempts),
+                "latency_ms": self.latency_ms + later.latency_ms,
+                "input_tokens": _add(self.input_tokens, later.input_tokens),
+                "output_tokens": _add(self.output_tokens, later.output_tokens),
+                "attempt_statuses": [*self.attempt_statuses, *later.attempt_statuses],
+            }
+        )
+
+
+def _add(a: int | None, b: int | None) -> int | None:
+    """Sum of two optional counts; None only when neither is known."""
+    return None if a is None and b is None else (a or 0) + (b or 0)
 
 
 class StructuredResult[T: BaseModel](BaseModel):
@@ -115,6 +136,10 @@ class LLMProvider(Protocol):
     ) -> ToolTurn:
         """Ask the model to continue. First call: no transcript. Later calls: the previous
         turn's transcript plus the outputs of the tool calls it asked for."""
+        ...
+
+    async def aclose(self) -> None:
+        """Release connections. Call once, when the provider will not be used again."""
         ...
 
 

@@ -34,6 +34,7 @@ class Fail:
     input_tokens: int | None = None
     output_tokens: int | None = None
     latency_ms: int = 0
+    attempts: int = 1  # tries the retry layer would have needed; earlier ones timed out
 
 
 @dataclass(frozen=True)
@@ -50,19 +51,23 @@ class FakeProvider:
 
     `tool_turns` scripts tool conversations the same way: a list of ToolCall means "the model
     asks for these calls", a str means "the model gives this final answer", an LLMStatus means
-    that failure.
+    that failure, and a `Fail` is a failure with a retry hint or other details.
     """
 
     def __init__(
         self,
         replies: list[BaseModel | LLMStatus | Fail] | None = None,
         *,
-        tool_turns: list[list[ToolCall] | str | LLMStatus] | None = None,
+        tool_turns: list[list[ToolCall] | str | LLMStatus | Fail] | None = None,
     ) -> None:
         self._replies = list(replies or [])
         self._tool_turns = list(tool_turns or [])
         self.calls: list[RecordedCall] = []
         self.tool_calls: list[RecordedToolTurn] = []
+        self.closed = False
+
+    async def aclose(self) -> None:
+        self.closed = True
 
     async def generate_structured[T: BaseModel](
         self, *, prompt: Prompt, schema: type[T], config: ModelConfig
@@ -83,11 +88,11 @@ class FakeProvider:
                 model=config.model,
                 prompt_name=prompt.name,
                 prompt_version=prompt.version,
-                attempts=1,
+                attempts=reply.attempts,
                 latency_ms=reply.latency_ms,
                 input_tokens=reply.input_tokens,
                 output_tokens=reply.output_tokens,
-                attempt_statuses=[reply.status],
+                attempt_statuses=[LLMStatus.TIMED_OUT] * (reply.attempts - 1) + [reply.status],
             ),
         )
 
@@ -103,22 +108,27 @@ class FakeProvider:
         self.tool_calls.append(RecordedToolTurn(prompt, tuple(tools), config, tuple(outputs)))
         scripted = self._tool_turns.pop(0)
         history = list(transcript or []) + [o.model_dump() for o in outputs]
-        status = scripted if isinstance(scripted, LLMStatus) else LLMStatus.SUCCEEDED
+        if isinstance(scripted, LLMStatus):
+            scripted = Fail(scripted)
+        failure = scripted if isinstance(scripted, Fail) else None
+        status = failure.status if failure else LLMStatus.SUCCEEDED
+        attempts = failure.attempts if failure else 1
         return ToolTurn(
             status=status,
             calls=scripted if isinstance(scripted, list) else [],
             final_text=scripted if isinstance(scripted, str) else None,
             transcript=[*history, {"turn": len(self.tool_calls)}],
-            error_detail="scripted" if isinstance(scripted, LLMStatus) else None,
+            error_detail="scripted" if failure else None,
+            retry_after_s=failure.retry_after_s if failure else None,
             metadata=RunMetadata(
                 provider="fake",
                 model=config.model,
                 prompt_name=prompt.name,
                 prompt_version=prompt.version,
-                attempts=1,
+                attempts=attempts,
                 latency_ms=0,
                 input_tokens=10,
                 output_tokens=5,
-                attempt_statuses=[status],
+                attempt_statuses=[LLMStatus.TIMED_OUT] * (attempts - 1) + [status],
             ),
         )

@@ -7,7 +7,11 @@ import pytest
 from pydantic import ValidationError
 
 from incidentops_ai.extraction.models import IncidentExtraction
-from incidentops_ai.extraction.service import EXTRACTION_PROMPT, extract_incident
+from incidentops_ai.extraction.service import (
+    EXTRACTION_PROMPT,
+    RecordedFields,
+    extract_incident,
+)
 from incidentops_ai.incidents.models import Environment, Severity
 from incidentops_ai.llm.fake_provider import FakeProvider
 from incidentops_ai.llm.prompts import PromptNotFoundError, load_prompt
@@ -91,6 +95,26 @@ def test_prompt_v1_loads_with_name_and_version():
     assert "missing_information" in prompt.instructions
 
 
+def test_prompt_v2_tells_the_model_to_use_recorded_fields():
+    prompt = load_prompt("extract_incident", "v2", input_text="x")
+
+    assert prompt.version == "v2"
+    assert "Recorded on the incident" in prompt.instructions
+    # Old versions stay loadable: a recorded run can always be traced to its exact text.
+    assert (
+        "Recorded on the incident"
+        not in load_prompt("extract_incident", "v1", input_text="x").instructions
+    )
+
+
+def test_prompt_file_is_read_once_not_on_every_call():
+    first = load_prompt("extract_incident", "v2", input_text="a")
+    second = load_prompt("extract_incident", "v2", input_text="b")
+
+    assert first.instructions is second.instructions
+    assert (first.input, second.input) == ("a", "b")  # only the text of the prompt is shared
+
+
 def test_unknown_prompt_version_fails_clearly():
     with pytest.raises(PromptNotFoundError):
         load_prompt("extract_incident", "v999", input_text="x")
@@ -115,10 +139,29 @@ async def test_extract_incident_returns_typed_value_and_run_metadata():
     assert isinstance(result.value, IncidentExtraction)
     assert result.value.service.name == "checkout-api"
     assert result.metadata.prompt_name == EXTRACTION_PROMPT
-    assert result.metadata.prompt_version == "v1"
+    assert result.metadata.prompt_version == "v2"
     assert result.metadata.model == "fake-model"
     assert provider.calls[0].prompt.input == "Checkout is throwing 502s since 14:05"
     assert provider.calls[0].schema is IncidentExtraction
+
+
+async def test_recorded_fields_are_shown_to_the_model_before_the_report():
+    provider = FakeProvider(replies=[IncidentExtraction.model_validate(VALID_EXTRACTION)])
+    recorded = RecordedFields(
+        service="checkout-api", severity=Severity.SEV3, environment=Environment.STAGING
+    )
+
+    await extract_incident(provider, "Checkout is slow", CONFIG, recorded=recorded)
+
+    assert provider.calls[0].prompt.input == (
+        "Recorded on the incident by the reporter:\n"
+        "- service: checkout-api\n"
+        "- severity: SEV3\n"
+        "- environment: staging\n"
+        "\n"
+        "Report:\n"
+        "Checkout is slow"
+    )
 
 
 async def test_failed_extraction_has_status_and_no_value():

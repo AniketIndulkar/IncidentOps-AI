@@ -1,24 +1,17 @@
 """Read-only tool: recent incidents for one service, from our own database."""
 
-import re
 import uuid
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from incidentops_ai.incidents.models import check_service_name
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import ToolSpec
 from incidentops_ai.tools.registry import Tool
 
 MAX_LIMIT = 10
-_SERVICE_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
-
-
-def _service(value: str) -> str:
-    if not _SERVICE_NAME.fullmatch(value):
-        raise ValueError("must be lowercase kebab-case")
-    return value
 
 
 def _limit(value: int) -> int:
@@ -30,7 +23,7 @@ def _limit(value: int) -> int:
 class GetRecentIncidentsArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    service: Annotated[str, AfterValidator(_service)]
+    service: Annotated[str, AfterValidator(check_service_name)]
     limit: Annotated[int, AfterValidator(_limit)]
 
 

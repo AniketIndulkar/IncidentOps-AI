@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from incidentops_ai.incidents.models import IncidentCreate
 from incidentops_ai.incidents.repository import IncidentRepository
-from incidentops_ai.llm.fake_provider import FakeProvider
+from incidentops_ai.llm.fake_provider import Fail, FakeProvider
 from incidentops_ai.llm.provider import LLMStatus, ModelConfig, Prompt, ToolCall, ToolSpec
 from incidentops_ai.llm.tool_loop import run_tool_loop
 from incidentops_ai.tools.recent_incidents import make_recent_incidents_tool
@@ -258,7 +258,7 @@ async def test_loop_without_tool_calls_answers_in_one_round():
     assert result.executions == [] and ran == []
 
 
-async def test_loop_stops_at_the_round_limit():
+async def test_loop_stops_at_the_round_limit_without_running_calls_nobody_will_answer():
     registry, ran = spy_registry()
     again = [call({"service": "a", "limit": 1})]
     provider = FakeProvider(tool_turns=[again, again, again, again])
@@ -267,7 +267,59 @@ async def test_loop_stops_at_the_round_limit():
 
     assert result.status is LLMStatus.INVALID_OUTPUT
     assert result.final_text is None and result.rounds == 3
-    assert len(provider.tool_calls) == 3 and len(ran) == 3
+    assert len(provider.tool_calls) == 3
+    # Rounds 1 and 2 were answered. The third round's calls would never be sent back, so they
+    # are not run (a write tool would change state with no one told), but they stay on record.
+    assert len(ran) == 2
+    assert [(e.executed, e.ok, e.error) for e in result.executions] == [
+        (True, True, None),
+        (True, True, None),
+        (False, False, "round limit reached"),
+    ]
+
+
+@pytest.mark.parametrize("answer", ["", "  \n "])
+async def test_loop_treats_an_empty_final_answer_as_invalid_output(answer):
+    registry, _ = spy_registry()
+    provider = FakeProvider(tool_turns=[answer])
+
+    result = await run_tool_loop(provider, PROMPT, registry, CONFIG)
+
+    assert result.status is LLMStatus.INVALID_OUTPUT
+    assert result.final_text is None
+    assert result.error_detail == "empty final answer"
+
+
+async def test_loop_passes_on_the_providers_retry_after_hint():
+    registry, _ = spy_registry()
+    provider = FakeProvider(tool_turns=[Fail(LLMStatus.RATE_LIMITED, retry_after_s=7)])
+
+    result = await run_tool_loop(provider, PROMPT, registry, CONFIG)
+
+    assert result.status is LLMStatus.RATE_LIMITED and result.retry_after_s == 7
+
+
+async def test_clean_two_turn_conversation_is_one_attempt_not_two():
+    registry, _ = spy_registry()
+    provider = FakeProvider(tool_turns=[[call({"service": "a", "limit": 1})], "done"])
+
+    result = await run_tool_loop(provider, PROMPT, registry, CONFIG)
+
+    assert result.rounds == 2
+    assert result.metadata.attempts == 1  # no model call needed a retry
+    assert result.metadata.attempt_statuses == [LLMStatus.SUCCEEDED, LLMStatus.SUCCEEDED]
+
+
+async def test_attempts_is_the_worst_single_turn_so_it_stays_within_max_attempts():
+    registry, _ = spy_registry()
+    provider = FakeProvider(
+        tool_turns=[[call({"service": "a", "limit": 1})], Fail(LLMStatus.TIMED_OUT, attempts=3)]
+    )
+
+    result = await run_tool_loop(provider, PROMPT, registry, CONFIG)
+
+    assert result.status is LLMStatus.TIMED_OUT
+    assert result.metadata.attempts == 3
 
 
 async def test_loop_reports_provider_failure_with_what_already_ran():

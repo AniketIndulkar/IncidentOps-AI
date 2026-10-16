@@ -50,3 +50,27 @@ class LLMCallFailedError(DomainError):
         self.code = f"llm_{status}"
         self.run_id = run_id
         self.retry_after_s = retry_after_s
+
+
+class UnauthorizedError(DomainError):
+    """The caller did not present the token this endpoint requires."""
+
+    code = "unauthorized"
+
+
+class RetryLaterError(DomainError):
+    """Refused for now; the same request can succeed after `retry_after_s` seconds."""
+
+    def __init__(self, message: str, retry_after_s: float) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
+class RateLimitExceededError(RetryLaterError):
+    code = "rate_limit_exceeded"
+
+
+class RequestInProgressError(RetryLaterError):
+    """Another request with the same Idempotency-Key is still running."""
+
+    code = "request_in_progress"

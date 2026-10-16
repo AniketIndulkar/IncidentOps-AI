@@ -206,6 +206,7 @@ Hard dependencies to protect:
 - Postman collection in `postman/` (11 requests).
 - Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
 - Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix.
+- Week write-up: [notes/week-02-llm-application-engineering.md](notes/week-02-llm-application-engineering.md) (every W02 decision, with why and why not).
 
 ### What W02 taught us
 
@@ -231,8 +232,8 @@ Hard dependencies to protect:
 9. **AWS Paid plan, no hard spending cap.** Account moved to Paid when Identity Center/Organizations were enabled (now removed). Mitigation: budget + anomaly alerts, fixed-price Lightsail, delete resources after every session; never enable Organizations/Identity Center.
 10. **Idempotency keys are global and never expire.** Scope per user once auth lands (AIENG-60) and add TTL cleanup (W12, AIENG-71).
 11. **Single LLM provider, no fallback.** A provider outage disables analysis (ADR-001). Second provider and gateway: W11 (AIENG-66).
-12. **LLM endpoints are unauthenticated and not idempotent.** Each `POST …/extraction` is a paid model call; anyone who can reach a deployed API with a key configured can spend money. Do not deploy with `OPENAI_API_KEY` set until auth (AIENG-60) or at least a rate limit exists.
-13. **Extraction ignores the stored fields.** The endpoint sends only title and description, so a stored environment can come back as "not stated". Fix with prompt `v2` and compare against the baseline.
+12. **LLM endpoints use one shared token, not per-user login.** Closed for a single-tenant deploy (review after W02): both LLM endpoints need `INCIDENTOPS_API_TOKEN` as a bearer token (without it they stay off, even with `OPENAI_API_KEY` set), are rate limited (`INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE`, per process, so it assumes one uvicorn worker) and take an `Idempotency-Key` (claimed before the model is called; only successes are replayed). Real users, roles and per-user limits are still AIENG-60; with several workers the rate limit has to move to shared storage.
+13. **Extraction ignored the stored fields.** Fixed with prompt `v2`: the recorded service, severity and environment are sent with the report. Not yet compared against the `v1` baseline with the real model (W11, AIENG-64).
 14. **Eval set is tiny and unscored.** 10 samples, service name checked only. Expected values and repeated runs come in W11 (AIENG-64, 65).
 11. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
 

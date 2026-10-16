@@ -186,3 +186,11 @@ async def test_max_attempts_of_one_disables_retries():
     )
 
     assert result.status is S.PROVIDER_ERROR and len(fake.calls) == 1
+
+
+async def test_closing_the_retry_layer_closes_the_provider_it_wraps():
+    fake = FakeProvider()
+
+    await RetryingProvider(fake).aclose()
+
+    assert fake.closed

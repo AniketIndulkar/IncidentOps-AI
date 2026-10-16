@@ -1,11 +1,20 @@
 """Runs a tool conversation: ask the model, run the calls it requests, send results, repeat.
 
-Bounded by `max_rounds` so a model that keeps asking for tools cannot loop forever.
+Bounded by `max_rounds` so a model that keeps asking for tools cannot loop forever. Tool calls
+are only run when their results can still be sent back: on the last round the calls are recorded
+but not run, so a tool with side effects never runs for an answer nobody will read.
 """
 
 from pydantic import BaseModel
 
-from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig, Prompt, RunMetadata
+from incidentops_ai.llm.provider import (
+    LLMProvider,
+    LLMStatus,
+    ModelConfig,
+    Prompt,
+    RunMetadata,
+    ToolCall,
+)
 from incidentops_ai.tools.registry import ToolExecution, ToolRegistry
 
 DEFAULT_MAX_ROUNDS = 3
@@ -15,9 +24,10 @@ class ToolLoopResult(BaseModel):
     status: LLMStatus
     final_text: str | None = None
     error_detail: str | None = None
+    retry_after_s: float | None = None  # provider's Retry-After hint, when the failing turn had one
     rounds: int  # model turns taken
-    executions: list[ToolExecution] = []  # every requested call, run or rejected, in order
-    metadata: RunMetadata  # tokens, latency and attempts summed over all turns
+    executions: list[ToolExecution] = []  # every requested call, run, rejected or skipped
+    metadata: RunMetadata  # tokens and latency summed over all turns; see RunMetadata.combine
 
 
 async def run_tool_loop(
@@ -41,17 +51,27 @@ async def run_tool_loop(
             transcript=transcript,
             outputs=outputs,
         )
-        total = _combine(total, turn.metadata)
+        total = turn.metadata if total is None else total.combine(turn.metadata)
 
         if turn.status is not LLMStatus.SUCCEEDED:
             return ToolLoopResult(
                 status=turn.status,
                 error_detail=turn.error_detail,
+                retry_after_s=turn.retry_after_s,
                 rounds=round_number,
                 executions=executions,
                 metadata=total,
             )
         if not turn.calls:
+            if not turn.final_text or not turn.final_text.strip():
+                # A "success" with nothing in it is a failed answer, and is recorded as one.
+                return ToolLoopResult(
+                    status=LLMStatus.INVALID_OUTPUT,
+                    error_detail="empty final answer",
+                    rounds=round_number,
+                    executions=executions,
+                    metadata=total,
+                )
             return ToolLoopResult(
                 status=LLMStatus.SUCCEEDED,
                 final_text=turn.final_text,
@@ -59,6 +79,9 @@ async def run_tool_loop(
                 executions=executions,
                 metadata=total,
             )
+        if round_number == max_rounds:
+            executions += [_skipped(call) for call in turn.calls]
+            break
 
         results = await registry.run_all(turn.calls)  # all calls of this turn run concurrently
         executions += [execution for execution, _ in results]
@@ -74,19 +97,7 @@ async def run_tool_loop(
     )
 
 
-def _combine(total: RunMetadata | None, turn: RunMetadata) -> RunMetadata:
-    if total is None:
-        return turn
-
-    def add(a: int | None, b: int | None) -> int | None:
-        return None if a is None and b is None else (a or 0) + (b or 0)
-
-    return turn.model_copy(
-        update={
-            "attempts": total.attempts + turn.attempts,
-            "attempt_statuses": total.attempt_statuses + turn.attempt_statuses,
-            "latency_ms": total.latency_ms + turn.latency_ms,
-            "input_tokens": add(total.input_tokens, turn.input_tokens),
-            "output_tokens": add(total.output_tokens, turn.output_tokens),
-        }
+def _skipped(call: ToolCall) -> ToolExecution:
+    return ToolExecution(
+        call_id=call.call_id, name=call.name, executed=False, ok=False, error="round limit reached"
     )

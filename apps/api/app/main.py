@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.errors import register_error_handlers
+from app.rate_limit import SlidingWindowLimiter
 from app.routes import analysis, incidents
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
@@ -23,14 +24,22 @@ def create_app(
         # One engine (connection pool) per process, created on startup and closed on shutdown.
         engine = create_engine(settings)
         app.state.session_factory = create_session_factory(engine)
-        app.state.llm_provider = llm_provider or (
-            build_provider(settings) if settings.openai_api_key else None
-        )
+        # A provider handed in by the caller is theirs to close; one built here is ours.
+        owned_provider = None
+        if llm_provider is None and settings.openai_api_key:
+            owned_provider = build_provider(settings)
+        app.state.llm_provider = llm_provider or owned_provider
         app.state.llm_config = build_model_config(settings) if settings.llm_model else None
+        app.state.api_token = settings.api_token
+        app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
         try:
             yield
         finally:
-            await engine.dispose()
+            try:
+                if owned_provider is not None:
+                    await owned_provider.aclose()
+            finally:
+                await engine.dispose()
 
     app = FastAPI(title="IncidentOps AI", version="0.0.1", lifespan=lifespan)
 
