@@ -6,17 +6,17 @@ from dataclasses import dataclass
 from incidentops_ai.retrieval.chunking import Chunker
 from incidentops_ai.retrieval.documents import Document
 from incidentops_ai.retrieval.embeddings import Embedder
-from incidentops_ai.retrieval.evalset import Question, resolve_question
+from incidentops_ai.retrieval.evalset import Question
+from incidentops_ai.retrieval.evaluate import evaluate_retriever
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
 from incidentops_ai.retrieval.metrics import (
     DEFAULT_KS,
     QuestionScore,
     Summary,
-    score_question,
     summarize,
     summarize_by_category,
 )
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk
+from incidentops_ai.retrieval.retriever import RetrievedChunk
 
 
 @dataclass(frozen=True)
@@ -52,25 +52,16 @@ async def run_config(
 ) -> ConfigResult:
     if not documents or not questions:
         raise ValueError("an experiment needs documents and questions")
-    tenant_id = documents[0].tenant_id
-    by_id = {document.id: document for document in documents}
 
     chunks = [chunk for document in documents for chunk in config.chunker.chunk(document)]
     retriever = await InMemoryDenseRetriever.build(
         chunks, embedder, with_context=config.with_context
     )
     await embedder.embed([q.text for q in questions])  # one batch, so a cache warms in one request
-
-    scores: list[QuestionScore] = []
-    rankings: dict[str, list[RetrievedChunk]] = {}
-    for question in questions:
-        services = (question.service,) if use_service_filter and question.service else None
-        filters = RetrievalFilter(tenant_id=tenant_id, services=services)
-        ranked = await retriever.retrieve(question.text, k=k, filters=filters)
-        rankings[question.id] = ranked
-        gold = resolve_question(question, by_id)
-        ks = tuple(x for x in DEFAULT_KS if x <= k) or (k,)
-        scores.append(score_question(question.id, question.category, ranked, gold, ks))
+    evaluation = await evaluate_retriever(
+        retriever, documents, questions, k=k, use_service_filter=use_service_filter
+    )
+    scores, rankings = evaluation.scores, evaluation.rankings
 
     return ConfigResult(
         name=config.name,

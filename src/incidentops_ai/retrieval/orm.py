@@ -7,7 +7,9 @@ permission filtering (W10) is a WHERE clause, not a retrofit.
 import uuid
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKeyConstraint,
     Index,
@@ -20,6 +22,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from incidentops_ai.db import Base
+
+# Vectors of every model are stored at this size (OpenAI's text-embedding-3 models can be asked
+# for it). A different size is a new column and a re-embed, never a silent mix.
+EMBEDDING_DIMENSIONS = 1536
 
 
 class DocumentRow(Base):
@@ -68,3 +74,8 @@ class ChunkRow(Base):
     page_end: Mapped[int] = mapped_column(Integer)
     section: Mapped[str | None] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text)
+    # Filled by indexing (store.index_chunks). NULL means "not embedded yet". The model and the
+    # context setting say how, so a vector is never compared with one made differently.
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+    embedding_model: Mapped[str | None] = mapped_column(String(128))
+    embedding_context: Mapped[bool | None] = mapped_column(Boolean)
