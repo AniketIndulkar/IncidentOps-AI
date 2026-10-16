@@ -101,12 +101,12 @@ async def run_benchmark(
     )
 
 
-def _percentile(values: Sequence[float], fraction: float) -> float:
+def percentile(values: Sequence[float], fraction: float) -> float:
     ordered = sorted(values)
     return ordered[max(math.ceil(fraction * len(ordered)) - 1, 0)]
 
 
-def _snippet(text: str) -> str:
+def snippet(text: str) -> str:
     flat = " ".join(text.split())
     return flat if len(flat) <= SNIPPET_CHARS else flat[: SNIPPET_CHARS - 1] + "…"
 
@@ -163,8 +163,8 @@ def render_benchmark_report(
         "Per question, query embedding plus database search.",
         "",
         (
-            f"mean {statistics.fmean(latency):.0f} ms, p50 {_percentile(latency, 0.5):.0f} ms, "
-            f"p95 {_percentile(latency, 0.95):.0f} ms, max {max(latency):.0f} ms"
+            f"mean {statistics.fmean(latency):.0f} ms, p50 {percentile(latency, 0.5):.0f} ms, "
+            f"p95 {percentile(latency, 0.95):.0f} ms, max {max(latency):.0f} ms"
         ),
         "",
         "## By question style",
@@ -195,6 +195,13 @@ def render_benchmark_report(
         f"Questions whose evidence is not all inside the top {MISS_K}.",
         "",
     ]
+    lines += render_misses(result)
+    return "\n".join(lines)
+
+
+def render_misses(result: BenchmarkResult, *, heading: str = "###") -> list[str]:
+    """One entry per missed question: what was not found and what came back instead."""
+    lines: list[str] = []
     for miss in result.misses:
         score = next(s for s in result.scores if s.question_id == miss.question.id)
         found = (
@@ -202,17 +209,20 @@ def render_benchmark_report(
             if score.first_relevant_rank
             else "no relevant chunk in the top 10"
         )
-        lines += [f"### {miss.question.id} ({miss.question.category}): {miss.question.text}", ""]
+        lines += [
+            f"{heading} {miss.question.id} ({miss.question.category}): {miss.question.text}",
+            "",
+        ]
         lines += [f"- {found}; Recall@5 {score.recall[5]:.2f}"]
         for evidence in miss.missing:
-            lines.append(f"- not found: `{evidence.doc_id}`: “{_snippet(evidence.quote)}”")
+            lines.append(f"- not found: `{evidence.doc_id}`: “{snippet(evidence.quote)}”")
         for r in miss.top:
             lines.append(
                 f"- returned #{r.rank} `{r.chunk.doc_id}` › {r.chunk.section or '(no section)'} "
-                f"(score {r.score:.3f}): {_snippet(r.chunk.text)}"
+                f"(score {r.score:.3f}): {snippet(r.chunk.text)}"
             )
         lines.append("")
-    return "\n".join(lines)
+    return lines
 
 
 def write_benchmark(
@@ -237,8 +247,8 @@ def write_benchmark(
         "retriever": result.retriever,
         "embedding_model": embedding_model,
         "k": result.k,
-        "summary": _summary_data(result.summary),
-        "by_category": {n: _summary_data(s) for n, s in result.by_category.items()},
+        "summary": summary_data(result.summary),
+        "by_category": {n: summary_data(s) for n, s in result.by_category.items()},
         "questions": {
             s.question_id: {
                 "category": s.category,
@@ -268,7 +278,7 @@ def _filter_row(label: str, summary: Summary) -> str:
     return f"| {label} | {summary.recall[5]:.3f} | {summary.precision[5]:.3f} | {summary.mrr:.3f} |"
 
 
-def _summary_data(summary: Summary) -> dict:
+def summary_data(summary: Summary) -> dict:
     return {
         "n": summary.n,
         "mrr": round(summary.mrr, 4),
