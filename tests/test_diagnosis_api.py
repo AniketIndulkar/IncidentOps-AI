@@ -1,10 +1,13 @@
 """POST /incidents/{id}/diagnosis, with a scripted model and a fixed retriever: no real calls."""
 
+import sys
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 from sqlalchemy import text
 from test_analysis_api import INCIDENT, runs
 from test_diagnosis import POOL, StaticRetriever, cause, chunks_of, model_says, retrieved
@@ -14,6 +17,7 @@ from incidentops_ai.config import Settings
 from incidentops_ai.llm.fake_provider import FakeProvider
 from incidentops_ai.llm.provider import LLMStatus
 from incidentops_ai.retrieval.embeddings import EmbeddingError
+from incidentops_ai.retrieval.rerank import RerankerError
 
 KEY = {"Idempotency-Key": "diagnose-me-0001"}
 GOOD = ("E1", "exhausts it within minutes")
@@ -204,3 +208,26 @@ async def test_a_failing_retrieval_is_a_502_problem_with_no_model_call_and_a_fre
     async with session_factory() as session:
         keys = (await session.execute(text("SELECT count(*) FROM llm_run_keys"))).scalar_one()
     assert keys == 0
+
+
+async def test_the_rerank_stack_refuses_to_start_when_its_runtime_is_missing(
+    settings, monkeypatch: pytest.MonkeyPatch
+):
+    """A mis-set stack should stop the server at boot, not fail every request later."""
+    monkeypatch.setitem(sys.modules, "fastembed", None)
+    configured = settings.model_copy(
+        update={"retrieval_stack": "hybrid-rerank", "openai_api_key": SecretStr("sk-test-0000")}
+    )
+    app = create_app(configured)
+
+    with pytest.raises(RerankerError, match="uv sync --extra rerank"):
+        async with app.router.lifespan_context(app):
+            pass
+
+
+async def test_the_default_hybrid_stack_starts_with_a_key_and_needs_no_reranker(settings):
+    configured = settings.model_copy(update={"openai_api_key": SecretStr("sk-test-0000")})
+    app = create_app(configured)
+
+    async with app.router.lifespan_context(app):
+        assert app.state.retriever.name == "hybrid-rrf"

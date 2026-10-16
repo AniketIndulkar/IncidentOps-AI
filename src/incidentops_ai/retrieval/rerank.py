@@ -72,17 +72,26 @@ class CrossEncoderReranker:
         self._model: Any = None
         self._lock = threading.Lock()
 
+    @staticmethod
+    def _runtime() -> Any:
+        try:
+            from fastembed.rerank.cross_encoder import TextCrossEncoder
+        except ImportError as error:
+            raise RerankerError(
+                "the cross-encoder needs the optional extra: uv sync --extra rerank"
+            ) from error
+        return TextCrossEncoder
+
+    def check_available(self) -> None:
+        """Raise now, with the install hint, if the optional runtime is missing. Loads no model."""
+        self._runtime()
+
     def _load(self) -> Any:
         with self._lock:
             if self._model is None:
-                try:
-                    from fastembed.rerank.cross_encoder import TextCrossEncoder
-                except ImportError as error:
-                    raise RerankerError(
-                        "the cross-encoder needs the optional extra: uv sync --extra rerank"
-                    ) from error
+                runtime = self._runtime()
                 started = time.perf_counter()
-                self._model = TextCrossEncoder(model_name=self.name)
+                self._model = runtime(model_name=self.name)
                 self.load_seconds = time.perf_counter() - started
             return self._model
 

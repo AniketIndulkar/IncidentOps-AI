@@ -246,3 +246,23 @@ async def test_the_batch_size_limits_how_many_passages_the_model_scores_at_once(
     await CrossEncoderReranker().score("q", ["a"])
 
     assert StubTextCrossEncoder.batch_sizes == [4, 64]
+
+
+def test_check_available_names_the_extra_when_the_runtime_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setitem(sys.modules, "fastembed", None)
+
+    with pytest.raises(RerankerError, match="uv sync --extra rerank"):
+        CrossEncoderReranker().check_available()
+
+
+def test_check_available_is_silent_and_loads_nothing_when_the_runtime_is_there(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    install_stub_runtime(monkeypatch)
+    reranker = CrossEncoderReranker()
+
+    reranker.check_available()
+
+    assert StubTextCrossEncoder.loaded == [] and reranker.load_seconds is None

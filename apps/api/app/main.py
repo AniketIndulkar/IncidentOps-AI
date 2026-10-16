@@ -33,25 +33,26 @@ def create_app(
         app.state.session_factory = create_session_factory(engine)
         # A provider handed in by the caller is theirs to close; one built here is ours.
         owned_provider = None
-        if llm_provider is None and settings.openai_api_key:
-            owned_provider = build_provider(settings)
-        app.state.llm_provider = llm_provider or owned_provider
-        # The retrieval stack embeds questions with OpenAI, so it needs the key too.
         owned_embedder = None
-        if retriever is None and settings.openai_api_key:
-            owned_embedder = build_embedder(settings)
-            reranker = (
-                CrossEncoderReranker() if settings.retrieval_stack == "hybrid-rerank" else None
-            )
-            app.state.retriever = build_retriever(
-                settings.retrieval_stack, app.state.session_factory, owned_embedder, reranker
-            )
-        else:
-            app.state.retriever = retriever
-        app.state.llm_config = build_model_config(settings) if settings.llm_model else None
-        app.state.api_token = settings.api_token
-        app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
         try:
+            if llm_provider is None and settings.openai_api_key:
+                owned_provider = build_provider(settings)
+            app.state.llm_provider = llm_provider or owned_provider
+            # The retrieval stack embeds questions with OpenAI, so it needs the key too.
+            if retriever is None and settings.openai_api_key:
+                owned_embedder = build_embedder(settings)
+                reranker = None
+                if settings.retrieval_stack == "hybrid-rerank":
+                    reranker = CrossEncoderReranker()
+                    reranker.check_available()  # a mis-set stack stops the server at boot
+                app.state.retriever = build_retriever(
+                    settings.retrieval_stack, app.state.session_factory, owned_embedder, reranker
+                )
+            else:
+                app.state.retriever = retriever
+            app.state.llm_config = build_model_config(settings) if settings.llm_model else None
+            app.state.api_token = settings.api_token
+            app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
         finally:
             try:
