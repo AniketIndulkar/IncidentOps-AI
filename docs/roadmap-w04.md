@@ -4,9 +4,9 @@ Source: Jira epic **AIENG-5** and tasks **AIENG-29 to AIENG-33**, read 16 Oct 20
 Overall plan: [ROADMAP.md](ROADMAP.md). Built early, like W02 and W03, on branch
 `feat/w04-hybrid-rerank-diagnosis` (cut from the W03 tip).
 
-> **Status, 16 Oct 2026: design approved; BM25, RRF, the reranker and the comparison are built and
-> measured (AIENG-29 to 31, part of 33). Cited diagnosis (AIENG-32) is in progress.** The design
-> below is unchanged from when it was approved.
+> **Status, 16 Oct 2026: complete, except the `v0.1` tag, which waits for your go-ahead.** BM25, RRF,
+> the reranker, the comparison and the cited diagnosis endpoint are built and measured (AIENG-29 to 33).
+> The design below is unchanged from when it was approved.
 >
 > **Result:** by the rule fixed below, the default stack is **hybrid** (dense + BM25, RRF); the
 > reranker is not adopted. Hybrid beats dense by +0.006 MRR on `fixed-2000-200` and +0.029 on
@@ -20,7 +20,13 @@ Overall plan: [ROADMAP.md](ROADMAP.md). Built early, like W02 and W03, on branch
 > (2) `--rerank-depth` and `--rerank-batch-size` were added to run the depth sweep the design asks for
 > and the smaller-batch fallback; (3) the benchmark times question embeddings live while chunk
 > vectors stay cached, otherwise the cache would hide the dense latency; (4) truncation of reranker
-> input is counted exactly from the model's tokenizer.
+> input is counted exactly from the model's tokenizer; (5) the BM25 index used by the API takes its
+> tenant from each query and rebuilds when a fingerprint of the stored chunks changes; (6) a citation
+> shows the source's own text for the quote (not the model's wording) and the chunk's page range.
+>
+> Write-ups: [W04 note](notes/week-04-hybrid-retrieval-and-diagnosis.md),
+> [October retrospective](notes/retro-october-2026.md), diagnosis spot check in
+> [evals/diagnosis](../evals/diagnosis/2026-10-16-real-model-check.md).
 
 ## Goal of the week
 

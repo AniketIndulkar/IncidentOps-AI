@@ -47,7 +47,7 @@ Client ──▶  FastAPI ingress (typed API, idempotency, structured errors)
 | Tag | Week | Date | Meaning |
 |---|---|---|---|
 | — | W01 | 9 Oct | Deployed typed API with persistence, idempotency, CI |
-| **v0.1** | W04 | 30 Oct | Evidence-backed hybrid retrieval + grounded, cited diagnosis |
+| **v0.1** | W04 | 30 Oct | Evidence-backed hybrid retrieval + grounded, cited diagnosis. Built 16 Oct; tag not created yet |
 | **v0.2** | W08 | 27 Nov | Recoverable agent workflow with HITL approval and MCP trust boundary |
 | **v1.0** | W13 | 1 Jan | Release: docs, reports, runbook, cost model, walkthrough |
 
@@ -88,10 +88,16 @@ Findings: [dense-baseline-findings](../evals/retrieval/runs/2026-10-16-dense-bas
 - ✅ AIENG-27 pgvector column, `PgVectorRetriever` (tenant/service/type filters in SQL), held to the same ranking as the in-memory reference. Embedding model `text-embedding-3-small` adopted: `-large` gained 0 points of Recall@5 on the chosen config.
 - ✅ AIENG-28 Baseline on pgvector: Recall@5 0.983, MRR@10 0.961, p95 285 ms, one question below full Recall@5. Ten failures inspected and sorted into modes; hypotheses H1–H6 judged (two refuted, two partly, two confirmed).
 
-**W04 · Hybrid, RRF, reranking** (AIENG-5)
-- AIENG-29 BM25 → AIENG-30 RRF fusion → AIENG-31 cross-encoder (does it earn its latency?).
-- AIENG-32 Diagnosis with citations + explicit no-evidence/no-answer path; unsupported claims blocked in tests.
-- AIENG-33 Dense vs BM25 vs Hybrid vs Hybrid+rerank table (quality/latency/cost); **tag v0.1**; October retro.
+**W04 · Hybrid, RRF, reranking** (AIENG-5) — *exit: Dense vs BM25 vs Hybrid vs Hybrid+reranker benchmark with grounded diagnosis output*
+
+Detailed plan, hypotheses and the stack-selection rule: [roadmap-w04.md](roadmap-w04.md). Done 16 Oct, ahead of schedule.
+Findings: [hybrid-findings](../evals/retrieval/runs/2026-10-16-hybrid-findings.md); write-up: [notes/week-04-hybrid-retrieval-and-diagnosis.md](notes/week-04-hybrid-retrieval-and-diagnosis.md).
+
+- ✅ AIENG-29 BM25 (own implementation, identifiers indexed whole and in parts, no stemming, k1 1.2 / b 0.75 fixed in advance). Ties dense on `fixed-2000-200` (MRR 0.957 vs 0.961), worse on small chunks (0.815 vs 0.889) except identifiers.
+- ✅ AIENG-30 RRF fusion (k 60, top 50 each, equal weights). Hybrid: MRR 0.967 on `fixed-2000-200`, 0.918 on `section-1500`+header; Recall@5 1.000 on the first. **Adopted as the default stack** by the rule fixed in advance; the win is about one question.
+- ✅ AIENG-31 Cross-encoder (`Xenova/ms-marco-MiniLM-L-6-v2`, ONNX, optional extra). **Does not earn its latency here**: MRR −0.006 and −0.029 on the two decision configs, and too heavy locally as pre-registered (p95 423 to 715 ms, 1.3 GB added at the default batch). Helps on small chunks without a header, where the free context header does the same. Built, off by default.
+- ✅ AIENG-32 `POST /incidents/{id}/diagnosis`: causes with server-checked citations, explicit `no_answer` (no evidence / insufficient evidence / no supported cause); fabricated citations blocked in tests. Real-model spot check: 3 of 3 on-corpus answered, 2 of 2 off-corpus refused ([record](../evals/diagnosis/2026-10-16-real-model-check.md)).
+- ✅ AIENG-33 Stack comparison table, [October retrospective](notes/retro-october-2026.md). **`v0.1` tag not created yet** (waiting for your go-ahead).
 
 ### Phase 3 — Richer evidence (W05–W06, 2–13 Nov)
 
@@ -195,13 +201,17 @@ Hard dependencies to protect:
 | Repo layout | Keep `apps/api` (HTTP) thin, domain logic in `src/incidentops_ai` | Workflow, evals and CLI reuse the same code |
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
+| Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (16 Oct 2026, W03 complete)
+## Current state (16 Oct 2026, W04 complete; `v0.1` not tagged yet)
 
-- **W01, W02 and W03 complete** (AIENG-2, 15–28). W03 was built and measured on 16 Oct, ahead of its
-  19–23 Oct slot. Next: W04, starting with AIENG-29 (BM25).
+- **W01 to W04 complete** (AIENG-2, 15–33). W03 and W04 were built and measured on 16 Oct, ahead of
+  their 19–23 Oct and 26–30 Oct slots. Next: W05 (knowledge graph), starting with AIENG-34. Waiting on
+  you: the `v0.1` tag, the pull request and the Jira updates.
 - API: incidents (`POST`, `GET`, idempotency keys), `POST /incidents/{id}/extraction`,
-  `POST /incidents/{id}/related-incidents`, `/health`; RFC 9457 errors. Unchanged in W03.
+  `POST /incidents/{id}/related-incidents`, **`POST /incidents/{id}/diagnosis`** (W04), `/health`; RFC 9457
+  errors (new: `retrieval_failed`, 502). The diagnosis route uses the same bearer token, rate limit and
+  `Idempotency-Key` as the other two LLM routes.
 - LLM: provider layer (`LLMProvider`; OpenAI and fake implementations), strict structured output,
   bounded retry, tool calling with a validation gate and parallel execution, rule-based review flag.
   Model in use: `gpt-6-luna`. Prompts versioned in the package (`extract_incident/v1`, `v2`, `related_incidents/v1`).
@@ -210,21 +220,33 @@ Hard dependencies to protect:
   into PostgreSQL, `Embedder` interface (OpenAI with bounded retry, offline fake, on-disk cache),
   a `Retriever` interface with a **required tenant**, in-memory and pgvector dense retrievers,
   Recall@K / Precision@K / Hit@K / MRR against evidence spans, experiment and benchmark runners.
+  **W04:** `Bm25Retriever`, reciprocal-rank-fusion `HybridRetriever`, `Reranker` interface with a
+  local ONNX cross-encoder (optional extra `rerank`), `build_retriever` (dense / hybrid / hybrid-rerank),
+  a BM25 index that follows re-ingestion, and `stack_benchmark` (every stage on the same questions).
+- Diagnosis (`src/incidentops_ai/diagnosis/`, prompt `diagnose_incident/v1`): numbered evidence, causes with
+  `(evidence id, verbatim quote)` citations, a server-side check that the quote is in the cited chunk
+  (words exact, spacing free, 12+ characters), provenance rebuilt from stored chunk data, explicit `no_answer`.
 - Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`, `llm_runs`,
   `llm_run_keys`, `documents`, `chunks` with a 1536-dimension `vector` column).
-- Tests: 387 pytest tests against real Postgres with pgvector, all offline (no API key, no model calls in CI).
+- Tests: 487 pytest tests (1 skipped: the opt-in real-reranker test) against real Postgres with pgvector, all offline (no API key, no model calls, no model download in CI).
 - Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`); 30 retrieval
   questions with 42 evidence spans (`evals/retrieval/questions.jsonl`), checked by a test against the corpus.
   Dense baseline (`text-embedding-3-small`, `fixed-2000-200`, pgvector): Recall@5 0.983, Precision@5 0.260,
   MRR@10 0.961, mean query latency 210 ms. Reports and per-question data in `evals/retrieval/runs/`.
+  **W04 stack comparison** (same questions; `fixed-2000-200` / `section-1500`+header, MRR@10): dense
+  0.961 / 0.889, BM25 0.957 / 0.815, **hybrid 0.967 / 0.918**, hybrid+rerank 0.961 / 0.889. Diagnosis spot
+  check with the real model in `evals/diagnosis/`.
 - Docker (image builds with the new dependencies), CI (lint → test → build; green on `main` as of W01) and
   compose now use `pgvector/pgvector:pg17` (changed in W03, CI not yet run on it), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
 - Postman collection in `postman/` (11 requests).
 - Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
 - Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix,
   [retrieval mental model](notes/retrieval-mental-model.md), [W03 write-up](notes/week-03-retrieval-foundations.md),
-  [dense baseline findings](../evals/retrieval/runs/2026-10-16-dense-baseline-findings.md).
-- Week write-ups: [W02](notes/week-02-llm-application-engineering.md), [W03](notes/week-03-retrieval-foundations.md).
+  [dense baseline findings](../evals/retrieval/runs/2026-10-16-dense-baseline-findings.md),
+  [hybrid findings](../evals/retrieval/runs/2026-10-16-hybrid-findings.md),
+  [W04 write-up](notes/week-04-hybrid-retrieval-and-diagnosis.md), [October retrospective](notes/retro-october-2026.md).
+- Week write-ups: [W02](notes/week-02-llm-application-engineering.md), [W03](notes/week-03-retrieval-foundations.md),
+  [W04](notes/week-04-hybrid-retrieval-and-diagnosis.md).
 
 ### What W03 taught us
 
@@ -245,6 +267,21 @@ Hard dependencies to protect:
   are CI and compose now.
 - An expired API key stopped the measurement, not the build; the offline runs were never presented
   as results, and the real runs cost a few cents.
+
+### What W04 taught us
+
+- Dense, BM25 and hybrid are within one or two questions of each other on this corpus. "Hybrid is never
+  meaningfully worse and costs nothing" is the honest claim; "hybrid wins" is not.
+- BM25 beats dense on identifiers when chunks are small (q06) and is blind to "updates" vs "update"
+  (q10): no stemming was a pre-registered choice with a visible cost.
+- A reranker reads the question against the heading and the passage. It fixes "right document, wrong
+  section" (q28, q10, q29) and breaks cases where topical overlap beats intent (q15) or the answer is one
+  line in a section about something else (q13). On small chunks a free context header buys the same MRR.
+- As pre-registered the reranker is too heavy locally (423 to 715 ms p95, 1.3 GB added at the default
+  batch). A batch of 8 halves the memory and depth 10 brings small chunks under 300 ms; none gets under
+  500 MB. A 1 GB Lightsail box cannot hold it, so no AWS move was needed because the rule did not adopt it.
+- A citation proves the quote exists, not that the claim follows. Claim-level checking is W11.
+- The remaining failures (q24, q25, q29) are about sources, not passages: the graph (W05) is the planned fix.
 
 ### What W02 taught us
 
@@ -276,11 +313,15 @@ Hard dependencies to protect:
 15. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
 
 16. ~~OpenAI key expired (found 16 Oct)~~ — resolved the same day with a new project-scoped key; keep the spend limit on and auto-recharge off.
-17. **Retrieval metrics favour large chunks on a corpus of short documents — confirmed in W03.** The rule picked `fixed-2000-200` (≈ whole documents; 7,433 characters read for the top five vs 1,961 for `section-1500`). Re-check the choice when the corpus has long documents (W06 PDFs, W11 expansion); runner-up `section-1500` + context header.
+17. **Retrieval metrics favour large chunks on a corpus of short documents — confirmed in W03; W04 reports both.** The rule picked `fixed-2000-200` (≈ whole documents; 7,433 characters read for the top five vs 1,961 for `section-1500`). Re-check the choice when the corpus has long documents (W06 PDFs, W11 expansion); runner-up `section-1500` + context header. W04 ran every stage on both configs; hybrid is the default on either.
 18. **Corpus and eval set share one author and are small** (18 documents, 30 questions; one question is 3.3 points). Treat differences under about 5 points as noise; expand in W11.
 19. **Postgres image changed** from `postgres:17-alpine` to `pgvector/pgvector:pg17` in compose and CI. A reused data volume could have collation differences (alpine/musl vs Debian/glibc); the Lightsail deploy is recreated each time, so it is acceptable, but CI and a clean deploy have not run on it yet.
 20. **No vector index.** Exact scan is right for hundreds of chunks. Add HNSW near ~10,000 chunks (measure recall against the exact scan when you do).
-21. **The dense baseline is near its ceiling** (Recall@5 0.983, MRR 0.961, one miss), so W04's hybrid and reranking gains may be invisible on the chosen config. Run W04 on `section-1500` as well and add harder multi-source questions (q24, q25 are the template) in W11.
+21. **The dense baseline is near its ceiling** (Recall@5 0.983, MRR 0.961, one miss), so W04's hybrid and reranking gains may be invisible on the chosen config. Confirmed: the only visible change there is one question (q25). W04 ran `section-1500`+header as the second decision config; add harder multi-source questions (q24, q25, q29 are the template) in W11.
+22. **A citation proves the words exist, not that the claim follows.** The server checks that the quote is in the cited chunk; it cannot tell that a claim goes beyond it (the Kafka answer in the spot check joined a runbook fact to an inference from an older incident, hedged only by the model's own wording). Claim-level checks: W11 (AIENG-64, 65).
+23. **No relevance gate for "nothing relevant was retrieved".** Off-corpus incidents still retrieve five chunks and reach the model, which refused 2 of 2 in the spot check. A score threshold needs off-corpus incidents to calibrate against: W11 (AIENG-64).
+24. **BM25 without stemming** misses "updates" vs "update" (q10). Left out on purpose (parameters fixed before the run); try it on the larger golden set (W11).
+25. **The reranker is too heavy to run in the 1 GB Lightsail deploy** (0.65 to 1.3 GB). It is off by default and an optional extra, so the default image is unaffected. If a later corpus needs it: depth 10 and a small batch, then a hosted reranker, then a bigger instance.
 
 ## Weekly cadence
 
