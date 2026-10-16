@@ -478,6 +478,61 @@
           ]
         },
         {
+          "name": "Diagnose with cited evidence",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/incidents/{{incidentId}}/diagnosis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "incidents",
+                "{{incidentId}}",
+                "diagnosis"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Calls a real LLM when the server has OPENAI_API_KEY, INCIDENTOPS_LLM_MODEL and an ingested corpus:",
+                  "// retrieval first (hybrid search over the stored runbooks and postmortems), then one model call.",
+                  "if (pm.response.code === 503 && pm.response.json().code === 'llm_not_configured') {",
+                  "  pm.test('LLM or retrieval not configured on this server (skipped)', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/problem+json'));",
+                  "  return;",
+                  "}",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('answers, or says explicitly that it cannot', () => {",
+                  "  pm.expect(['answered', 'no_answer']).to.include(body.diagnosis.status);",
+                  "  pm.expect(body.diagnosis.status === 'answered').to.eql(body.diagnosis.causes.length > 0);",
+                  "  pm.expect(body.diagnosis.status === 'no_answer').to.eql(body.diagnosis.no_answer_reason !== null);",
+                  "});",
+                  "pm.test('every shown cause has a checked citation with its source', () => {",
+                  "  body.diagnosis.causes.forEach(cause => {",
+                  "    pm.expect(cause.citations).to.be.an('array').and.not.empty;",
+                  "    cause.citations.forEach(c => {",
+                  "      pm.expect(c.quote).to.be.a('string').and.not.empty;",
+                  "      pm.expect(c.doc_id).to.be.a('string').and.not.empty;",
+                  "      pm.expect(c.source_path).to.be.a('string').and.not.empty;",
+                  "      pm.expect(c.quote_end - c.quote_start).to.eql(c.quote.length);",
+                  "    });",
+                  "  });",
+                  "});",
+                  "pm.test('reports which retrieval stack supplied the evidence', () => {",
+                  "  pm.expect(body.retrieval.stack).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.run.prompt_name).to.eql('diagnose_incident');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Extraction for unknown incident",
           "request": {
             "method": "POST",

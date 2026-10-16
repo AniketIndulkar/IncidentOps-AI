@@ -53,13 +53,35 @@ documents); choose another with `--chunker`. Dense baseline on this corpus: Reca
 Add `--fake` to the benchmark and
 experiment commands for an offline wiring check (clearly labelled; not a measurement).
 
+## Hybrid retrieval and cited diagnosis (W04)
+
+Dense search and BM25 are fused by reciprocal rank (the default stack, chosen by a rule fixed before the
+run; see the [findings](evals/retrieval/runs/2026-10-16-hybrid-findings.md) and
+[docs/roadmap-w04.md](docs/roadmap-w04.md)). A cross-encoder reranker is built and measured but off by
+default: it did not earn its cost on this corpus.
+
+```bash
+uv run python -m incidentops_ai.retrieval.stack_benchmark --fake              # offline wiring check, all stages
+uv run python -m incidentops_ai.retrieval.stack_benchmark --stages dense,bm25,hybrid   # real run, no model download
+uv sync --extra rerank                                                        # optional: the local reranker (~87 MB model on first use)
+uv run --extra rerank python -m incidentops_ai.retrieval.stack_benchmark      # all four stages, three chunk configs
+```
+
+`POST /incidents/{id}/diagnosis` (same bearer token, rate limit and `Idempotency-Key` as the other LLM
+routes) retrieves evidence, asks the model for likely causes and returns only causes whose citation the
+server has checked against the stored chunk, with the source document, section, page and character span.
+With nothing relevant it answers `no_answer`, never a guess. It needs the corpus ingested and indexed
+(commands above), `OPENAI_API_KEY`, `INCIDENTOPS_LLM_MODEL` and `INCIDENTOPS_API_TOKEN`;
+`INCIDENTOPS_RETRIEVAL_STACK` picks `dense`, `hybrid` (default) or `hybrid-rerank`.
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
 - `src/incidentops_ai` — domain models, persistence, config (reused by workers/evals later)
   - `llm/`, `extraction/`, `tools/` — provider layer, structured extraction, read-only tools (W02)
-  - `retrieval/` — documents, chunking, embeddings, retrievers, metrics, benchmark (W03)
+  - `retrieval/` — documents, chunking, embeddings, retrievers, metrics, benchmark (W03); BM25, hybrid, reranker, stacks (W04)
+  - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
-- `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03)
+- `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04)
 - `migrations` — Alembic schema migrations
 - `docs` — roadmap, notes, ADRs

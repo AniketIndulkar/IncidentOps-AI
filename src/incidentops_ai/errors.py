@@ -52,6 +52,12 @@ class LLMCallFailedError(DomainError):
         self.retry_after_s = retry_after_s
 
 
+class RetrievalFailedError(DomainError):
+    """The evidence for an analysis could not be fetched (embedding or reranking failed)."""
+
+    code = "retrieval_failed"
+
+
 class UnauthorizedError(DomainError):
     """The caller did not present the token this endpoint requires."""
 

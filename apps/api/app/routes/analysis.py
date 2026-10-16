@@ -12,12 +12,15 @@ from app.deps import (
     LLM,
     LLMConfig,
     LLMIdempotencyKey,
+    Retrieval,
     SessionFactory,
     enforce_llm_rate_limit,
     require_llm_access,
 )
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
-from incidentops_ai.errors import LLMCallFailedError
+from incidentops_ai.diagnosis.models import Diagnosis
+from incidentops_ai.diagnosis.service import diagnose
+from incidentops_ai.errors import LLMCallFailedError, RetrievalFailedError
 from incidentops_ai.extraction.models import IncidentExtraction
 from incidentops_ai.extraction.review import ReviewDecision, assess
 from incidentops_ai.extraction.service import RecordedFields, extract_incident
@@ -27,6 +30,9 @@ from incidentops_ai.llm.provider import LLMStatus, RunMetadata
 from incidentops_ai.llm.run_keys import claim_key, release_key
 from incidentops_ai.llm.runs import LLMRunRead, LLMRunRepository
 from incidentops_ai.related import find_related_incidents
+from incidentops_ai.retrieval.documents import DEFAULT_TENANT
+from incidentops_ai.retrieval.embeddings import EmbeddingError
+from incidentops_ai.retrieval.rerank import RerankerError
 from incidentops_ai.tools.recent_incidents import make_recent_incidents_tool
 from incidentops_ai.tools.registry import ToolExecution, ToolRegistry
 
@@ -34,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 EXTRACT_OPERATION = "extract_incident"
 RELATED_OPERATION = "related_incidents"
+DIAGNOSE_OPERATION = "diagnose_incident"
 
 _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
@@ -66,6 +73,19 @@ class RelatedIncidentsResponse(BaseModel):
     incident_id: uuid.UUID
     summary: str
     tool_calls: list[ToolExecution]
+    run: RunMetadata
+
+
+class RetrievalInfo(BaseModel):
+    stack: str  # which retriever supplied the evidence
+    latency_ms: float
+
+
+class DiagnosisResponse(BaseModel):
+    run_id: uuid.UUID
+    incident_id: uuid.UUID
+    diagnosis: Diagnosis  # only causes whose citations the server has checked
+    retrieval: RetrievalInfo
     run: RunMetadata
 
 
@@ -212,5 +232,74 @@ async def related_incidents(
         incident_id=incident.id,
         summary=result.final_text,
         tool_calls=result.executions,
+        run=result.metadata,
+    )
+
+
+@router.post("/diagnosis", response_model=DiagnosisResponse)
+async def diagnose_incident(
+    incident_id: uuid.UUID,
+    sessions: SessionFactory,
+    llm: LLM,
+    config: LLMConfig,
+    retriever: Retrieval,
+    response: Response,
+    idempotency_key: LLMIdempotencyKey = None,
+):
+    """Likely causes of the incident, each backed by a quote from a runbook or postmortem that
+    the server has checked against the source. Causes whose citation does not check out are
+    dropped; with no usable evidence the answer is an explicit `no_answer`, never a guess."""
+    incident = await _load(sessions, incident_id)
+    if replay := await _claim(sessions, DIAGNOSE_OPERATION, incident.id, idempotency_key):
+        response.headers["Idempotent-Replayed"] = "true"
+        return DiagnosisResponse(
+            run_id=replay.id,
+            incident_id=incident.id,
+            diagnosis=Diagnosis.model_validate(replay.output["diagnosis"]),
+            retrieval=RetrievalInfo.model_validate(replay.output["retrieval"]),
+            run=replay.metadata,
+        )
+
+    async with _release_claim_on_error(sessions, DIAGNOSE_OPERATION, idempotency_key):
+        try:
+            result = await diagnose(
+                llm,
+                retriever,
+                query=_report_text(incident),
+                tenant_id=DEFAULT_TENANT,
+                config=config,
+            )
+        except (EmbeddingError, RerankerError) as error:
+            # The detail may name providers or limits; it goes to the log, not to the client.
+            logger.warning("Evidence retrieval failed: %s", error)
+            raise RetrievalFailedError(
+                "The evidence for this diagnosis could not be fetched. Try again shortly."
+            ) from error
+
+        retrieval = RetrievalInfo(stack=result.stack, latency_ms=round(result.retrieval_ms, 1))
+        async with sessions() as session:
+            run_id = await LLMRunRepository(session).record(
+                operation=DIAGNOSE_OPERATION,
+                incident_id=incident.id,
+                status=result.status,
+                metadata=result.metadata,
+                error_detail=result.error_detail,
+                output=(
+                    {
+                        "diagnosis": result.diagnosis.model_dump(mode="json"),
+                        "retrieval": retrieval.model_dump(mode="json"),
+                    }
+                    if result.diagnosis
+                    else None
+                ),
+                idempotency_key=idempotency_key,
+            )
+    if result.status is not LLMStatus.SUCCEEDED or result.diagnosis is None:
+        raise LLMCallFailedError(result.status, run_id, "Diagnosis", result.retry_after_s)
+    return DiagnosisResponse(
+        run_id=run_id,
+        incident_id=incident.id,
+        diagnosis=result.diagnosis,
+        retrieval=retrieval,
         run=result.metadata,
     )

@@ -10,13 +10,20 @@ from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMProvider
+from incidentops_ai.retrieval.factory import build_embedder
+from incidentops_ai.retrieval.rerank import CrossEncoderReranker
+from incidentops_ai.retrieval.retriever import Retriever
+from incidentops_ai.retrieval.stack import build_retriever
 
 
 def create_app(
-    settings: Settings | None = None, *, llm_provider: LLMProvider | None = None
+    settings: Settings | None = None,
+    *,
+    llm_provider: LLMProvider | None = None,
+    retriever: Retriever | None = None,
 ) -> FastAPI:
-    """`llm_provider` lets tests inject a FakeProvider; otherwise the real one is built from
-    settings, or left off (LLM endpoints answer 503) when no key or model is configured."""
+    """`llm_provider` and `retriever` let tests inject fakes; otherwise the real ones are built
+    from settings, or left off (the endpoints that need them answer 503) when no key is set."""
     settings = settings or Settings()
 
     @asynccontextmanager
@@ -26,18 +33,33 @@ def create_app(
         app.state.session_factory = create_session_factory(engine)
         # A provider handed in by the caller is theirs to close; one built here is ours.
         owned_provider = None
-        if llm_provider is None and settings.openai_api_key:
-            owned_provider = build_provider(settings)
-        app.state.llm_provider = llm_provider or owned_provider
-        app.state.llm_config = build_model_config(settings) if settings.llm_model else None
-        app.state.api_token = settings.api_token
-        app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
+        owned_embedder = None
         try:
+            if llm_provider is None and settings.openai_api_key:
+                owned_provider = build_provider(settings)
+            app.state.llm_provider = llm_provider or owned_provider
+            # The retrieval stack embeds questions with OpenAI, so it needs the key too.
+            if retriever is None and settings.openai_api_key:
+                owned_embedder = build_embedder(settings)
+                reranker = None
+                if settings.retrieval_stack == "hybrid-rerank":
+                    reranker = CrossEncoderReranker()
+                    reranker.check_available()  # a mis-set stack stops the server at boot
+                app.state.retriever = build_retriever(
+                    settings.retrieval_stack, app.state.session_factory, owned_embedder, reranker
+                )
+            else:
+                app.state.retriever = retriever
+            app.state.llm_config = build_model_config(settings) if settings.llm_model else None
+            app.state.api_token = settings.api_token
+            app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
         finally:
             try:
                 if owned_provider is not None:
                     await owned_provider.aclose()
+                if owned_embedder is not None:
+                    await owned_embedder.aclose()
             finally:
                 await engine.dispose()
 
