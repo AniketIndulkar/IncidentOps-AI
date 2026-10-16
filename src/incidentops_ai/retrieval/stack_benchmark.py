@@ -391,8 +391,9 @@ def _reranker_section(run: StageRun) -> list[str]:
             f"candidates: mean {extra['rerank_mean_ms']:.0f} ms, p95 {extra['rerank_p95_ms']:.0f} ms."
         ),
         (
-            f"- Memory added: {extra['rss_added_mb']:.0f} MB. Candidates probably cut at the "
-            f"{TOKEN_LIMIT}-token limit (estimate): {extra['truncated']:.0f}."
+            f"- Memory added: {extra['rss_added_mb']:.0f} MB. Candidates cut at the "
+            f"{TOKEN_LIMIT}-token limit: {extra['truncated']:.0f} of "
+            f"{RERANK_DEPTH * run.result.summary.n} reranked."
         ),
         f"- {verdict}",
         (

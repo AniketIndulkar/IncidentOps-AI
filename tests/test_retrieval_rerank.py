@@ -1,7 +1,10 @@
 """AIENG-31: a reranker behind the Retriever interface."""
 
 import sys
+import types
 from collections.abc import Sequence
+from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 
@@ -168,3 +171,64 @@ async def test_a_missing_runtime_says_how_to_install_it(monkeypatch: pytest.Monk
 
     with pytest.raises(RerankerError, match="uv sync --extra rerank"):
         await CrossEncoderReranker().score("q", ["a passage"])
+
+
+class StubEncoding:
+    def __init__(self, overflowing: list[int]) -> None:
+        self.overflowing = overflowing
+
+
+class StubTokenizer:
+    """Pretends any passage longer than 10 characters does not fit the model's input."""
+
+    def encode(self, query: str, passage: str) -> StubEncoding:
+        return StubEncoding([1] if len(passage) > 10 else [])
+
+
+class StubTextCrossEncoder:
+    loaded: ClassVar[list[str]] = []
+
+    def __init__(self, model_name: str) -> None:
+        StubTextCrossEncoder.loaded.append(model_name)
+        self.model = SimpleNamespace(tokenizer=StubTokenizer())
+
+    def rerank(self, query: str, passages: Sequence[str]):
+        return (len(passage) / 100 for passage in passages)
+
+
+def install_stub_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stands in for fastembed, so the loading path runs without the extra or a download."""
+    StubTextCrossEncoder.loaded = []
+    module = types.ModuleType("fastembed.rerank.cross_encoder")
+    module.TextCrossEncoder = StubTextCrossEncoder
+    monkeypatch.setitem(sys.modules, "fastembed", types.ModuleType("fastembed"))
+    monkeypatch.setitem(sys.modules, "fastembed.rerank", types.ModuleType("fastembed.rerank"))
+    monkeypatch.setitem(sys.modules, "fastembed.rerank.cross_encoder", module)
+
+
+async def test_the_model_loads_once_on_first_use_and_scores_come_back_as_floats(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    install_stub_runtime(monkeypatch)
+    reranker = CrossEncoderReranker("some/model")
+
+    first = await reranker.score("q", ["short", "a much longer passage"])
+    second = await reranker.score("q", ["short"])
+
+    assert StubTextCrossEncoder.loaded == ["some/model"]
+    assert first == pytest.approx([0.05, 0.21]) and second == pytest.approx([0.05])
+    assert all(isinstance(score, float) for score in first)
+    assert reranker.load_seconds is not None and reranker.load_seconds >= 0
+    assert await reranker.score("q", []) == []
+
+
+async def test_truncated_passages_are_counted_exactly_from_the_models_own_tokenizer(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    install_stub_runtime(monkeypatch)
+    reranker = CrossEncoderReranker()
+
+    await reranker.score("q", ["short", "a much longer passage", "another long passage here"])
+    await reranker.score("q", ["a much longer passage"])
+
+    assert reranker.truncated == 3

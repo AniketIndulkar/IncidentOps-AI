@@ -53,8 +53,7 @@ class CrossEncoderReranker:
     """A small cross-encoder run locally on CPU. Loaded on first use, inference off the event loop.
 
     `load_seconds` is how long loading took (None before first use). `truncated` counts passages
-    that probably exceeded the model's input limit and were cut; it is an *estimate* from the
-    character count (4 characters per token), which under-counts code and identifiers.
+    that exceeded the model's input limit and were cut, summed over all calls.
     """
 
     def __init__(self, model_name: str = DEFAULT_MODEL, *, max_length: int = TOKEN_LIMIT) -> None:
@@ -83,9 +82,17 @@ class CrossEncoderReranker:
         if not passages:
             return []
         model = await asyncio.to_thread(self._load)
-        limit = self._max_length * CHARS_PER_TOKEN
-        self.truncated += sum(len(query) + len(passage) > limit for passage in passages)
+        self.truncated += self._count_truncated(model, query, passages)
         return await asyncio.to_thread(lambda: [float(s) for s in model.rerank(query, passages)])
+
+    def _count_truncated(self, model: Any, query: str, passages: Sequence[str]) -> int:
+        """Passages cut at the model's input limit: exact when the model's tokenizer is reachable
+        (it reports the tokens that overflowed), else estimated from the character count."""
+        tokenizer = getattr(getattr(model, "model", None), "tokenizer", None)
+        if tokenizer is not None:
+            return sum(bool(tokenizer.encode(query, passage).overflowing) for passage in passages)
+        limit = self._max_length * CHARS_PER_TOKEN
+        return sum(len(query) + len(passage) > limit for passage in passages)
 
 
 class RerankingRetriever:
