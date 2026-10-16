@@ -35,15 +35,16 @@ from incidentops_ai.retrieval.embeddings import CachingEmbedder, Embedder, FakeE
 from incidentops_ai.retrieval.evalset import Question, load_questions
 from incidentops_ai.retrieval.experiment import ExperimentConfig
 from incidentops_ai.retrieval.factory import build_embedder
+from incidentops_ai.retrieval.hybrid import HybridRetriever
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
 from incidentops_ai.retrieval.retriever import Retriever
 
-STAGES = ("dense", "bm25")
+STAGES = ("dense", "bm25", "hybrid")
 # The two configs the stack is chosen on; anything else in a report is exploratory.
 DECISION_CONFIGS = ("fixed-2000-200", "section-1500+ctx")
 DEFAULT_CONFIGS = (*DECISION_CONFIGS, "section-1500")
-# Which earlier stage a stage's regressions are read against.
-COMPARED_TO = {"bm25": "dense", "hybrid": "dense", "hybrid-rerank": "hybrid"}
+# Which earlier stages a stage's regressions are read against.
+COMPARED_TO = {"bm25": ("dense",), "hybrid": ("dense", "bm25"), "hybrid-rerank": ("hybrid",)}
 # Stages that send the question to the embedding API.
 EMBEDS_QUERY = frozenset({"dense", "hybrid", "hybrid-rerank"})
 
@@ -125,8 +126,12 @@ async def run_stages(
                 retrievers[stage] = await InMemoryDenseRetriever.build(
                     chunks, dense_embedder, with_context=config.with_context
                 )
-            else:
+            elif stage == "bm25":
                 retrievers[stage] = Bm25Retriever(chunks, with_context=config.with_context)
+            else:
+                retrievers[stage] = HybridRetriever(
+                    await retriever_for("dense"), await retriever_for("bm25")
+                )
         return retrievers[stage]
 
     runs: list[StageRun] = []
@@ -244,14 +249,15 @@ def render_stack_report(
             "",
         ]
         moved = [
-            (run.stage, COMPARED_TO[run.stage], by_stage[COMPARED_TO[run.stage]])
+            (run.stage, base)
             for run in runs
-            if COMPARED_TO.get(run.stage) in by_stage
+            for base in COMPARED_TO.get(run.stage, ())
+            if base in by_stage
         ]
         if moved:
             lines += ["### Questions moved", ""]
-            for stage, base, base_run in moved:
-                improved, worse = questions_moved(base_run, by_stage[stage])
+            for stage, base in moved:
+                improved, worse = questions_moved(by_stage[base], by_stage[stage])
                 lines.append(f"- {stage} vs {base}: improved {_ids(improved)}; worse {_ids(worse)}")
             lines.append("")
         categories = list(runs[0].result.by_category)

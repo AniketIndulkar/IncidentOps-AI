@@ -35,6 +35,27 @@ def row_to_chunk(row: ChunkRow, *, title: str, source_path: str) -> Chunk:
     )
 
 
+async def load_chunks(session: AsyncSession, tenant_id: str) -> list[Chunk]:
+    """Every stored chunk of one tenant, in corpus order (source path, then position).
+
+    Feeds the in-memory BM25 index, which must see the same chunks the vector search does.
+    """
+    rows = (
+        await session.execute(
+            select(ChunkRow, DocumentRow.title, DocumentRow.source_path)
+            .join(
+                DocumentRow,
+                and_(
+                    DocumentRow.tenant_id == ChunkRow.tenant_id, DocumentRow.id == ChunkRow.doc_id
+                ),
+            )
+            .where(ChunkRow.tenant_id == tenant_id)
+            .order_by(DocumentRow.source_path, ChunkRow.ordinal)
+        )
+    ).all()
+    return [row_to_chunk(row, title=title, source_path=path) for row, title, path in rows]
+
+
 def _check_dimensions(embedder: Embedder) -> None:
     if embedder.dimensions != EMBEDDING_DIMENSIONS:
         raise ValueError(

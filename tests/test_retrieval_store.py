@@ -14,7 +14,7 @@ from incidentops_ai.retrieval.ingest import ingest_documents
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
 from incidentops_ai.retrieval.orm import ChunkRow
 from incidentops_ai.retrieval.retriever import RetrievalFilter
-from incidentops_ai.retrieval.store import PgVectorRetriever, index_chunks
+from incidentops_ai.retrieval.store import PgVectorRetriever, index_chunks, load_chunks
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCUMENTS = load_corpus(ROOT / "data" / "corpus")
@@ -219,3 +219,24 @@ async def test_run_index_embeds_what_is_stored(settings, session_factory: Factor
 
     assert await run_index(settings, FakeEmbedder()) == total
     assert await run_index(settings, FakeEmbedder()) == 0
+
+
+async def test_load_chunks_returns_one_tenants_stored_chunks_in_corpus_order(
+    session_factory: Factory,
+):
+    await ingest(session_factory)
+    other = parse_document(
+        "---\nid: theirs\ntype: runbook\ntitle: Theirs\n---\n# Theirs\n\nnot for you\n",
+        source_path="theirs.md",
+        tenant_id="acme",
+    )
+    await ingest(session_factory, [other], tenant_id="acme")
+
+    async with session_factory() as session:
+        loaded = await load_chunks(session, "default")
+
+    expected = [c for d in sorted(DOCUMENTS, key=lambda d: d.source_path) for c in CHUNKER.chunk(d)]
+    assert [c.id for c in loaded] == [c.id for c in expected]
+    assert [c.text for c in loaded] == [c.text for c in expected]
+    assert {c.tenant_id for c in loaded} == {"default"}
+    assert loaded[0].title and loaded[0].source_path  # provenance comes with the chunk

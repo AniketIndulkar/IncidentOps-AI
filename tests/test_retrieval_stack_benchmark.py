@@ -201,3 +201,16 @@ async def test_the_report_and_per_question_data_are_written(tmp_path: Path):
 
 def _with_scores(run: StageRun, scores: list[QuestionScore]):
     return replace(run.result, scores=scores)
+
+
+async def test_the_hybrid_stage_is_compared_with_both_of_its_sources():
+    runs = {"fixed-2000-200": await runs_for("fixed-2000-200", stages=("dense", "bm25", "hybrid"))}
+
+    report = render_stack_report(runs, embedding_model="m", run_date="d")
+
+    assert [r.stage for r in runs["fixed-2000-200"]] == ["dense", "bm25", "hybrid"]
+    assert runs["fixed-2000-200"][2].result.retriever == "hybrid-rrf"
+    assert runs["fixed-2000-200"][2].extras["usd_per_1000_queries"] > 0
+    assert "- hybrid vs dense: improved" in report
+    assert "- hybrid vs bm25: improved" in report
+    assert "### Misses: hybrid" in report
