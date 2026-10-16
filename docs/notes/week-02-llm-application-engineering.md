@@ -1229,8 +1229,8 @@ Stated plainly, so nothing is assumed.
 
 | Gap | Why it matters | When |
 |---|---|---|
-| **LLM endpoints have no authentication and no rate limit** | Each call is paid. If the API is deployed with a key configured, anyone who can reach it can spend your money. **Do not deploy with `OPENAI_API_KEY` set yet.** | Auth: W10 (AIENG-60) |
-| **Repeating `POST …/extraction` runs the model again** | No idempotency key on these endpoints; a retrying client pays twice | Later |
+| **LLM endpoints had no authentication and no rate limit** | Each call is paid. *Closed after review:* a bearer token (`INCIDENTOPS_API_TOKEN`, endpoints stay off without it) and a per-process rate limit. Still one shared token, not per-user | Per-user auth: W10 (AIENG-60) |
+| **Repeating `POST …/extraction` ran the model again** | *Closed after review:* both LLM endpoints take an `Idempotency-Key`, claimed before the call; a retry gets the first successful result | Done |
 | **No fallback provider** | A provider outage disables analysis | W11 (AIENG-66) |
 | **No circuit breaker** | During an outage every request still makes 3 attempts | W12 |
 | **Wrong-but-valid answers are not detected** | A plausible wrong service name passes every check | W11 evals |

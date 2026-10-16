@@ -8,6 +8,8 @@ It grows with the app: each ticket that adds or changes an endpoint adds request
 1. Postman → **Import** → select the collection file and both files in `environments/`.
 2. Pick an environment (top right): **IncidentOps Local** or **IncidentOps AWS**.
 3. For AWS, set `baseUrl` in that environment to `http://<server-ip>`.
+   To use the Analysis (LLM) folder, also set `apiToken` to the server's `INCIDENTOPS_API_TOKEN`
+   (it is sent as a bearer token; without it those requests answer 401).
 4. Run one request, or the whole collection: collection → **Run** (order matters; requests share
    `incidentId` and `idempotencyKey`).
 
@@ -32,4 +34,4 @@ npx newman run postman/IncidentOps-AI.postman_collection.json --env-var baseUrl=
 |---|---|
 | Health | `GET /health` |
 | Incidents | create, retry with the same key (replay), same key with a different body (422), get, unknown id (404), malformed id (422), invalid body (422, no input echoed) |
-| Analysis (LLM) | extract structured data, find related incidents (tool calls), extraction for an unknown incident. **With an API key on the server these make paid model calls and take several seconds;** without one the server answers 503 and the checks are skipped |
+| Analysis (LLM) | extract structured data, find related incidents (tool calls), extraction for an unknown incident. **With an API key on the server these make paid model calls and take several seconds;** without one (or without `INCIDENTOPS_API_TOKEN`) the server answers 503 and the checks are skipped. They need `apiToken` (401 otherwise) |

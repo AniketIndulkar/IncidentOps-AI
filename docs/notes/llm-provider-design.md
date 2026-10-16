@@ -145,8 +145,8 @@ class RunMetadata(BaseModel):
     model: str                          # model that actually answered
     prompt_name: str
     prompt_version: str
-    attempts: int
-    latency_ms: int                     # total, across attempts
+    attempts: int                       # tries the hardest single model call needed (1 = no retry)
+    latency_ms: int                     # total, across attempts and turns
     input_tokens: int | None
     output_tokens: int | None
     request_id: str | None              # for support tickets and tracing
@@ -201,6 +201,9 @@ Three limits apply together, so a call cannot run away:
 
 The final result keeps the **real last status** (not a generic error) and records
 `attempts`, `attempt_statuses` (one per try), and tokens and latency summed across tries.
+`RunMetadata.combine` is the one place costs are added up. The tool loop uses it too, to join
+the turns of a conversation: tokens, latency and statuses add up, but `attempts` stays the worst
+single turn, so a clean two-turn conversation is 1 attempt and never exceeds `max_attempts`.
 
 **No coercion.** Replies are validated in Pydantic strict mode: `"true"` is not accepted for a
 boolean and `42` is not accepted for a string. A reply with a wrong type is `invalid_output`.
@@ -258,6 +261,15 @@ returns partial data. HTTP status tells the client whether retrying can help: 50
 422 refused, 500 our configuration is wrong. Neither endpoint holds a DB connection while waiting
 for the model.
 
+Both endpoints spend money, so they are guarded, in this order: a bearer token (401; 503 when
+the server has no `INCIDENTOPS_API_TOKEN`, so an OpenAI key alone never opens them), a rate limit
+(429 with `Retry-After`), then an optional `Idempotency-Key`. The key is claimed before the model
+is called (`llm_run_keys`), so a duplicate that arrives while the first is still running gets 409
+`request_in_progress` instead of a second call. Only a successful run is replayed
+(`Idempotent-Replayed: true`); a failed run frees the key so the retry really retries, and a claim
+left by a dead request expires after 5 minutes. In the tool loop, calls the model asks for on the
+last allowed round are recorded but not run, because their results could not be sent back.
+
 ---
 
 ## 4. Where things live
@@ -277,6 +289,7 @@ src/incidentops_ai/tools/
   prompts.py          loads prompts/<name>/<version>.md
 src/incidentops_ai/prompts/
   extract_incident/v1.md   inside the package, so it ships in the Docker image
+  extract_incident/v2.md   v1 plus the recorded service, severity and environment
 ```
 
 **Rule:** `import openai` appears in exactly one file. If another file needs it, the abstraction has leaked.
@@ -296,6 +309,8 @@ src/incidentops_ai/prompts/
 | Model | `INCIDENTOPS_LLM_MODEL` | No default in code: startup fails clearly if it is missing |
 | Timeout | `INCIDENTOPS_LLM_TIMEOUT_S` | Default 30 |
 | Max attempts | `INCIDENTOPS_LLM_MAX_ATTEMPTS` | Default 3 |
+| API token | `INCIDENTOPS_API_TOKEN` | Bearer token for the LLM endpoints, at least 16 characters. Unset: the endpoints answer 503 |
+| Rate limit | `INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE` | Default 10, all callers together, per process |
 
 The provider is created once at app startup (like the DB engine) and injected with `Depends`, so
 tests swap in `FakeProvider` the same way they swap the database.

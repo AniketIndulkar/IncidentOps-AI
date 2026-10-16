@@ -28,8 +28,13 @@ services:
     environment:
       INCIDENTOPS_DATABASE_URL: postgresql+asyncpg://incidentops:${POSTGRES_PASSWORD}@db:5432/incidentops
       # Optional. Without these the API runs normally and the LLM endpoints answer 503.
+      # Every LLM call costs money, so the endpoints also need INCIDENTOPS_API_TOKEN (callers send
+      # it as a bearer token): with an OpenAI key but no token they stay off. Generate one with
+      # `openssl rand -hex 24`.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       INCIDENTOPS_LLM_MODEL: ${INCIDENTOPS_LLM_MODEL:-}
+      INCIDENTOPS_API_TOKEN: ${INCIDENTOPS_API_TOKEN:-}
+      INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE: ${INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE:-10}
     ports:
       - "${API_PORT:-8000}:8000"
 

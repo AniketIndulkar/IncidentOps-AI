@@ -378,7 +378,7 @@
     },
     {
       "name": "Analysis (LLM)",
-      "description": "LLM-backed endpoints. Run the Incidents folder first so `incidentId` is set. With an API key configured on the server these make paid model calls and take several seconds.",
+      "description": "LLM-backed endpoints. Run the Incidents folder first so `incidentId` is set. They need the server's INCIDENTOPS_API_TOKEN: set `apiToken` in the environment. With an API key configured on the server these make paid model calls and take several seconds.",
       "item": [
         {
           "name": "Extract structured data",
@@ -512,7 +512,17 @@
             }
           ]
         }
-      ]
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{apiToken}}",
+            "type": "string"
+          }
+        ]
+      }
     }
   ]
 }
