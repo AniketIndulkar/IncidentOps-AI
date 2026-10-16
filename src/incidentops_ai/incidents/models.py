@@ -4,6 +4,7 @@ IncidentCreate is what a client may send; IncidentRead is what the server return
 Server-owned fields (id, status, timestamps) only exist on IncidentRead, so clients cannot set them.
 """
 
+import re
 import uuid
 from datetime import datetime
 from enum import StrEnum
@@ -35,7 +36,17 @@ class IncidentStatus(StrEnum):
 Title = Annotated[str, Field(min_length=1, max_length=200)]
 Description = Annotated[str, Field(min_length=1, max_length=10_000)]
 # Lowercase kebab-case service id, e.g. "checkout-api". Matches how services are named in the graph later.
-ServiceName = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9-]{0,62}$")]
+# The one definition of the rule: the API, extraction and the lookup tool all use it.
+SERVICE_NAME_PATTERN = r"^[a-z0-9][a-z0-9-]{0,62}$"
+ServiceName = Annotated[str, Field(pattern=SERVICE_NAME_PATTERN)]
+_SERVICE_NAME = re.compile(SERVICE_NAME_PATTERN)
+
+
+def check_service_name(value: str) -> str:
+    """For validators that must not put `pattern` in a JSON Schema (model-facing schemas)."""
+    if not _SERVICE_NAME.fullmatch(value):
+        raise ValueError("must be lowercase kebab-case, e.g. 'checkout-api'")
+    return value
 
 
 class IncidentCreate(BaseModel):

@@ -3,9 +3,10 @@
 import json
 
 import httpx2
+import pytest
 from pydantic import BaseModel, ConfigDict
 
-from incidentops_ai.llm.openai_provider import OpenAIProvider
+from incidentops_ai.llm.openai_provider import OpenAIProvider, _strict_schema
 from incidentops_ai.llm.provider import LLMStatus, ModelConfig, Prompt
 
 
@@ -67,6 +68,19 @@ def provider_with(handler) -> tuple[OpenAIProvider, list[httpx2.Request]]:
 
 def ok(body: dict, status_code: int = 200) -> httpx2.Response:
     return httpx2.Response(status_code, json=body, headers={"x-request-id": "req_abc"})
+
+
+def test_json_schema_is_built_and_checked_once_per_model():
+    assert _strict_schema(Ticket) is _strict_schema(Ticket)
+
+
+async def test_closing_the_provider_closes_its_connection_pool():
+    http_client = httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: ok({})))
+    provider = OpenAIProvider(api_key="test-key", http_client=http_client)
+
+    await provider.aclose()
+
+    assert http_client.is_closed
 
 
 async def test_success_returns_parsed_model_and_metadata():
@@ -274,6 +288,15 @@ async def test_rate_limit_carries_retry_after_and_quota_does_not_retry():
     result, seen, _ = await retrying(scripted(error(429, "insufficient_quota"), ok(GOOD)))
     assert result.status is LLMStatus.REJECTED
     assert len(seen) == 1
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-5", "soon", ""])
+async def test_retry_after_that_is_not_a_usable_number_of_seconds_is_ignored(value):
+    provider, _ = provider_with(lambda _: error(429, "rate_limit_exceeded", {"retry-after": value}))
+
+    limited = await provider.generate_structured(prompt=PROMPT, schema=Ticket, config=CONFIG)
+
+    assert limited.status is LLMStatus.RATE_LIMITED and limited.retry_after_s is None
 
 
 async def test_429_twice_then_success_recovers_and_waits_as_told():

@@ -7,14 +7,11 @@ Schema rules for strict structured output:
   model replies, so the JSON Schema sent to the provider stays within what strict mode accepts
 """
 
-import re
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict
 
-from incidentops_ai.incidents.models import Environment, Severity
-
-_SERVICE_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+from incidentops_ai.incidents.models import Environment, Severity, check_service_name
 
 
 def _non_empty(value: str) -> str:
@@ -25,9 +22,7 @@ def _non_empty(value: str) -> str:
 
 
 def _service_name(value: str | None) -> str | None:
-    if value is not None and not _SERVICE_NAME.fullmatch(value):
-        raise ValueError("must be lowercase kebab-case, e.g. 'checkout-api'")
-    return value
+    return value if value is None else check_service_name(value)
 
 
 NonEmpty = Annotated[str, AfterValidator(_non_empty)]

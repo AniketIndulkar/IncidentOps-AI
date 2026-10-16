@@ -8,6 +8,7 @@ Rules:
 """
 
 import logging
+import math
 from http import HTTPStatus
 from typing import Any
 
@@ -24,6 +25,10 @@ from incidentops_ai.errors import (
     LLMCallFailedError,
     LLMNotConfiguredError,
     NotFoundError,
+    RateLimitExceededError,
+    RequestInProgressError,
+    RetryLaterError,
+    UnauthorizedError,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +85,9 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     # (matches the IETF Idempotency-Key draft). 409 is reserved for "retry later" conflicts.
     ConflictError: 422,
     LLMNotConfiguredError: 503,
+    UnauthorizedError: 401,
+    RateLimitExceededError: 429,
+    RequestInProgressError: 409,  # the "retry later" conflict the 422 comment above leaves free
 }
 
 # Why an LLM call failed decides the HTTP status, so clients know whether retrying can help.
@@ -95,16 +103,26 @@ _LLM_STATUS = {
 
 _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
 
+DEFAULT_RETRY_AFTER_S = 30  # for a rate limit where the provider gave no hint
+
 
 async def _domain_error(request: Request, exc: DomainError) -> JSONResponse:
     status = next((_DOMAIN_STATUS[cls] for cls in type(exc).__mro__ if cls in _DOMAIN_STATUS), 400)
-    return problem_response(request, status, exc.code, exc.message)
+    headers = None
+    if isinstance(exc, UnauthorizedError):
+        headers = {"WWW-Authenticate": "Bearer"}
+    elif isinstance(exc, RetryLaterError):
+        # Whole seconds, rounded up, never 0: "retry now" is not a wait.
+        headers = {"Retry-After": str(max(1, math.ceil(exc.retry_after_s)))}
+    return problem_response(request, status, exc.code, exc.message, headers=headers)
 
 
 async def _llm_call_failed(request: Request, exc: LLMCallFailedError) -> JSONResponse:
     headers = None
     if exc.status == "rate_limited":
-        headers = {"Retry-After": str(int(exc.retry_after_s or 30))}
+        wait = DEFAULT_RETRY_AFTER_S if exc.retry_after_s is None else exc.retry_after_s
+        # Whole seconds, rounded up: telling a client "0" for a 0.4 s wait invites an instant retry.
+        headers = {"Retry-After": str(math.ceil(wait))}
     return problem_response(
         request, _LLM_STATUS.get(exc.status, 502), exc.code, exc.message, headers=headers
     )

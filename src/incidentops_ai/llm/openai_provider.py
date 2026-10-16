@@ -6,9 +6,11 @@ LLMStatus; nothing here raises for a provider failure.
 """
 
 import json
+import math
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import cache
 
 import httpx2
 import openai
@@ -58,6 +60,9 @@ class OpenAIProvider:
         self._client = openai.AsyncOpenAI(
             api_key=api_key, project=project, max_retries=0, http_client=http_client
         )
+
+    async def aclose(self) -> None:
+        await self._client.close()
 
     async def generate_structured[T: BaseModel](
         self, *, prompt: Prompt, schema: type[T], config: ModelConfig
@@ -226,8 +231,10 @@ def _metadata(
     )
 
 
+@cache
 def _strict_schema(schema: type[BaseModel]) -> dict:
-    """JSON Schema for strict mode.
+    """JSON Schema for strict mode. Built and checked once per model class (a class does not
+    change while the app runs), so the dict is shared: treat it as read-only.
 
     Strict mode needs every object to list all its properties as required and to forbid extras.
     We check that here so a badly declared schema fails loudly in tests, not as an HTTP 400.
@@ -276,11 +283,13 @@ def _as_input_item(item) -> dict:
 
 
 def _retry_after(exc: openai.APIStatusError) -> float | None:
-    """Retry-After in seconds, when the provider sent a plain number."""
+    """Retry-After in seconds, when the provider sent a plain, usable number."""
     try:
-        return float(exc.response.headers["retry-after"])
+        seconds = float(exc.response.headers["retry-after"])
     except (KeyError, ValueError):
         return None
+    # float() also accepts "nan", "inf" and negatives; none of them is a time to wait.
+    return seconds if math.isfinite(seconds) and seconds >= 0 else None
 
 
 def _refused(response: Response) -> bool:

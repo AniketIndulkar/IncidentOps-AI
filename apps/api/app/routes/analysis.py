@@ -1,29 +1,55 @@
 """LLM-backed analysis of a stored incident. Every call is recorded in `llm_runs`."""
 
+import logging
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
-from app.deps import LLM, LLMConfig, SessionFactory
+from app.deps import (
+    LLM,
+    LLMConfig,
+    LLMIdempotencyKey,
+    SessionFactory,
+    enforce_llm_rate_limit,
+    require_llm_access,
+)
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.errors import LLMCallFailedError
 from incidentops_ai.extraction.models import IncidentExtraction
 from incidentops_ai.extraction.review import ReviewDecision, assess
-from incidentops_ai.extraction.service import extract_incident
+from incidentops_ai.extraction.service import RecordedFields, extract_incident
 from incidentops_ai.incidents.models import IncidentRead
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMStatus, RunMetadata
-from incidentops_ai.llm.runs import LLMRunRepository
+from incidentops_ai.llm.run_keys import claim_key, release_key
+from incidentops_ai.llm.runs import LLMRunRead, LLMRunRepository
 from incidentops_ai.related import find_related_incidents
 from incidentops_ai.tools.recent_incidents import make_recent_incidents_tool
 from incidentops_ai.tools.registry import ToolExecution, ToolRegistry
+
+logger = logging.getLogger(__name__)
+
+EXTRACT_OPERATION = "extract_incident"
+RELATED_OPERATION = "related_incidents"
 
 _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
     prefix="/incidents/{incident_id}",
     tags=["analysis"],
-    responses={**ERROR_RESPONSES, 404: _PROBLEM, 502: _PROBLEM, 504: _PROBLEM},
+    # Every route here spends model budget: login first, then the rate limit (order matters).
+    dependencies=[Depends(require_llm_access), Depends(enforce_llm_rate_limit)],
+    responses={
+        **ERROR_RESPONSES,
+        401: _PROBLEM,
+        404: _PROBLEM,
+        409: _PROBLEM,
+        429: _PROBLEM,
+        502: _PROBLEM,
+        504: _PROBLEM,
+    },
 )
 
 
@@ -53,29 +79,82 @@ def _report_text(incident: IncidentRead) -> str:
     return f"{incident.title}\n\n{incident.description}"
 
 
+async def _claim(
+    sessions: SessionFactory, operation: str, incident_id: uuid.UUID, key: str | None
+) -> LLMRunRead | None:
+    """Reserve the Idempotency-Key before the model is called. Returns the earlier successful
+    run to replay, or None: go ahead (no key, or the key is now ours)."""
+    if key is None:
+        return None
+    async with sessions() as session:
+        run_id = await claim_key(session, operation=operation, key=key, incident_id=incident_id)
+        return None if run_id is None else await LLMRunRepository(session).get(run_id)
+
+
+@asynccontextmanager
+async def _release_claim_on_error(
+    sessions: SessionFactory, operation: str, key: str | None
+) -> AsyncIterator[None]:
+    """If the call or the recording raises, free the key: otherwise the client's retry would be
+    told to wait for a request that no longer exists. (A claim that cannot be freed here, say
+    the process is killed, expires by itself: see run_keys.IN_FLIGHT_TTL.)"""
+    try:
+        yield
+    except Exception:
+        if key is not None:
+            try:
+                async with sessions() as session:
+                    await release_key(session, operation=operation, key=key)
+            except Exception:
+                logger.exception("Could not release idempotency key for %s", operation)
+        raise
+
+
 @router.post("/extraction", response_model=ExtractionResponse)
-async def extract(incident_id: uuid.UUID, sessions: SessionFactory, llm: LLM, config: LLMConfig):
+async def extract(
+    incident_id: uuid.UUID,
+    sessions: SessionFactory,
+    llm: LLM,
+    config: LLMConfig,
+    response: Response,
+    idempotency_key: LLMIdempotencyKey = None,
+):
     """Extract structured data from the incident's text. Takes several seconds."""
     incident = await _load(sessions, incident_id)
-    result = await extract_incident(llm, _report_text(incident), config)
-
-    review = assess(result.value) if result.value else None
-    async with sessions() as session:
-        run_id = await LLMRunRepository(session).record(
-            operation="extract_incident",
+    if replay := await _claim(sessions, EXTRACT_OPERATION, incident.id, idempotency_key):
+        response.headers["Idempotent-Replayed"] = "true"
+        return ExtractionResponse(
+            run_id=replay.id,
             incident_id=incident.id,
-            status=result.status,
-            metadata=result.metadata,
-            error_detail=result.error_detail,
-            output=(
-                {
-                    "extraction": result.value.model_dump(mode="json"),
-                    "review": review.model_dump(mode="json"),
-                }
-                if result.value and review
-                else None
-            ),
+            extraction=IncidentExtraction.model_validate(replay.output["extraction"]),
+            review=ReviewDecision.model_validate(replay.output["review"]),
+            run=replay.metadata,
         )
+
+    async with _release_claim_on_error(sessions, EXTRACT_OPERATION, idempotency_key):
+        recorded = RecordedFields(
+            service=incident.service, severity=incident.severity, environment=incident.environment
+        )
+        result = await extract_incident(llm, _report_text(incident), config, recorded=recorded)
+
+        review = assess(result.value) if result.value else None
+        async with sessions() as session:
+            run_id = await LLMRunRepository(session).record(
+                operation=EXTRACT_OPERATION,
+                incident_id=incident.id,
+                status=result.status,
+                metadata=result.metadata,
+                error_detail=result.error_detail,
+                output=(
+                    {
+                        "extraction": result.value.model_dump(mode="json"),
+                        "review": review.model_dump(mode="json"),
+                    }
+                    if result.value and review
+                    else None
+                ),
+                idempotency_key=idempotency_key,
+            )
     if result.status is not LLMStatus.SUCCEEDED or result.value is None or review is None:
         raise LLMCallFailedError(result.status, run_id, "Extraction", result.retry_after_s)
     return ExtractionResponse(
@@ -89,26 +168,45 @@ async def extract(incident_id: uuid.UUID, sessions: SessionFactory, llm: LLM, co
 
 @router.post("/related-incidents", response_model=RelatedIncidentsResponse)
 async def related_incidents(
-    incident_id: uuid.UUID, sessions: SessionFactory, llm: LLM, config: LLMConfig
+    incident_id: uuid.UUID,
+    sessions: SessionFactory,
+    llm: LLM,
+    config: LLMConfig,
+    response: Response,
+    idempotency_key: LLMIdempotencyKey = None,
 ):
     """Ask the model which earlier incidents look related. It looks them up with a read-only
     tool; every tool call it requested, run or rejected, is returned and recorded."""
     incident = await _load(sessions, incident_id)
-    registry = ToolRegistry([make_recent_incidents_tool(sessions, exclude_id=incident.id)])
-    result = await find_related_incidents(llm, registry, _report_text(incident), config)
-
-    async with sessions() as session:
-        run_id = await LLMRunRepository(session).record(
-            operation="related_incidents",
+    if replay := await _claim(sessions, RELATED_OPERATION, incident.id, idempotency_key):
+        response.headers["Idempotent-Replayed"] = "true"
+        return RelatedIncidentsResponse(
+            run_id=replay.id,
             incident_id=incident.id,
-            status=result.status,
-            metadata=result.metadata,
-            error_detail=result.error_detail,
-            tool_executions=result.executions,
-            output={"summary": result.final_text} if result.final_text else None,
+            summary=replay.output["summary"],
+            tool_calls=[ToolExecution.model_validate(call) for call in replay.tool_calls or []],
+            run=replay.metadata,
         )
+
+    async with _release_claim_on_error(sessions, RELATED_OPERATION, idempotency_key):
+        registry = ToolRegistry([make_recent_incidents_tool(sessions, exclude_id=incident.id)])
+        result = await find_related_incidents(llm, registry, _report_text(incident), config)
+
+        async with sessions() as session:
+            run_id = await LLMRunRepository(session).record(
+                operation=RELATED_OPERATION,
+                incident_id=incident.id,
+                status=result.status,
+                metadata=result.metadata,
+                error_detail=result.error_detail,
+                tool_executions=result.executions,
+                output={"summary": result.final_text} if result.final_text else None,
+                idempotency_key=idempotency_key,
+            )
     if result.status is not LLMStatus.SUCCEEDED or not result.final_text:
-        raise LLMCallFailedError(result.status, run_id, "Related-incident lookup")
+        raise LLMCallFailedError(
+            result.status, run_id, "Related-incident lookup", result.retry_after_s
+        )
     return RelatedIncidentsResponse(
         run_id=run_id,
         incident_id=incident.id,

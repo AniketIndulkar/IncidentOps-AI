@@ -1,26 +1,12 @@
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, Header, Response, status
+from fastapi import APIRouter, Response, status
 
-from app.deps import IncidentRepo
+from app.deps import IdempotencyKey, IncidentRepo
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.incidents.models import IncidentCreate, IncidentRead
 
 router = APIRouter(prefix="/incidents", tags=["incidents"], responses=ERROR_RESPONSES)
-
-# Printable ASCII, no spaces: safe to log and to store; UUIDv4 is the recommended client choice.
-IdempotencyKey = Annotated[
-    str | None,
-    Header(
-        alias="Idempotency-Key",
-        min_length=1,
-        max_length=255,
-        pattern=r"^[\x21-\x7e]+$",
-        description="Client-generated key (UUIDv4 recommended). Retrying with the same key and "
-        "body returns the original incident instead of creating a duplicate.",
-    ),
-]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=IncidentRead)

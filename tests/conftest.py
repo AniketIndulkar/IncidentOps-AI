@@ -16,11 +16,18 @@ TEST_DATABASE_URL = os.environ.get(
     "postgresql+asyncpg://localhost:5432/incidentops_test",
 )
 
+TEST_API_TOKEN = "test-token-0123456789"
+
 
 @pytest.fixture(scope="session")
 def settings() -> Settings:
     # _env_file=None: tests must never pick up the real API key or model from .env.
-    return Settings(_env_file=None, database_url=TEST_DATABASE_URL, llm_model="fake-model")
+    return Settings(
+        _env_file=None,
+        database_url=TEST_DATABASE_URL,
+        llm_model="fake-model",
+        api_token=TEST_API_TOKEN,
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -55,3 +62,9 @@ async def session_factory(settings: Settings) -> AsyncIterator[async_sessionmake
     engine = create_async_engine(settings.database_url)
     yield async_sessionmaker(engine, expire_on_commit=False)
     await engine.dispose()
+
+
+@pytest.fixture
+def llm_headers(settings: Settings) -> dict[str, str]:
+    """Login for the LLM endpoints."""
+    return {"Authorization": f"Bearer {settings.api_token.get_secret_value()}"}

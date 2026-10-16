@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from incidentops_ai.db import Base
 from incidentops_ai.llm.provider import LLMStatus, RunMetadata
+from incidentops_ai.llm.run_keys import settle_key
 from incidentops_ai.tools.registry import ToolExecution
 
 
@@ -69,6 +70,22 @@ class LLMRunRead(BaseModel):
     output: dict | None
     created_at: datetime
 
+    @property
+    def metadata(self) -> RunMetadata:
+        """The run as an API client first saw it, for replaying a stored result."""
+        return RunMetadata(
+            provider=self.provider,
+            model=self.model,
+            prompt_name=self.prompt_name,
+            prompt_version=self.prompt_version,
+            attempts=self.attempts,
+            latency_ms=self.latency_ms,
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            request_id=self.request_id,
+            attempt_statuses=self.attempt_statuses,
+        )
+
 
 class LLMRunRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -84,7 +101,10 @@ class LLMRunRepository:
         error_detail: str | None = None,
         tool_executions: list[ToolExecution] | None = None,
         output: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
     ) -> uuid.UUID:
+        """Store the run. With `idempotency_key` (claimed earlier with claim_key) the key is
+        settled in the same transaction: kept for a success, freed for a failure."""
         row = LLMRunRow(
             id=uuid.uuid4(),
             incident_id=incident_id,
@@ -109,6 +129,15 @@ class LLMRunRepository:
             output=output,
         )
         self._session.add(row)
+        if idempotency_key is not None:
+            await self._session.flush()  # the run must exist before a key can point at it
+            await settle_key(
+                self._session,
+                operation=operation,
+                key=idempotency_key,
+                run_id=row.id,
+                succeeded=status is LLMStatus.SUCCEEDED,
+            )
         await self._session.commit()
         return row.id
 

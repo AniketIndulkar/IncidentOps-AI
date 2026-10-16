@@ -5,6 +5,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
@@ -40,9 +41,14 @@ async def app_client(
     settings: Settings, provider: FakeProvider | None
 ) -> AsyncIterator[AsyncClient]:
     app = create_app(settings, llm_provider=provider)
+    token = settings.api_token.get_secret_value() if settings.api_token else ""
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client,
+        AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://t",
+            headers={"Authorization": f"Bearer {token}"},
+        ) as client,
     ):
         yield client
 
@@ -75,16 +81,24 @@ async def test_extraction_returns_typed_result_and_persists_run_metadata(setting
     assert body["incident_id"] == incident["id"]
     assert body["extraction"]["service"] == {"name": "checkout-api", "stated_explicitly": True}
     assert body["run"]["prompt_name"] == "extract_incident"
-    assert body["run"]["prompt_version"] == "v1"
-    # The model saw the stored title and description.
-    assert provider.calls[0].prompt.input == f"{INCIDENT['title']}\n\n{INCIDENT['description']}"
+    assert body["run"]["prompt_version"] == "v2"
+    # The model saw the stored title and description, and what is already recorded on the incident.
+    assert provider.calls[0].prompt.input == (
+        "Recorded on the incident by the reporter:\n"
+        "- service: checkout-api\n"
+        "- severity: SEV2\n"
+        "- environment: production\n"
+        "\n"
+        "Report:\n"
+        f"{INCIDENT['title']}\n\n{INCIDENT['description']}"
+    )
 
     [run] = await runs(session_factory)
     assert str(run["id"]) == body["run_id"]
     assert str(run["incident_id"]) == incident["id"]
     assert (run["operation"], run["status"]) == ("extract_incident", "succeeded")
     assert (run["provider"], run["model"]) == ("fake", "fake-model")
-    assert (run["prompt_name"], run["prompt_version"]) == ("extract_incident", "v1")
+    assert (run["prompt_name"], run["prompt_version"]) == ("extract_incident", "v2")
     assert (run["input_tokens"], run["output_tokens"], run["latency_ms"]) == (900, 300, 4200)
     assert (run["attempts"], run["attempt_statuses"]) == (1, ["succeeded"])
     assert run["output"]["extraction"]["severity_candidate"]["level"] == "SEV2"
@@ -129,6 +143,39 @@ async def test_rate_limited_extraction_tells_the_client_when_to_retry(settings):
         resp = await client.post(f"/incidents/{incident['id']}/extraction")
 
     assert resp.status_code == 503 and resp.headers["retry-after"] == "12"
+
+
+@pytest.mark.parametrize(
+    ("hint", "header"), [(0.4, "1"), (7, "7"), (7.2, "8"), (None, "30")], ids=str
+)
+async def test_both_endpoints_tell_the_client_the_same_rounded_up_retry_time(
+    settings, hint, header
+):
+    limited = Fail(LLMStatus.RATE_LIMITED, retry_after_s=hint)
+    for path, provider in (
+        ("extraction", FakeProvider([limited])),
+        ("related-incidents", FakeProvider(tool_turns=[limited])),
+    ):
+        async with app_client(settings, provider) as client:
+            incident = (await client.post("/incidents", json=INCIDENT)).json()
+
+            resp = await client.post(f"/incidents/{incident['id']}/{path}")
+
+        assert resp.status_code == 503, path
+        assert resp.headers["retry-after"] == header, path
+
+
+async def test_empty_model_answer_is_an_invalid_output_failure_recorded_as_one(
+    settings, session_factory
+):
+    async with app_client(settings, FakeProvider(tool_turns=[""])) as client:
+        incident = (await client.post("/incidents", json=INCIDENT)).json()
+
+        resp = await client.post(f"/incidents/{incident['id']}/related-incidents")
+
+    assert resp.status_code == 502 and resp.json()["code"] == "llm_invalid_output"
+    [run] = await runs(session_factory)
+    assert run["status"] == "invalid_output" and run["output"] is None
 
 
 async def test_extraction_for_unknown_incident_is_404_and_calls_no_model(settings, session_factory):
@@ -207,6 +254,7 @@ async def test_related_incidents_runs_parallel_tool_calls_and_records_them(
     assert run["tool_calls"][0]["arguments"] == {"service": "checkout-api", "limit": 5}
     assert run["output"] == {"summary": "One earlier checkout-api incident looks related."}
     assert run["input_tokens"] == 20  # summed over both model turns
+    assert run["attempts"] == 1  # two model turns, neither needed a retry
 
 
 async def test_failed_tool_conversation_is_recorded_with_the_calls_that_ran(
@@ -263,7 +311,11 @@ async def test_deleting_an_incident_keeps_its_run_history(settings, session_fact
 
 async def test_blank_key_and_model_count_as_not_configured(settings):
     blank = Settings(
-        _env_file=None, database_url=settings.database_url, OPENAI_API_KEY="", llm_model="  "
+        _env_file=None,
+        database_url=settings.database_url,
+        OPENAI_API_KEY="",
+        llm_model="  ",
+        api_token=settings.api_token,
     )
 
     assert blank.openai_api_key is None and blank.llm_model is None
@@ -271,3 +323,25 @@ async def test_blank_key_and_model_count_as_not_configured(settings):
         resp = await client.post(f"/incidents/{uuid.uuid4()}/extraction")
 
     assert resp.status_code == 503 and resp.json()["code"] == "llm_not_configured"
+
+
+async def test_shutdown_closes_the_provider_the_app_built_but_not_one_it_was_given(
+    settings, monkeypatch
+):
+    built = FakeProvider()
+    monkeypatch.setattr("app.main.build_provider", lambda _: built)
+    configured = Settings(
+        _env_file=None,
+        database_url=settings.database_url,
+        OPENAI_API_KEY="sk-test",
+        llm_model="fake-model",
+        api_token=settings.api_token,
+    )
+    async with app_client(configured, None):
+        assert not built.closed
+    assert built.closed
+
+    injected = FakeProvider()
+    async with app_client(configured, injected):
+        pass
+    assert not injected.closed  # whoever created it closes it
