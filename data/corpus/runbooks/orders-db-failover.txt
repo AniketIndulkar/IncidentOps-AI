@@ -1,0 +1,53 @@
+---
+id: rb-orders-db-failover
+type: runbook
+title: Orders database failover (legacy wiki export)
+service: orders-db
+---
+ORDERS DATABASE FAILOVER RUNBOOK
+Document owner: Database Reliability. Last reviewed: 2025-11-03
+Exported from the legacy wiki. This is a plain text export; page breaks are preserved.
+
+Purpose
+This runbook describes how to move traffic from orders-db-primary to orders-db-standby when the
+primary in eu-west-2 is unavailable. It applies to the PostgreSQL cluster used by orders-api only.
+
+When to fail over
+Fail over only when the primary has been unreachable for more than 3 minutes AND replication lag on
+the standby is below 30 seconds. If lag is higher, promote only with approval from the database
+reliability on-call, because every second of lag is a second of committed orders that will be lost.
+
+Roles
+The failover needs two people: the operator who runs the commands and the observer who reads each
+step aloud and confirms the output. Do not run the failover alone.
+FAILOVER STEPS
+
+Step 1. Stop writers. Scale orders-api to zero so that no process can write to the old primary if
+it comes back: kubectl scale deployment/orders-api --replicas=0 -n commerce.
+
+Step 2. Confirm the old primary is fenced. Run dbctl fence orders-db-primary. The command removes the
+primary from the load balancer and revokes its replication slot. Wait for the message FENCED.
+
+Step 3. Promote the standby with dbctl promote orders-db-standby. Promotion normally takes 20 to 40
+seconds. The command prints the last replayed LSN. Write this value in the incident channel.
+
+Step 4. Point the connection alias at the new primary: dbctl alias set orders-db-primary
+orders-db-standby. The alias change propagates through DNS with a 30 second TTL, so wait one minute
+before starting the application.
+
+Step 5. Scale orders-api back up to its normal 12 replicas, in two steps of six replicas, one
+minute apart. Starting all pods together exhausts the connection limit of the new primary.
+VERIFICATION AND FAILBACK
+
+Verification. After the application is back, check three things: the order create rate returns to
+its normal level of about 40 orders per second, the replication lag metric of the new primary shows
+no replica yet (expected), and a test order placed with the canary account completes.
+
+Data loss check. Compare the last replayed LSN from Step 3 with the last LSN seen on the old primary
+before it failed. Any difference means orders may be missing. Give the list of missing order ids to
+Customer Support within one hour.
+
+Failback. Do not fail back to the original primary on the same day. Rebuild it as a standby with
+dbctl rebuild orders-db-primary --from orders-db-standby, wait for replication lag to reach zero, and
+schedule the failback in the next maintenance window. Failing back in a hurry is how the 2024
+incident turned one outage into two.

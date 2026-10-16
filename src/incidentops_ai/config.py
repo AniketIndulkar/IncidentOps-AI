@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     llm_max_output_tokens: int = 2000
     llm_timeout_s: float = 30.0
+
+    # Retrieval (W03). Vectors from different models or sizes cannot be compared, so both are
+    # stored with the index; changing either means re-embedding the corpus.
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = Field(default=1536, ge=1)
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
