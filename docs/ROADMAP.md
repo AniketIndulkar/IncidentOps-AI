@@ -79,14 +79,14 @@ Detailed day-by-day plan: [roadmap-w02.md](roadmap-w02.md).
 
 **W03 · Retrieval foundations** (AIENG-4) — *exit: ingestion pipeline, metadata, chunking experiments and a reproducible retrieval benchmark*
 
-Detailed plan, hypotheses and decisions: [roadmap-w03.md](roadmap-w03.md). Built 16 Oct, ahead of schedule;
-two measurements wait for a valid OpenAI key (see Current state).
+Detailed plan, hypotheses and decisions: [roadmap-w03.md](roadmap-w03.md). Done 16 Oct, ahead of schedule.
+Findings: [dense-baseline-findings](../evals/retrieval/runs/2026-10-16-dense-baseline-findings.md).
 
 - ✅ AIENG-24 Corpus of 18 runbooks/postmortems + **30-question eval set committed first** (ground truth = exact quotes, valid under any chunking).
 - ✅ AIENG-25 Ingestion with source/page/section/char-span provenance and a tenant on every chunk; repeatable, one transaction.
-- 🟡 AIENG-26 Five chunking configs, metrics and harness built; **selection pending** the real-embedding run (rule fixed in advance).
-- ✅ AIENG-27 pgvector column, `PgVectorRetriever` (tenant/service/type filters in SQL), held to the same ranking as the in-memory reference. Embedding model `text-embedding-3-small` is provisional until the comparison runs.
-- 🟡 AIENG-28 Benchmark runner (Recall@K, Precision@K, MRR, latency, per-style table, every miss listed); **baseline report and the ≥5-miss analysis pending** the real-embedding run.
+- ✅ AIENG-26 Five chunking configs on real embeddings; the rule fixed in advance selects **`fixed-2000-200`** (MRR 0.961, next 0.801). Caveat: at ~1,900 characters per document that chunk is nearly a whole document and reads 3.8× more text than `section-1500`; the runner-up for long documents is `section-1500` with the context header.
+- ✅ AIENG-27 pgvector column, `PgVectorRetriever` (tenant/service/type filters in SQL), held to the same ranking as the in-memory reference. Embedding model `text-embedding-3-small` adopted: `-large` gained 0 points of Recall@5 on the chosen config.
+- ✅ AIENG-28 Baseline on pgvector: Recall@5 0.983, MRR@10 0.961, p95 285 ms, one question below full Recall@5. Ten failures inspected and sorted into modes; hypotheses H1–H6 judged (two refuted, two partly, two confirmed).
 
 **W04 · Hybrid, RRF, reranking** (AIENG-5)
 - AIENG-29 BM25 → AIENG-30 RRF fusion → AIENG-31 cross-encoder (does it earn its latency?).
@@ -187,6 +187,7 @@ Hard dependencies to protect:
 
 | Decision | Recommendation | Why |
 |---|---|---|
+| Embeddings and chunking | `text-embedding-3-small` (1536 dims) and `fixed-2000-200` ✅ adopted (W03) | `-large` was no better on the chosen config; chunking chosen by a rule fixed before the run. Revisit chunking when documents get long. |
 | Vector store | **pgvector** in existing Postgres ✅ adopted (W03) | One fewer service, same DB for metadata filters and tenant isolation (W10). Needs the `pgvector/pgvector:pg17` image locally, in CI and in compose. |
 | DB access | SQLAlchemy 2.x async + asyncpg + Alembic ✅ adopted | Matches async FastAPI; migrations needed by W07/W08 |
 | Errors | RFC 9457 `problem+json` with stable `code` ✅ adopted | One error shape for clients; no input echo |
@@ -195,13 +196,10 @@ Hard dependencies to protect:
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
 
-## Current state (16 Oct 2026, W03 built; real-embedding runs pending)
+## Current state (16 Oct 2026, W03 complete)
 
-- **W01 and W02 complete** (AIENG-2, 15–23). **W03 built ahead of schedule** (AIENG-24–28: code, tests, docs).
-  Two W03 results are **not produced yet**: the chunking choice (AIENG-26) and the dense baseline
-  with its miss analysis (AIENG-28). Both need real embeddings and the OpenAI key in `.env` has
-  expired (401 `expired_secret_key`). Next: create a new project key, then run the commands in
-  [roadmap-w03.md](roadmap-w03.md#to-finish-w03). After that: W04, AIENG-29.
+- **W01, W02 and W03 complete** (AIENG-2, 15–28). W03 was built and measured on 16 Oct, ahead of its
+  19–23 Oct slot. Next: W04, starting with AIENG-29 (BM25).
 - API: incidents (`POST`, `GET`, idempotency keys), `POST /incidents/{id}/extraction`,
   `POST /incidents/{id}/related-incidents`, `/health`; RFC 9457 errors. Unchanged in W03.
 - LLM: provider layer (`LLMProvider`; OpenAI and fake implementations), strict structured output,
@@ -217,27 +215,36 @@ Hard dependencies to protect:
 - Tests: 387 pytest tests against real Postgres with pgvector, all offline (no API key, no model calls in CI).
 - Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`); 30 retrieval
   questions with 42 evidence spans (`evals/retrieval/questions.jsonl`), checked by a test against the corpus.
-- Docker, CI (lint → test → build; green on `main` as of W01) and compose now use `pgvector/pgvector:pg17`
-  (changed in W03, not yet run in CI), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
+  Dense baseline (`text-embedding-3-small`, `fixed-2000-200`, pgvector): Recall@5 0.983, Precision@5 0.260,
+  MRR@10 0.961, mean query latency 210 ms. Reports and per-question data in `evals/retrieval/runs/`.
+- Docker (image builds with the new dependencies), CI (lint → test → build; green on `main` as of W01) and
+  compose now use `pgvector/pgvector:pg17` (changed in W03, CI not yet run on it), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
 - Postman collection in `postman/` (11 requests).
 - Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
 - Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix,
-  [retrieval mental model](notes/retrieval-mental-model.md), [W03 write-up](notes/week-03-retrieval-foundations.md).
+  [retrieval mental model](notes/retrieval-mental-model.md), [W03 write-up](notes/week-03-retrieval-foundations.md),
+  [dense baseline findings](../evals/retrieval/runs/2026-10-16-dense-baseline-findings.md).
 - Week write-ups: [W02](notes/week-02-llm-application-engineering.md), [W03](notes/week-03-retrieval-foundations.md).
 
 ### What W03 taught us
 
-- The metric can favour the wrong thing. With documents of about 2,000 characters, a 2,000-character
-  chunk is nearly the whole document, so "did the retrieved chunk hold the answer" is easy and
-  Recall/MRR reward it. An offline check showed it before any real run, so a "Chars read@5" column
-  was added next to the quality numbers. The selection rule itself was not changed.
-- Ground truth as a quote, not a chunk id, is what lets one eval set judge five chunkings.
-- Tests caught two of my own wrong assumptions (a paragraph is 61 characters, not 70; a chunk that
-  starts on page 2 and ends on page 3 does not make page 3 a "start page"), not product defects.
-- The local Postgres (Homebrew 14) cannot run pgvector, so the test database is a container. Anything
-  that needs the extension therefore needs that image, including CI and compose.
-- An expired API key stops the measurement, not the build: everything except the two real-model
-  results is finished and tested, and nothing offline is presented as a benchmark.
+- The best config by the pre-registered rule is the one that is closest to "retrieve the whole
+  document" (`fixed-2000-200`, MRR 0.961), on a corpus of ~1,900-character documents. It reads 3.8×
+  more text than `section-1500`. We kept the rule and published the cost next to the score.
+- Two of the six hypotheses were refuted outright (large chunks do not hurt; identifier questions are
+  not the weak spot), two held in part, two held. Writing them down first made that visible.
+- A context header (`title > section`) lifts small chunks by ~0.08 MRR and does nothing for large ones.
+- The real failures are about *sources and passages*, not scores: a second document that shares no
+  words with the question, one postmortem crowding out its runbook, a definition ranked below its
+  usages, a small fact diluted inside a large chunk. W04's BM25, fusion and reranker each map to one.
+- The baseline is near its ceiling on the chosen config (Recall@5 0.983), leaving W04 little room to
+  show improvement. Run the W04 comparison on `section-1500` too, and add harder questions.
+- Ground truth as a quote, not a chunk id, is what let one eval set judge five chunkings and two
+  embedding models.
+- The local Postgres (Homebrew 14) cannot run pgvector, so the test database is a container, and so
+  are CI and compose now.
+- An expired API key stopped the measurement, not the build; the offline runs were never presented
+  as results, and the real runs cost a few cents.
 
 ### What W02 taught us
 
@@ -253,7 +260,7 @@ Hard dependencies to protect:
 ## Risks & gaps found in the tickets
 
 1. ~~Schedule slip in W01~~ — resolved: W01 finished on time.
-2. **PREP partly open:** Postgres ✅ (pgvector container for tests), Docker ✅ (OrbStack), AWS + budget ✅. LLM API: OpenAI credit exists but **the key has expired** (see risk 16). Still open: Neo4j Aura (W05), Langfuse (W11).
+2. **PREP partly open:** Postgres ✅ (pgvector container for tests), Docker ✅ (OrbStack), AWS + budget ✅. LLM API ✅ (OpenAI; the key expired on 16 Oct and was replaced, see risk 16). Still open: Neo4j Aura (W05), Langfuse (W11).
 3. ~~`__pycache__` committed~~ — resolved (`.gitignore` populated, files untracked).
 4. ~~README empty~~ — resolved (setup/run/test steps); keep it current for AIENG-77.
 5. **Heavy weeks:** W09 (3 integrations + Text-to-SQL) and W10 (RBAC + data permissions + red-team) are dense for 10h each. Pre-decide what drops first (candidate: legacy SOAP adapter AIENG-58 → known limitation).
@@ -268,11 +275,12 @@ Hard dependencies to protect:
 14. **Eval set is tiny and unscored.** 10 samples, service name checked only. Expected values and repeated runs come in W11 (AIENG-64, 65).
 15. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
 
-16. **OpenAI key expired (found 16 Oct).** Blocks the real-embedding runs for AIENG-26 and AIENG-28 and the real-model parts of W04. Create a new project-scoped key, put it in `.env`, keep the spend limit and auto-recharge off.
-17. **Retrieval metrics favour large chunks on a corpus of short documents.** The selection rule uses MRR and Recall@5 as fixed in advance; "Chars read@5" shows the cost. Re-check the choice when the corpus has long documents (W06 PDFs, W11 golden-set expansion).
+16. ~~OpenAI key expired (found 16 Oct)~~ — resolved the same day with a new project-scoped key; keep the spend limit on and auto-recharge off.
+17. **Retrieval metrics favour large chunks on a corpus of short documents — confirmed in W03.** The rule picked `fixed-2000-200` (≈ whole documents; 7,433 characters read for the top five vs 1,961 for `section-1500`). Re-check the choice when the corpus has long documents (W06 PDFs, W11 expansion); runner-up `section-1500` + context header.
 18. **Corpus and eval set share one author and are small** (18 documents, 30 questions; one question is 3.3 points). Treat differences under about 5 points as noise; expand in W11.
 19. **Postgres image changed** from `postgres:17-alpine` to `pgvector/pgvector:pg17` in compose and CI. A reused data volume could have collation differences (alpine/musl vs Debian/glibc); the Lightsail deploy is recreated each time, so it is acceptable, but CI and a clean deploy have not run on it yet.
 20. **No vector index.** Exact scan is right for hundreds of chunks. Add HNSW near ~10,000 chunks (measure recall against the exact scan when you do).
+21. **The dense baseline is near its ceiling** (Recall@5 0.983, MRR 0.961, one miss), so W04's hybrid and reranking gains may be invisible on the chosen config. Run W04 on `section-1500` as well and add harder multi-source questions (q24, q25 are the template) in W11.
 
 ## Weekly cadence
 

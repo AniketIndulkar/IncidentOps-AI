@@ -1,10 +1,12 @@
 # Week 3 write-up: retrieval foundations (AIENG-24 to AIENG-28)
 
-Status on 16 Oct 2026: everything is built and tested; **two measurements are still to be run** (the
-chunking choice and the dense baseline) because the OpenAI key expired. This note records what was
-built, every decision with why and why not, what the offline checks did and did not show, and what
-is left. The plan and hypotheses are in [../roadmap-w03.md](../roadmap-w03.md); the concepts are in
-[retrieval-mental-model.md](retrieval-mental-model.md).
+Status on 16 Oct 2026: **complete**. Everything was built and tested offline first; the chunking
+choice and the dense baseline were then run on real embeddings (a first attempt had stopped on an
+expired OpenAI key, replaced the same day). This note records what was built, every decision with
+why and why not, what the offline checks did and did not show, and what the real run found. The
+plan and hypotheses are in [../roadmap-w03.md](../roadmap-w03.md); the concepts are in
+[retrieval-mental-model.md](retrieval-mental-model.md); the full analysis is in
+[the findings](../../evals/retrieval/runs/2026-10-16-dense-baseline-findings.md).
 
 ## What exists now
 
@@ -55,7 +57,7 @@ still worth noticing: on the five pre-registered configs it ranked the 2,000-cha
 first on MRR and Recall, simply because a 2,000-character chunk is close to a whole document in this
 corpus. That is a property of the metric and the corpus, not of the fake. So the report now shows
 **Chars read@5** beside the quality columns, the write-up must say so if a very large chunk wins, and
-the rule was left as written.
+the rule was left as written. The real run then selected the same config for the same reason.
 
 The pgvector retriever and the in-memory one rank identically on all 30 questions, with and without
 the service filter (within float32 rounding), so benchmarks run on either mean the same thing.
@@ -71,16 +73,34 @@ the service filter (within float32 rounding), so benchmarks run on either mean t
 - Local Postgres is Homebrew 14 and cannot load pgvector. Tests run against a
   `pgvector/pgvector:pg17` container; CI and compose switched to the same image.
 - The OpenAI key expired (401 `expired_secret_key`) at the first real run. Everything after it was
-  built and tested offline, and nothing was written into `evals/retrieval/runs/`.
+  built and tested offline, nothing was written into `evals/retrieval/runs/`, and the real runs
+  followed once the key was replaced.
 
-## Not done yet
+## Results (real embeddings, `text-embedding-3-small`)
 
-1. The chunking experiment on real embeddings, and the choice it produces (AIENG-26).
-2. The dense baseline report and the analysis of at least five misses (AIENG-28).
-3. Hypotheses H1 to H6 are open. They are in the roadmap, written before any retrieval code.
-4. CI has not run on the pgvector image yet.
+| | |
+|---|---|
+| Chunking chosen by the pre-registered rule | `fixed-2000-200`: MRR 0.961, Recall@5 0.983, next best MRR 0.801 |
+| Embedding model | `-small` kept: `-large` gained 0 points of Recall@5 on that config |
+| Dense baseline on pgvector | Recall@1/3/5/10 0.800 / 0.983 / 0.983 / 1.000, MRR@10 0.961, one question below full Recall@5, mean query 210 ms |
+| Hypotheses | H1 partly, H2 half, H3 refuted, H4 refuted, H5 directionally yes, H6 confirmed |
+| Cost of the choice | 7,433 characters read for the top five, against 1,961 for `section-1500` |
 
-Exact steps: [../roadmap-w03.md#to-finish-w03](../roadmap-w03.md#to-finish-w03).
+What to remember:
+
+- The chosen chunk is nearly a whole document in this corpus, so the win says "documents are easy
+  to find", not "2,000 characters is the right size". Use `section-1500` with the context header
+  (MRR 0.889, 2,016 characters) once documents get long.
+- The failures that remain are about sources and passages, not scores (ten inspected cases in the
+  findings): a second source with no shared words, one document crowding out another, a definition
+  ranked below its usages, a small fact diluted in a large chunk.
+- The benchmark is near its ceiling on the chosen config, so W04 may not show gains there.
+
+## Still open
+
+1. CI has not run on the pgvector image yet.
+2. The AIENG tickets (24 to 28) are not updated in Jira.
+3. The eval set needs harder, multi-source questions (W11, AIENG-64); q24 and q25 are the template.
 
 ## Hand-off to W04
 

@@ -1,6 +1,6 @@
 """Load the corpus into PostgreSQL: parse, chunk, store with provenance.
 
-    uv run python -m incidentops_ai.retrieval.ingest data/corpus --chunker fixed-1000-100
+    uv run python -m incidentops_ai.retrieval.ingest data/corpus --chunker fixed-2000-200
 
 Repeatable: documents whose file, parser version and chunker are unchanged are skipped; changed
 ones are replaced together with their chunks. Everything runs in one transaction, so a failure
@@ -27,8 +27,8 @@ from incidentops_ai.retrieval.documents import (
 )
 from incidentops_ai.retrieval.orm import ChunkRow, DocumentRow
 
-# Provisional: replace with the experiment's winner once AIENG-26 has run on real embeddings.
-DEFAULT_CHUNKER = "fixed-1000-100"
+# Winner of the AIENG-26 chunking experiment (evals/retrieval/runs/2026-10-16-chunking-text-embedding-3-small.md).
+DEFAULT_CHUNKER = "fixed-2000-200"
 
 
 @dataclass(frozen=True)
@@ -163,7 +163,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Load the retrieval corpus into PostgreSQL.")
     parser.add_argument("corpus", nargs="?", type=Path, default=Path("data/corpus"))
     parser.add_argument("--tenant", default=DEFAULT_TENANT)
-    parser.add_argument("--chunker", default=DEFAULT_CHUNKER, help="e.g. fixed-1000-100")
+    parser.add_argument("--chunker", default=DEFAULT_CHUNKER, help="e.g. fixed-2000-200")
     parser.add_argument(
         "--prune", action="store_true", help="delete documents no longer in the corpus"
     )

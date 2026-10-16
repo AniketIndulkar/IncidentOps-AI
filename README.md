@@ -46,9 +46,11 @@ uv run python -m incidentops_ai.retrieval.benchmark                             
 uv run python -m incidentops_ai.retrieval.chunking_experiment                         # compare chunking configs
 ```
 
-Ingestion is repeatable: unchanged documents are skipped. The default chunker is provisional
-(`fixed-1000-100`) until the chunking experiment has run with real embeddings; choose another with
-`--chunker`. Add `--fake` to the benchmark and
+Ingestion is repeatable: unchanged documents are skipped. The default chunker is `fixed-2000-200`,
+chosen by the chunking experiment (see the
+[findings](evals/retrieval/runs/2026-10-16-dense-baseline-findings.md), including its caveat for long
+documents); choose another with `--chunker`. Dense baseline on this corpus: Recall@5 0.983, MRR 0.961.
+Add `--fake` to the benchmark and
 experiment commands for an offline wiring check (clearly labelled; not a measurement).
 
 ## Layout
