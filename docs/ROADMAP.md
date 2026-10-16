@@ -228,7 +228,7 @@ Hard dependencies to protect:
   (words exact, spacing free, 12+ characters), provenance rebuilt from stored chunk data, explicit `no_answer`.
 - Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`, `llm_runs`,
   `llm_run_keys`, `documents`, `chunks` with a 1536-dimension `vector` column).
-- Tests: 487 pytest tests (1 skipped: the opt-in real-reranker test) against real Postgres with pgvector, all offline (no API key, no model calls, no model download in CI).
+- Tests: 491 pytest tests (1 skipped: the opt-in real-reranker test) against real Postgres with pgvector, all offline (no API key, no model calls, no model download in CI).
 - Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`); 30 retrieval
   questions with 42 evidence spans (`evals/retrieval/questions.jsonl`), checked by a test against the corpus.
   Dense baseline (`text-embedding-3-small`, `fixed-2000-200`, pgvector): Recall@5 0.983, Precision@5 0.260,

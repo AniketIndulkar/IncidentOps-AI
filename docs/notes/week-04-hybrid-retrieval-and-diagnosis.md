@@ -20,7 +20,7 @@ hypotheses and the rule that picks the stack were committed before any W04 code
 4. **`POST /incidents/{id}/diagnosis`** answers with causes whose citations the server has checked, or an
    explicit "no answer". In a real-model spot check three on-corpus incidents were answered and two
    off-corpus ones were refused.
-5. 487 tests pass offline (1 skipped: the opt-in real-reranker test). 100 more than W03.
+5. 491 tests pass offline (1 skipped: the opt-in real-reranker test). 104 more than W03.
 
 ## What exists now
 

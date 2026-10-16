@@ -16,7 +16,7 @@ how you think, what you would like to be different) are yours to add under "Your
 By the roadmap's own milestone, v0.1 is "evidence-backed hybrid retrieval plus grounded, cited
 diagnosis". Both exist and are measured; the tag is the only thing left, and it is yours to say.
 
-Numbers: 487 offline tests; 30 retrieval questions with 42 evidence spans; 10 extraction samples.
+Numbers: 491 offline tests; 30 retrieval questions with 42 evidence spans; 10 extraction samples.
 Write-ups: ADR-001, the LLM failure matrix, the dense-baseline findings and the hybrid findings.
 
 ## What held up
