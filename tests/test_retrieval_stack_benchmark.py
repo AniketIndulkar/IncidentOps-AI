@@ -282,3 +282,31 @@ async def test_the_report_has_the_reranker_section_and_its_comparison():
     assert "### Reranker, local cost" in report
     assert "- hybrid-rerank vs hybrid: improved" in report
     assert "### Misses: hybrid-rerank" in report
+
+
+class DepthRecorder:
+    name = "depth-recorder"
+
+    def __init__(self) -> None:
+        self.passage_counts: list[int] = []
+
+    async def score(self, query: str, passages: Sequence[str]) -> list[float]:
+        self.passage_counts.append(len(passages))
+        return await FakeReranker().score(query, passages)
+
+
+async def test_the_rerank_depth_decides_how_many_candidates_are_reranked():
+    recorder = DepthRecorder()
+
+    await run_stages(
+        parse_config("fixed-2000-200"),
+        DOCUMENTS,
+        QUESTIONS,
+        FakeEmbedder(),
+        stages=("hybrid-rerank",),
+        reranker=recorder,
+        rerank_depth=7,
+    )
+
+    questions_only = recorder.passage_counts[1:]  # the first call is the model warm-up
+    assert len(questions_only) == 30 and max(questions_only) == 7

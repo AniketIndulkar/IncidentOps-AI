@@ -22,6 +22,7 @@ RERANK_DEPTH = 20  # candidates taken from the stage below
 # ONNX export of cross-encoder/ms-marco-MiniLM-L-6-v2 (22M parameters, about 80 MB), run without torch.
 DEFAULT_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
 TOKEN_LIMIT = 512
+DEFAULT_BATCH_SIZE = 64  # fastembed's own default: all 20 candidates go through in one batch
 CHARS_PER_TOKEN = 4
 
 
@@ -56,11 +57,18 @@ class CrossEncoderReranker:
     that exceeded the model's input limit and were cut, summed over all calls.
     """
 
-    def __init__(self, model_name: str = DEFAULT_MODEL, *, max_length: int = TOKEN_LIMIT) -> None:
+    def __init__(
+        self,
+        model_name: str = DEFAULT_MODEL,
+        *,
+        max_length: int = TOKEN_LIMIT,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+    ) -> None:
         self.name = model_name
         self.load_seconds: float | None = None
         self.truncated = 0
         self._max_length = max_length
+        self._batch_size = batch_size  # passages scored at once; smaller uses less memory
         self._model: Any = None
         self._lock = threading.Lock()
 
@@ -83,7 +91,9 @@ class CrossEncoderReranker:
             return []
         model = await asyncio.to_thread(self._load)
         self.truncated += self._count_truncated(model, query, passages)
-        return await asyncio.to_thread(lambda: [float(s) for s in model.rerank(query, passages)])
+        return await asyncio.to_thread(
+            lambda: [float(s) for s in model.rerank(query, passages, batch_size=self._batch_size)]
+        )
 
     def _count_truncated(self, model: Any, query: str, passages: Sequence[str]) -> int:
         """Passages cut at the model's input limit: exact when the model's tokenizer is reachable

@@ -187,18 +187,21 @@ class StubTokenizer:
 
 class StubTextCrossEncoder:
     loaded: ClassVar[list[str]] = []
+    batch_sizes: ClassVar[list[int]] = []
 
     def __init__(self, model_name: str) -> None:
         StubTextCrossEncoder.loaded.append(model_name)
         self.model = SimpleNamespace(tokenizer=StubTokenizer())
 
-    def rerank(self, query: str, passages: Sequence[str]):
+    def rerank(self, query: str, passages: Sequence[str], batch_size: int = 64):
+        StubTextCrossEncoder.batch_sizes.append(batch_size)
         return (len(passage) / 100 for passage in passages)
 
 
 def install_stub_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stands in for fastembed, so the loading path runs without the extra or a download."""
     StubTextCrossEncoder.loaded = []
+    StubTextCrossEncoder.batch_sizes = []
     module = types.ModuleType("fastembed.rerank.cross_encoder")
     module.TextCrossEncoder = StubTextCrossEncoder
     monkeypatch.setitem(sys.modules, "fastembed", types.ModuleType("fastembed"))
@@ -232,3 +235,14 @@ async def test_truncated_passages_are_counted_exactly_from_the_models_own_tokeni
     await reranker.score("q", ["a much longer passage"])
 
     assert reranker.truncated == 3
+
+
+async def test_the_batch_size_limits_how_many_passages_the_model_scores_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    install_stub_runtime(monkeypatch)
+
+    await CrossEncoderReranker(batch_size=4).score("q", ["a", "b"])
+    await CrossEncoderReranker().score("q", ["a"])
+
+    assert StubTextCrossEncoder.batch_sizes == [4, 64]

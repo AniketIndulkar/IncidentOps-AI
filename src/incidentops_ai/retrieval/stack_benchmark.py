@@ -41,6 +41,7 @@ from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.hybrid import HybridRetriever
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
 from incidentops_ai.retrieval.rerank import (
+    DEFAULT_BATCH_SIZE,
     RERANK_DEPTH,
     TOKEN_LIMIT,
     CrossEncoderReranker,
@@ -166,6 +167,7 @@ async def run_stages(
     k: int = TOP_K,
     query_embedder: Embedder | None = None,
     reranker: Reranker | None = None,
+    rerank_depth: int = RERANK_DEPTH,
 ) -> list[StageRun]:
     """Score each stage on the same chunks. `query_embedder`, when given, embeds the questions
     (timed for real); `embedder` then only embeds the chunks."""
@@ -200,7 +202,9 @@ async def run_stages(
                 )
             else:
                 assert timed is not None  # checked above
-                retrievers[stage] = RerankingRetriever(await retriever_for("hybrid"), timed)
+                retrievers[stage] = RerankingRetriever(
+                    await retriever_for("hybrid"), timed, depth=rerank_depth
+                )
         return retrievers[stage]
 
     runs: list[StageRun] = []
@@ -220,6 +224,7 @@ async def run_stages(
         if reranking:
             assert timed is not None
             extras.update(
+                depth=float(rerank_depth),
                 rerank_mean_ms=statistics.fmean(timed.elapsed_ms),
                 rerank_p95_ms=percentile(timed.elapsed_ms, 0.95),
                 rss_added_mb=max(_current_rss_mb() - rss_before, 0.0),
@@ -349,7 +354,9 @@ def render_stack_report(
                 lines.append(f"- {stage} vs {base}: improved {_ids(improved)}; worse {_ids(worse)}")
             lines.append("")
         if "hybrid-rerank" in by_stage:
-            lines += _reranker_section(by_stage["hybrid-rerank"])
+            lines += _reranker_section(
+                by_stage["hybrid-rerank"], int(by_stage["hybrid-rerank"].extras["depth"])
+            )
         categories = list(runs[0].result.by_category)
         lines += [
             "### MRR by question style",
@@ -378,7 +385,7 @@ def render_stack_report(
     return "\n".join(lines)
 
 
-def _reranker_section(run: StageRun) -> list[str]:
+def _reranker_section(run: StageRun, rerank_depth: int) -> list[str]:
     extra = run.extras
     _, verdict = rerank_verdict(extra["rerank_p95_ms"], extra["rss_added_mb"])
     end_to_end = percentile(run.result.latencies_ms, 0.95)
@@ -387,13 +394,13 @@ def _reranker_section(run: StageRun) -> list[str]:
         "### Reranker, local cost",
         "",
         (
-            f"- Load and first call: {extra['load_seconds']:.1f} s. Reranking {RERANK_DEPTH} "
+            f"- Load and first call: {extra['load_seconds']:.1f} s. Reranking {rerank_depth} "
             f"candidates: mean {extra['rerank_mean_ms']:.0f} ms, p95 {extra['rerank_p95_ms']:.0f} ms."
         ),
         (
             f"- Memory added: {extra['rss_added_mb']:.0f} MB. Candidates cut at the "
             f"{TOKEN_LIMIT}-token limit: {extra['truncated']:.0f} of "
-            f"{RERANK_DEPTH * run.result.summary.n} reranked."
+            f"{rerank_depth * run.result.summary.n} reranked."
         ),
         f"- {verdict}",
         (
@@ -474,7 +481,9 @@ async def _run(args: argparse.Namespace) -> BenchmarkFiles:
     stages = tuple(args.stages.split(","))
     reranker: Reranker | None = None
     if "hybrid-rerank" in stages:
-        reranker = FakeReranker() if args.fake else CrossEncoderReranker()
+        reranker = (
+            FakeReranker() if args.fake else CrossEncoderReranker(batch_size=args.rerank_batch_size)
+        )
     try:
         runs_by_config = {
             name: await run_stages(
@@ -485,6 +494,7 @@ async def _run(args: argparse.Namespace) -> BenchmarkFiles:
                 stages=stages,
                 query_embedder=live,
                 reranker=reranker,
+                rerank_depth=args.rerank_depth,
             )
             for name in args.configs.split(",")
         }
@@ -515,6 +525,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default="stack-comparison")
     parser.add_argument("--stages", default=",".join(STAGES), help=f"from: {', '.join(STAGES)}")
     parser.add_argument("--configs", default=",".join(DEFAULT_CONFIGS))
+    parser.add_argument("--rerank-depth", type=int, default=RERANK_DEPTH)
+    parser.add_argument("--rerank-batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument(
         "--fake", action="store_true", help="offline hashed embeddings (wiring check)"
     )
