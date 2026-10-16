@@ -2,7 +2,8 @@
 
     uv run python -m incidentops_ai.retrieval.chunking_experiment
 
-Writes evals/retrieval/runs/<date>-chunking.md (the tables) and .json (every question's result).
+Writes evals/retrieval/runs/<date>-chunking-<model>.md (the tables) and .json (every
+question's result).
 The configurations and the selection rule were written down before the first run
 (docs/roadmap-w03.md); this module only applies them.
 """
@@ -10,6 +11,7 @@ The configurations and the selection rule were written down before the first run
 import argparse
 import asyncio
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -70,13 +72,14 @@ async def run_chunking_experiment(
     winner_filtered = replace(filtered, name=f"{winner.name} (service filter)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    label = re.sub(r"[^A-Za-z0-9._-]", "_", embedder.model)  # one file per model, same day or not
     experiment = ChunkingExperiment(
         primary=primary,
         winner=winner,
         with_context=with_context,
         winner_filtered=winner_filtered,
-        report_path=out_dir / f"{run_date}-chunking.md",
-        data_path=out_dir / f"{run_date}-chunking.json",
+        report_path=out_dir / f"{run_date}-chunking-{label}.md",
+        data_path=out_dir / f"{run_date}-chunking-{label}.json",
     )
     experiment.report_path.write_text(
         _render_report(experiment, documents, questions, embedder, run_date), encoding="utf-8"

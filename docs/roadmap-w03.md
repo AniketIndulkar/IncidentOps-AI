@@ -3,6 +3,19 @@
 Source: Jira epic **AIENG-4** and tasks **AIENG-24 to AIENG-28**, read 16 Oct 2026. All six were To Do.
 Overall plan: [ROADMAP.md](ROADMAP.md). Built early, like W02.
 
+> **Status, 16 Oct 2026: built; two measurements pending.** AIENG-24, 25 and 27 are done. AIENG-26
+> and AIENG-28 have all code, tests and tooling, but the chunking choice and the dense baseline need
+> real embeddings, and the OpenAI key in `.env` has expired. No offline number is reported as a
+> result. Steps to finish: [To finish W03](#to-finish-w03). Write-up: [notes/week-03-retrieval-foundations.md](notes/week-03-retrieval-foundations.md).
+>
+> Changes from this plan: (1) the embedder interface and its OpenAI, fake and cached versions were
+> built in AIENG-26, not 27, because the chunking experiment needs vectors; (2) the experiment
+> report also shows **Chars read@5** (text read for the top five), added after an offline check
+> showed that large chunks look good on a corpus of short documents; the selection rule was not
+> changed; (3) the context-header and service-filter runs are exploratory and sit outside the
+> decision rule; (4) report files carry the embedding model in their name, so comparing two models
+> on one day does not overwrite.
+
 ## Goal of the week
 
 Build the dense retrieval foundation and measure it, so that W04 (hybrid search, reranking, cited
@@ -35,7 +48,7 @@ output (service, error codes) that becomes retrieval metadata. Nothing in W03 ch
 |---|---|---|
 | Vector store | **pgvector** in the existing Postgres | One fewer service; metadata filters and tenant isolation (W10) in the same database. Roadmap recommendation, now adopted. |
 | Local/CI Postgres | `pgvector/pgvector:pg17` image | Local Homebrew Postgres is 14 without pgvector; CI and compose used `postgres:17-alpine`, which has no pgvector. |
-| Embeddings | OpenAI `text-embedding-3-small`, 1536 dimensions, compared with `-large` shortened to the same size | Account already exists; no new heavy dependency. A fake embedder keeps every test offline. |
+| Embeddings | OpenAI `text-embedding-3-small`, 1536 dimensions (**provisional** until compared with `-large` shortened to the same size) | Account already exists; no new heavy dependency. A fake embedder keeps every test offline. |
 | Ground truth | **Exact evidence quotes**, not chunk ids | Chunking changes every chunk id. A quote stays valid under any chunking. |
 | "Relevant chunk" | Chunk covers at least half of an evidence span | Overlap by one character should not count as finding the answer. |
 | Corpus | 18 synthetic documents (11 runbooks, 7 postmortems), ~35k characters | Public incident reports do not match our services. Written to match the W02 sample services. |
@@ -65,11 +78,21 @@ If these are wrong, that is a finding, not a failure.
    smaller mean chunk size (less context to pay for later).
 4. Record at least three qualitative failures per config class before writing the decision.
 
+Not part of the decision: the context-header runs (`+ctx`) and the service-filter run are reported
+as exploratory. If `+ctx` improves the winner's MRR by more than 0.02 it is adopted as a separate,
+documented step (`index --context`). The embedding model is kept at `-small` unless `-large` is
+at least 5 points better on Recall@5 (H6).
+
+Known bias, noted before the run: the average document is about 1,900 characters, so a
+2,000-character chunk is nearly a whole document and scores well on Recall and MRR without being a
+better unit to cite. "Chars read@5" in the table is there to make that cost visible; if the winner
+is the largest config, say so in the write-up and name the runner-up for corpora with long documents.
+
 ## Day by day
 
 Each ticket is timeboxed to 2 hours.
 
-### AIENG-24 · Corpus, eval set, mental model
+### AIENG-24 · Corpus, eval set, mental model  ✅
 
 - **Corpus:** `data/corpus/runbooks/` (10 markdown + 1 paged text export) and `data/corpus/postmortems/`.
   Front matter carries `id`, `type`, `title`, `service`.
@@ -82,25 +105,45 @@ Each ticket is timeboxed to 2 hours.
 - The reading part of the ticket (retrieval, chunking and embedding chapters) is yours; the note
   records what the implementation assumes, so you can check it against the book.
 
-### AIENG-25 · Ingestion and metadata
+### AIENG-25 · Ingestion and metadata  ✅
+
 
 Parse, clean, chunk, persist. Every chunk keeps source path, document id and type, service, tenant,
 section path, page and character span. `incidentops_ai.retrieval.ingest` is repeatable: unchanged
 documents are skipped, changed ones are replaced.
 
-### AIENG-26 · Chunking experiments
+### AIENG-26 · Chunking experiments  🟡 built, run pending
 
-Five configs against the 30 questions with an in-memory retriever; decision rule above.
+Five configs against the 30 questions with an in-memory retriever; decision rule above. Chunkers: `fixed-500-50`, `fixed-1000-100`, `fixed-2000-200`, `paragraph-1000`, `section-1500`. Command: `uv run python -m incidentops_ai.retrieval.chunking_experiment`.
 
-### AIENG-27 · Embeddings, vector store, dense retriever
+### AIENG-27 · Embeddings, vector store, dense retriever  ✅
 
-Embedder interface (OpenAI and fake), `chunks.embedding vector(1536)`, `PgVectorRetriever` with
-tenant, service and document-type filters, and a parity test against the in-memory retriever.
+Embedder interface (OpenAI and fake), `chunks.embedding vector(1536)` with the model and context
+setting that made each vector, `index_chunks` (embeds only what is missing or stale),
+`PgVectorRetriever` with tenant, service and document-type filters applied in SQL, and a test that
+it ranks like the in-memory retriever on all 30 questions.
 
-### AIENG-28 · Benchmark and findings
+### AIENG-28 · Benchmark and findings  🟡 runner built, baseline pending
 
 Recall@K, Precision@K, MRR; at least five misses inspected; written baseline in
-`evals/retrieval/runs/`. Re-runnable with one command.
+`evals/retrieval/runs/`. Re-runnable with one command: `uv run python -m incidentops_ai.retrieval.benchmark`.
+The runner already lists every miss with what was returned instead; the written analysis of *why* waits for real numbers.
+
+## To finish W03
+
+Two results need real embeddings. Cost is a few cents (the corpus is about 9,000 tokens).
+
+1. Create a new project-scoped OpenAI key and put it in `.env` as `OPENAI_API_KEY` (spend limit on,
+   auto-recharge off).
+2. Start the pgvector database and migrate (README, "Local development").
+3. `uv run python -m incidentops_ai.retrieval.chunking_experiment`. Read
+   `evals/retrieval/runs/<date>-chunking-text-embedding-3-small.md`; the selected config is named in it.
+4. Optional, for H6: the same command with `--model text-embedding-3-large`, then compare Recall@5.
+5. Make the winner the default (`DEFAULT_CHUNKER` in `retrieval/ingest.py`), then
+   `ingest --prune`, `index`, `benchmark`. Commit the two files the benchmark writes.
+6. Write the results into the W03 note: each hypothesis H1 to H6 confirmed or refuted, and the
+   failure modes behind at least five misses from the benchmark report.
+7. Update ROADMAP.md (the 🟡 rows and "Current state") and the AIENG ticket statuses.
 
 ## Risks
 

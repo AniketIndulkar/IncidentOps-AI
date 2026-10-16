@@ -77,12 +77,16 @@ Detailed day-by-day plan: [roadmap-w02.md](roadmap-w02.md).
 
 ### Phase 2 — Retrieval (W03–W04, 19–30 Oct) → **v0.1**
 
-**W03 · Retrieval foundations** (AIENG-4)
-- AIENG-24 Corpus of runbooks/postmortems + **30-question eval set committed first**.
-- AIENG-25 Ingestion with source/page provenance on every chunk.
-- AIENG-26 ≥3 chunking configs vs eval set; pick from evidence.
-- AIENG-27 Embedding model + pgvector/Qdrant + metadata-aware dense retriever.
-- AIENG-28 Recall@K, Precision@K, MRR baseline report; inspect ≥5 misses.
+**W03 · Retrieval foundations** (AIENG-4) — *exit: ingestion pipeline, metadata, chunking experiments and a reproducible retrieval benchmark*
+
+Detailed plan, hypotheses and decisions: [roadmap-w03.md](roadmap-w03.md). Built 16 Oct, ahead of schedule;
+two measurements wait for a valid OpenAI key (see Current state).
+
+- ✅ AIENG-24 Corpus of 18 runbooks/postmortems + **30-question eval set committed first** (ground truth = exact quotes, valid under any chunking).
+- ✅ AIENG-25 Ingestion with source/page/section/char-span provenance and a tenant on every chunk; repeatable, one transaction.
+- 🟡 AIENG-26 Five chunking configs, metrics and harness built; **selection pending** the real-embedding run (rule fixed in advance).
+- ✅ AIENG-27 pgvector column, `PgVectorRetriever` (tenant/service/type filters in SQL), held to the same ranking as the in-memory reference. Embedding model `text-embedding-3-small` is provisional until the comparison runs.
+- 🟡 AIENG-28 Benchmark runner (Recall@K, Precision@K, MRR, latency, per-style table, every miss listed); **baseline report and the ≥5-miss analysis pending** the real-embedding run.
 
 **W04 · Hybrid, RRF, reranking** (AIENG-5)
 - AIENG-29 BM25 → AIENG-30 RRF fusion → AIENG-31 cross-encoder (does it earn its latency?).
@@ -175,7 +179,7 @@ W01 API+Postgres ─▶ W02 extraction ─▶ W03 dense ─▶ W04 hybrid+diagno
 
 Hard dependencies to protect:
 1. **W02 provider abstraction** must be clean — W11 replaces it with LiteLLM. Keep a single interface so the swap is local.
-2. **W03 retriever interface** is reused by graph (W05), multimodal (W06), and permission filtering (W10). Design it to accept filters/context from day one.
+2. **W03 retriever interface** is reused by graph (W05), multimodal (W06), and permission filtering (W10). Design it to accept filters/context from day one. ✅ Built in W03: `Retriever.retrieve(query, k, filters)` with a required tenant.
 3. **W01 Postgres** carries incidents, idempotency, audit, LangGraph checkpoints and memory. Use migrations (Alembic) from W01.
 4. **W01 CI** is the home for eval gates (W11) and red-team suite (W10). Keep it fast.
 
@@ -183,7 +187,7 @@ Hard dependencies to protect:
 
 | Decision | Recommendation | Why |
 |---|---|---|
-| Vector store | **pgvector** in existing Postgres | One fewer service, same DB for metadata filters and tenant isolation (W10) |
+| Vector store | **pgvector** in existing Postgres ✅ adopted (W03) | One fewer service, same DB for metadata filters and tenant isolation (W10). Needs the `pgvector/pgvector:pg17` image locally, in CI and in compose. |
 | DB access | SQLAlchemy 2.x async + asyncpg + Alembic ✅ adopted | Matches async FastAPI; migrations needed by W07/W08 |
 | Errors | RFC 9457 `problem+json` with stable `code` ✅ adopted | One error shape for clients; no input echo |
 | Hosting (W01–W12) | Lightsail `micro` + docker compose, deleted after use ✅ adopted | Fixed $7/mo, no hidden costs; registry/orchestrator deferred (see deployment note) |
@@ -191,22 +195,49 @@ Hard dependencies to protect:
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
 
-## Current state (13 Oct 2026, W02 complete)
+## Current state (16 Oct 2026, W03 built; real-embedding runs pending)
 
-- **W01 and W02 complete:** AIENG-2, 15–23 done. W02 finished on Tue 13 Oct, three days early. Next: W03, AIENG-24.
+- **W01 and W02 complete** (AIENG-2, 15–23). **W03 built ahead of schedule** (AIENG-24–28: code, tests, docs).
+  Two W03 results are **not produced yet**: the chunking choice (AIENG-26) and the dense baseline
+  with its miss analysis (AIENG-28). Both need real embeddings and the OpenAI key in `.env` has
+  expired (401 `expired_secret_key`). Next: create a new project key, then run the commands in
+  [roadmap-w03.md](roadmap-w03.md#to-finish-w03). After that: W04, AIENG-29.
 - API: incidents (`POST`, `GET`, idempotency keys), `POST /incidents/{id}/extraction`,
-  `POST /incidents/{id}/related-incidents`, `/health`; RFC 9457 errors.
+  `POST /incidents/{id}/related-incidents`, `/health`; RFC 9457 errors. Unchanged in W03.
 - LLM: provider layer (`LLMProvider`; OpenAI and fake implementations), strict structured output,
   bounded retry, tool calling with a validation gate and parallel execution, rule-based review flag.
-  Model in use: `gpt-6-luna`. Prompts versioned in the package (`extract_incident/v1`, `related_incidents/v1`).
-- Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`, `llm_runs`).
-- Tests: 143 pytest tests against real Postgres, all offline (no API key, no model calls in CI).
-- Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`).
-- Docker, CI (lint → test → build, green on `main` as of W01), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
+  Model in use: `gpt-6-luna`. Prompts versioned in the package (`extract_incident/v1`, `v2`, `related_incidents/v1`).
+- Retrieval (`src/incidentops_ai/retrieval/`): document parser (front matter, cleaning, form-feed
+  pages, heading paths), three chunker families (fixed window, paragraph, section-aware), ingestion
+  into PostgreSQL, `Embedder` interface (OpenAI with bounded retry, offline fake, on-disk cache),
+  a `Retriever` interface with a **required tenant**, in-memory and pgvector dense retrievers,
+  Recall@K / Precision@K / Hit@K / MRR against evidence spans, experiment and benchmark runners.
+- Data: PostgreSQL via async SQLAlchemy + Alembic (`incidents`, `idempotency_keys`, `llm_runs`,
+  `llm_run_keys`, `documents`, `chunks` with a 1536-dimension `vector` column).
+- Tests: 387 pytest tests against real Postgres with pgvector, all offline (no API key, no model calls in CI).
+- Evals: 10 extraction samples with two recorded baseline runs (`evals/extraction/`); 30 retrieval
+  questions with 42 evidence spans (`evals/retrieval/questions.jsonl`), checked by a test against the corpus.
+- Docker, CI (lint → test → build; green on `main` as of W01) and compose now use `pgvector/pgvector:pg17`
+  (changed in W03, not yet run in CI), AWS account secured; deploy steps in `docs/deploy-lightsail.md`.
 - Postman collection in `postman/` (11 requests).
 - Decisions: [ADR-001](adr/001-llm-failure-handling.md) (retry vs fallback vs human review vs rejection).
-- Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix.
-- Week write-up: [notes/week-02-llm-application-engineering.md](notes/week-02-llm-application-engineering.md) (every W02 decision, with why and why not).
+- Notes: `docs/notes/` — async Python, backend stack, deployment, LLM provider design, LLM failure matrix,
+  [retrieval mental model](notes/retrieval-mental-model.md), [W03 write-up](notes/week-03-retrieval-foundations.md).
+- Week write-ups: [W02](notes/week-02-llm-application-engineering.md), [W03](notes/week-03-retrieval-foundations.md).
+
+### What W03 taught us
+
+- The metric can favour the wrong thing. With documents of about 2,000 characters, a 2,000-character
+  chunk is nearly the whole document, so "did the retrieved chunk hold the answer" is easy and
+  Recall/MRR reward it. An offline check showed it before any real run, so a "Chars read@5" column
+  was added next to the quality numbers. The selection rule itself was not changed.
+- Ground truth as a quote, not a chunk id, is what lets one eval set judge five chunkings.
+- Tests caught two of my own wrong assumptions (a paragraph is 61 characters, not 70; a chunk that
+  starts on page 2 and ends on page 3 does not make page 3 a "start page"), not product defects.
+- The local Postgres (Homebrew 14) cannot run pgvector, so the test database is a container. Anything
+  that needs the extension therefore needs that image, including CI and compose.
+- An expired API key stops the measurement, not the build: everything except the two real-model
+  results is finished and tested, and nothing offline is presented as a benchmark.
 
 ### What W02 taught us
 
@@ -222,20 +253,26 @@ Hard dependencies to protect:
 ## Risks & gaps found in the tickets
 
 1. ~~Schedule slip in W01~~ — resolved: W01 finished on time.
-2. **PREP partly open:** Postgres ✅, Docker ✅ (OrbStack), AWS + budget ✅. LLM API ✅ (OpenAI, existing credit). Still open: Neo4j Aura (W05), Langfuse (W11).
+2. **PREP partly open:** Postgres ✅ (pgvector container for tests), Docker ✅ (OrbStack), AWS + budget ✅. LLM API: OpenAI credit exists but **the key has expired** (see risk 16). Still open: Neo4j Aura (W05), Langfuse (W11).
 3. ~~`__pycache__` committed~~ — resolved (`.gitignore` populated, files untracked).
 4. ~~README empty~~ — resolved (setup/run/test steps); keep it current for AIENG-77.
 5. **Heavy weeks:** W09 (3 integrations + Text-to-SQL) and W10 (RBAC + data permissions + red-team) are dense for 10h each. Pre-decide what drops first (candidate: legacy SOAP adapter AIENG-58 → known limitation).
 6. **Holiday weeks:** W12 (Christmas) and W13 (New Year) are full release work. AIENG-73 is already optional; consider making AIENG-74 start in W12 Fri if energy is low.
 7. **Corpus is synthetic/public.** Eval results risk overfitting a small set; W11 golden-set expansion (AIENG-64) is the mitigation — don't skip it.
-8. **Data permissions retrofit (W10)** touches every retriever. Carry a `tenant_id`/ACL field in chunk metadata from W03 to make W10 cheap.
+8. **Data permissions retrofit (W10)** touches every retriever. ~~Carry a `tenant_id`/ACL field in chunk metadata from W03.~~ Done: every document and chunk has a tenant, and `RetrievalFilter` requires one. An ACL field is still to come (AIENG-61).
 9. **AWS Paid plan, no hard spending cap.** Account moved to Paid when Identity Center/Organizations were enabled (now removed). Mitigation: budget + anomaly alerts, fixed-price Lightsail, delete resources after every session; never enable Organizations/Identity Center.
 10. **Idempotency keys are global and never expire.** Scope per user once auth lands (AIENG-60) and add TTL cleanup (W12, AIENG-71).
 11. **Single LLM provider, no fallback.** A provider outage disables analysis (ADR-001). Second provider and gateway: W11 (AIENG-66).
 12. **LLM endpoints use one shared token, not per-user login.** Closed for a single-tenant deploy (review after W02): both LLM endpoints need `INCIDENTOPS_API_TOKEN` as a bearer token (without it they stay off, even with `OPENAI_API_KEY` set), are rate limited (`INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE`, per process, so it assumes one uvicorn worker) and take an `Idempotency-Key` (claimed before the model is called; only successes are replayed). Real users, roles and per-user limits are still AIENG-60; with several workers the rate limit has to move to shared storage.
 13. **Extraction ignored the stored fields.** Fixed with prompt `v2`: the recorded service, severity and environment are sent with the report. Not yet compared against the `v1` baseline with the real model (W11, AIENG-64).
 14. **Eval set is tiny and unscored.** 10 samples, service name checked only. Expected values and repeated runs come in W11 (AIENG-64, 65).
-11. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
+15. **Planned improvement: prevent lost updates between sessions.** Before adding an incident update endpoint, add an Alembic migration for a non-null version counter and configure SQLAlchemy optimistic locking (`version_id_col`). Return the version to clients and require the expected version on updates, so stale client edits and concurrent session writes cannot silently overwrite another change. Return a structured HTTP `409` conflict when the version is stale; clients must reload and reconcile rather than blindly retry. Verify with a real-Postgres test using two independent sessions: both load the same version, the first commits, and the second is rejected without overwriting it. Include this scenario in W12 concurrency checks (AIENG-71).
+
+16. **OpenAI key expired (found 16 Oct).** Blocks the real-embedding runs for AIENG-26 and AIENG-28 and the real-model parts of W04. Create a new project-scoped key, put it in `.env`, keep the spend limit and auto-recharge off.
+17. **Retrieval metrics favour large chunks on a corpus of short documents.** The selection rule uses MRR and Recall@5 as fixed in advance; "Chars read@5" shows the cost. Re-check the choice when the corpus has long documents (W06 PDFs, W11 golden-set expansion).
+18. **Corpus and eval set share one author and are small** (18 documents, 30 questions; one question is 3.3 points). Treat differences under about 5 points as noise; expand in W11.
+19. **Postgres image changed** from `postgres:17-alpine` to `pgvector/pgvector:pg17` in compose and CI. A reused data volume could have collation differences (alpine/musl vs Debian/glibc); the Lightsail deploy is recreated each time, so it is acceptable, but CI and a clean deploy have not run on it yet.
+20. **No vector index.** Exact scan is right for hundreds of chunks. Add HNSW near ~10,000 chunks (measure recall against the exact scan when you do).
 
 ## Weekly cadence
 

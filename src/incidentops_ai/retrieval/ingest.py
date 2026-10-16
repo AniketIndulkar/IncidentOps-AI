@@ -27,6 +27,7 @@ from incidentops_ai.retrieval.documents import (
 )
 from incidentops_ai.retrieval.orm import ChunkRow, DocumentRow
 
+# Provisional: replace with the experiment's winner once AIENG-26 has run on real embeddings.
 DEFAULT_CHUNKER = "fixed-1000-100"
 
 

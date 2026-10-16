@@ -45,14 +45,14 @@ async def test_the_report_and_the_per_question_data_are_written(tmp_path: Path):
         DOCUMENTS, QUESTIONS, FakeEmbedder(), out_dir=tmp_path, run_date="2026-10-17"
     )
 
-    report = (tmp_path / "2026-10-17-chunking.md").read_text()
+    report = (tmp_path / "2026-10-17-chunking-fake-hash-1536.md").read_text()
     assert "fake-hash-1536" in report  # the embedding model is always on the page
     assert "## Primary configurations" in report
     assert f"**{outcome.winner.name}**" in report
     assert "## Context header" in report and "## Service filter" in report
     assert "## MRR by question style" in report
 
-    data = json.loads((tmp_path / "2026-10-17-chunking.json").read_text())
+    data = json.loads((tmp_path / "2026-10-17-chunking-fake-hash-1536.json").read_text())
     assert data["embedding_model"] == "fake-hash-1536"
     assert data["winner"] == outcome.winner.name
     assert set(data["configs"]) >= set(PRIMARY_CONFIGS)
@@ -70,7 +70,9 @@ async def test_the_same_inputs_give_the_same_report(tmp_path: Path):
         DOCUMENTS, QUESTIONS, FakeEmbedder(), out_dir=second, run_date="d"
     )
 
-    assert (first / "d-chunking.json").read_text() == (second / "d-chunking.json").read_text()
+    assert (first / "d-chunking-fake-hash-1536.json").read_text() == (
+        second / "d-chunking-fake-hash-1536.json"
+    ).read_text()
 
 
 def test_the_embedder_comes_from_settings():
