@@ -11,12 +11,14 @@ from incidentops_ai.retrieval.documents import load_corpus
 from incidentops_ai.retrieval.embeddings import FakeEmbedder
 from incidentops_ai.retrieval.evalset import load_questions
 from incidentops_ai.retrieval.metrics import QuestionScore
+from incidentops_ai.retrieval.rerank import FakeReranker
 from incidentops_ai.retrieval.stack_benchmark import (
     STAGES,
     StageRun,
     parse_config,
     questions_moved,
     render_stack_report,
+    rerank_verdict,
     run_stages,
     write_stack_report,
 )
@@ -214,3 +216,69 @@ async def test_the_hybrid_stage_is_compared_with_both_of_its_sources():
     assert "- hybrid vs dense: improved" in report
     assert "- hybrid vs bm25: improved" in report
     assert "### Misses: hybrid" in report
+
+
+async def rerank_runs(config: str = "fixed-2000-200") -> list[StageRun]:
+    return await run_stages(
+        parse_config(config),
+        DOCUMENTS,
+        QUESTIONS,
+        FakeEmbedder(),
+        stages=("hybrid", "hybrid-rerank"),
+        reranker=FakeReranker(),
+    )
+
+
+async def test_the_rerank_stage_refuses_to_run_without_a_reranker():
+    with pytest.raises(ValueError, match="hybrid-rerank.*needs a reranker"):
+        await run_stages(
+            parse_config("fixed-2000-200"),
+            DOCUMENTS,
+            QUESTIONS,
+            FakeEmbedder(),
+            stages=("hybrid-rerank",),
+        )
+
+
+async def test_the_rerank_stage_records_what_it_costs_locally():
+    hybrid, rerank = await rerank_runs()
+
+    assert rerank.result.retriever == "hybrid-rrf+rerank"
+    assert set(rerank.extras) >= {
+        "load_seconds",
+        "rerank_mean_ms",
+        "rerank_p95_ms",
+        "rss_added_mb",
+        "truncated",
+        "usd_per_1000_queries",
+    }
+    assert rerank.extras["rerank_p95_ms"] >= rerank.extras["rerank_mean_ms"] >= 0
+    assert rerank.extras["usd_per_1000_queries"] == hybrid.extras["usd_per_1000_queries"] > 0
+    assert len(rerank.result.scores) == 30
+
+
+@pytest.mark.parametrize(
+    ("p95_ms", "added_mb", "heavy", "mentions"),
+    [
+        (120.0, 40.0, False, "Within"),
+        (350.0, 40.0, True, "p95"),
+        (100.0, 600.0, True, "memory"),
+        (350.0, 600.0, True, "p95"),
+    ],
+)
+def test_the_local_verdict_applies_the_bars_fixed_in_advance(p95_ms, added_mb, heavy, mentions):
+    too_heavy, text = rerank_verdict(p95_ms, added_mb)
+
+    assert too_heavy is heavy
+    assert mentions in text
+    assert "300" in text and "500" in text  # the bars are always printed next to the numbers
+
+
+async def test_the_report_has_the_reranker_section_and_its_comparison():
+    runs = {"fixed-2000-200": await rerank_runs()}
+
+    report = render_stack_report(runs, embedding_model="m", run_date="d")
+
+    assert "### Reranker, local cost" in report
+    assert "- hybrid-rerank vs hybrid: improved" in report
+    assert "### Misses: hybrid-rerank" in report

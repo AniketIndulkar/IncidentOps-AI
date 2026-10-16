@@ -12,7 +12,10 @@ first run, and this module only produces the evidence.
 import argparse
 import asyncio
 import json
+import os
 import statistics
+import subprocess
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -37,9 +40,17 @@ from incidentops_ai.retrieval.experiment import ExperimentConfig
 from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.hybrid import HybridRetriever
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
+from incidentops_ai.retrieval.rerank import (
+    RERANK_DEPTH,
+    TOKEN_LIMIT,
+    CrossEncoderReranker,
+    FakeReranker,
+    Reranker,
+    RerankingRetriever,
+)
 from incidentops_ai.retrieval.retriever import Retriever
 
-STAGES = ("dense", "bm25", "hybrid")
+STAGES = ("dense", "bm25", "hybrid", "hybrid-rerank")
 # The two configs the stack is chosen on; anything else in a report is exploratory.
 DECISION_CONFIGS = ("fixed-2000-200", "section-1500+ctx")
 DEFAULT_CONFIGS = (*DECISION_CONFIGS, "section-1500")
@@ -47,6 +58,11 @@ DEFAULT_CONFIGS = (*DECISION_CONFIGS, "section-1500")
 COMPARED_TO = {"bm25": ("dense",), "hybrid": ("dense", "bm25"), "hybrid-rerank": ("hybrid",)}
 # Stages that send the question to the embedding API.
 EMBEDS_QUERY = frozenset({"dense", "hybrid", "hybrid-rerank"})
+
+# "Too heavy to run locally" bars, fixed before the first run (docs/roadmap-w04.md).
+RERANK_MAX_P95_MS = 300.0  # added by the reranker for 20 candidates
+RERANK_MAX_ADDED_MB = 500.0  # memory the reranker adds
+END_TO_END_P95_BUDGET_MS = 1000.0  # whole stack, per question
 
 # List price of text-embedding-3-small per million tokens; an estimate, check the current price.
 EMBEDDING_USD_PER_MILLION_TOKENS = 0.02
@@ -87,6 +103,52 @@ class _SplitEmbedder:
         return await (self._queries if is_query else self._chunks).embed(texts)
 
 
+class _TimedReranker:
+    """Passes through to a reranker and records how long each call took."""
+
+    def __init__(self, inner: Reranker) -> None:
+        self.name = inner.name
+        self.inner = inner
+        self.elapsed_ms: list[float] = []
+
+    async def score(self, query: str, passages: Sequence[str]) -> list[float]:
+        started = time.perf_counter()
+        try:
+            return await self.inner.score(query, passages)
+        finally:
+            self.elapsed_ms.append((time.perf_counter() - started) * 1000)
+
+
+def _current_rss_mb() -> float:
+    """Resident memory of this process now (not the high-water mark, which hides growth below an
+    earlier peak). 0.0 if `ps` is unavailable."""
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(os.getpid())], capture_output=True, text=True, check=True
+        )
+        return int(out.stdout.strip()) / 1024  # ps reports kilobytes on macOS and Linux
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return 0.0
+
+
+def rerank_verdict(p95_ms: float, added_mb: float) -> tuple[bool, str]:
+    """Whether the reranker is too heavy to run on this machine, by the bars set in advance."""
+    problems = []
+    if p95_ms > RERANK_MAX_P95_MS:
+        problems.append(f"p95 {p95_ms:.0f} ms is above the {RERANK_MAX_P95_MS:.0f} ms bar")
+    if added_mb > RERANK_MAX_ADDED_MB:
+        problems.append(
+            f"memory added {added_mb:.0f} MB is above the {RERANK_MAX_ADDED_MB:.0f} MB bar"
+        )
+    if problems:
+        bars = f"Bars: p95 {RERANK_MAX_P95_MS:.0f} ms, memory added {RERANK_MAX_ADDED_MB:.0f} MB."
+        return True, "**Too heavy locally:** " + "; ".join(problems) + f". {bars}"
+    return False, (
+        f"Within the local bars: p95 {p95_ms:.0f} ms (bar {RERANK_MAX_P95_MS:.0f} ms), "
+        f"memory added {added_mb:.0f} MB (bar {RERANK_MAX_ADDED_MB:.0f} MB)."
+    )
+
+
 def _query_cost_per_1000(stage: str, questions: Sequence[Question]) -> float:
     if stage not in EMBEDS_QUERY:
         return 0.0
@@ -103,12 +165,16 @@ async def run_stages(
     stages: Sequence[str],
     k: int = TOP_K,
     query_embedder: Embedder | None = None,
+    reranker: Reranker | None = None,
 ) -> list[StageRun]:
     """Score each stage on the same chunks. `query_embedder`, when given, embeds the questions
     (timed for real); `embedder` then only embeds the chunks."""
     for stage in stages:
         if stage not in STAGES:
             raise ValueError(f"unknown stage {stage!r}; valid stages: {', '.join(STAGES)}")
+    if "hybrid-rerank" in stages and reranker is None:
+        raise ValueError("stage 'hybrid-rerank' needs a reranker")
+    timed = _TimedReranker(reranker) if reranker is not None else None
     chunks = [chunk for document in documents for chunk in config.chunker.chunk(document)]
     question_texts = [q.text for q in questions]
     if query_embedder is None:
@@ -128,15 +194,37 @@ async def run_stages(
                 )
             elif stage == "bm25":
                 retrievers[stage] = Bm25Retriever(chunks, with_context=config.with_context)
-            else:
+            elif stage == "hybrid":
                 retrievers[stage] = HybridRetriever(
                     await retriever_for("dense"), await retriever_for("bm25")
                 )
+            else:
+                assert timed is not None  # checked above
+                retrievers[stage] = RerankingRetriever(await retriever_for("hybrid"), timed)
         return retrievers[stage]
 
     runs: list[StageRun] = []
     for stage in stages:
-        result = await run_benchmark(await retriever_for(stage), documents, questions, k=k)
+        retriever = await retriever_for(stage)
+        extras = {"usd_per_1000_queries": _query_cost_per_1000(stage, questions)}
+        reranking = stage == "hybrid-rerank"
+        if reranking:
+            assert timed is not None  # checked above
+            rss_before = _current_rss_mb()
+            started = time.perf_counter()
+            await timed.score("warm up", ["warm up"])  # loads the model; not part of query latency
+            extras["load_seconds"] = time.perf_counter() - started
+            timed.elapsed_ms.clear()
+            truncated_before = getattr(reranker, "truncated", 0)
+        result = await run_benchmark(retriever, documents, questions, k=k)
+        if reranking:
+            assert timed is not None
+            extras.update(
+                rerank_mean_ms=statistics.fmean(timed.elapsed_ms),
+                rerank_p95_ms=percentile(timed.elapsed_ms, 0.95),
+                rss_added_mb=max(_current_rss_mb() - rss_before, 0.0),
+                truncated=float(getattr(reranker, "truncated", 0) - truncated_before),
+            )
         runs.append(
             StageRun(
                 stage=stage,
@@ -147,7 +235,7 @@ async def run_stages(
                     for ranked in result.rankings.values()
                 )
                 / len(result.rankings),
-                extras={"usd_per_1000_queries": _query_cost_per_1000(stage, questions)},
+                extras=extras,
             )
         )
     return runs
@@ -260,6 +348,8 @@ def render_stack_report(
                 improved, worse = questions_moved(by_stage[base], by_stage[stage])
                 lines.append(f"- {stage} vs {base}: improved {_ids(improved)}; worse {_ids(worse)}")
             lines.append("")
+        if "hybrid-rerank" in by_stage:
+            lines += _reranker_section(by_stage["hybrid-rerank"])
         categories = list(runs[0].result.by_category)
         lines += [
             "### MRR by question style",
@@ -286,6 +376,31 @@ def render_stack_report(
                 *render_misses(run.result, heading="####"),
             ]
     return "\n".join(lines)
+
+
+def _reranker_section(run: StageRun) -> list[str]:
+    extra = run.extras
+    _, verdict = rerank_verdict(extra["rerank_p95_ms"], extra["rss_added_mb"])
+    end_to_end = percentile(run.result.latencies_ms, 0.95)
+    within = "within" if end_to_end < END_TO_END_P95_BUDGET_MS else "OVER"
+    return [
+        "### Reranker, local cost",
+        "",
+        (
+            f"- Load and first call: {extra['load_seconds']:.1f} s. Reranking {RERANK_DEPTH} "
+            f"candidates: mean {extra['rerank_mean_ms']:.0f} ms, p95 {extra['rerank_p95_ms']:.0f} ms."
+        ),
+        (
+            f"- Memory added: {extra['rss_added_mb']:.0f} MB. Candidates probably cut at the "
+            f"{TOKEN_LIMIT}-token limit (estimate): {extra['truncated']:.0f}."
+        ),
+        f"- {verdict}",
+        (
+            f"- Whole stack, end to end p95: {end_to_end:.0f} ms, {within} the "
+            f"{END_TO_END_P95_BUDGET_MS:.0f} ms budget."
+        ),
+        "",
+    ]
 
 
 def _stage_data(run: StageRun) -> dict:
@@ -356,6 +471,9 @@ async def _run(args: argparse.Namespace) -> BenchmarkFiles:
     documents = load_corpus(args.corpus)
     questions = load_questions(args.questions)
     stages = tuple(args.stages.split(","))
+    reranker: Reranker | None = None
+    if "hybrid-rerank" in stages:
+        reranker = FakeReranker() if args.fake else CrossEncoderReranker()
     try:
         runs_by_config = {
             name: await run_stages(
@@ -365,6 +483,7 @@ async def _run(args: argparse.Namespace) -> BenchmarkFiles:
                 embedder,
                 stages=stages,
                 query_embedder=live,
+                reranker=reranker,
             )
             for name in args.configs.split(",")
         }
