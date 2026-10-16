@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+
+# Embedding vectors cached by the retrieval experiments (re-creatable; costs a few cents to rebuild)
+evals/retrieval/.cache/
