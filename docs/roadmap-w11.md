@@ -3,9 +3,15 @@
 Source: Jira epic **AIENG-12** and tasks **AIENG-64 to AIENG-68**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W10 (branch `feat/w11-evals-gateway-observability`).
 
-> **Status:** design written before any W11 code. Decisions are mine (W05 to W13 built back to back
-> at the user's request), except tracing, which the user chose: an interface, a local file exporter,
-> and a Langfuse adapter tested against a fake.
+> **Status, 17 Oct 2026: built and measured.** Design written before any W11 code. Decisions are
+> mine (W05 to W13 built back to back at the user's request), except tracing, which the user chose:
+> an interface, a local file exporter, and a Langfuse adapter tested against a fake.
+>
+> **Result:** H45, H47, H48 and H49 hold; **H46 is refuted**: the judge agreed with the labels on
+> 31% of faithfulness verdicts at first and 77% after a clearer rubric and a harness fix (kappa
+> 0.45, in-sample), so it is reported, not gated. Findings:
+> [w11-findings](../evals/generation/runs/2026-10-17-w11-findings.md); decision:
+> [ADR-008](adr/008-evaluation-gateway-and-tracing.md).
 
 ## Goal of the week
 

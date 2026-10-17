@@ -169,6 +169,21 @@ uv run pytest -m redteam                            # the security regression su
 uv run python -m incidentops_ai.security.benchmark  # injections against the real model (scratch DB)
 ```
 
+## Evaluation, gateway and tracing (W11)
+
+```bash
+uv run python -m incidentops_ai.evals.gate                       # the CI gate; writes evals/dashboard.md
+uv run python -m incidentops_ai.evals.generation generate        # real model: golden-set diagnoses
+uv run python -m incidentops_ai.evals.generation judge           # real model: judge verdicts
+uv run python -m incidentops_ai.evals.gate --refresh-baseline    # after a prompt change and a new run
+uv run python -m incidentops_ai.observability.report traces.jsonl --trace <run id without dashes>
+```
+
+Every model call goes through the gateway (`INCIDENTOPS_LLM_ROUTES`, e.g. `{"diagnosis": ["model-a",
+"model-b"]}`: fallback on timeouts, rate limits and provider errors; a circuit breaker per model).
+Traces go to `INCIDENTOPS_TRACE_FILE` (JSONL) and, with `INCIDENTOPS_LANGFUSE_HOST` and both keys, to
+Langfuse. A prompt change fails CI until the generation run is repeated and the baseline refreshed.
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -185,6 +200,8 @@ uv run python -m incidentops_ai.security.benchmark  # injections against the rea
   - `ops/` — the ops database: allow-list, reader, SQL validator, text-to-SQL (W09)
   - `auth/` — JWT verification, roles and permissions (W10)
   - `security/` — PII redaction, the guarded provider, injection flags, attack benchmark (W10)
+  - `evals/` — the evaluation layers, the generation judge and calibration, the CI gate (W11)
+  - `observability/` — tracing, the JSONL and Langfuse exporters, the trace report (W11)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)
