@@ -36,7 +36,17 @@ class Settings(BaseSettings):
     # W04: dense + BM25 fused by reciprocal rank beat dense alone by the rule fixed in advance; the
     # reranker did not earn its cost (evals/retrieval/runs/2026-10-16-hybrid-findings.md). It needs
     # the optional "rerank" extra: uv sync --extra rerank.
-    retrieval_stack: Literal["dense", "hybrid", "hybrid-rerank"] = "hybrid"
+    retrieval_stack: Literal["dense", "hybrid", "hybrid-rerank", "bm25"] = "hybrid"
+    # W12: "simulated" answers with the latencies and token counts of real runs, for load tests.
+    llm_provider: Literal["openai", "simulated"] = "openai"
+    # W12: a run still "running" this long after its last update belonged to a process that died.
+    stale_run_after_s: int = 900
+    # W12: connection pools, configurable. Doubling them made no measurable difference under load
+    # (the bottleneck was CPU on one event loop), so the defaults stay where they were.
+    database_pool_size: int = Field(default=5, ge=1)
+    database_max_overflow: int = Field(default=10, ge=0)
+    checkpoint_pool_size: int = Field(default=5, ge=1)
+    simulated_latency_scale: float = 1.0
 
     # Knowledge graph (W05). With a URI and a password the API reads service context from Neo4j.
     # graph_retrieval: "off" (default; the W05 comparison found no gain), "anchor" (the incident's

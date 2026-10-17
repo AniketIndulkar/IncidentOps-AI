@@ -42,6 +42,7 @@ MATRIX = [
     ("POST", f"/memory/{N}/supersede", "memory:write"),
     ("GET", f"/memory/{N}/history", "memory:read"),
     ("POST", "/ops/query", "ops:query"),
+    ("GET", "/status", "incidents:read"),
 ]
 
 

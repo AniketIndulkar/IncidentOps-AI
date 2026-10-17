@@ -25,7 +25,7 @@ from incidentops_ai.retrieval.retriever import (
 )
 from incidentops_ai.retrieval.store import PgVectorRetriever, load_chunks
 
-STACKS: Sequence[str] = ("dense", "hybrid", "hybrid-rerank")
+STACKS: Sequence[str] = ("dense", "hybrid", "hybrid-rerank", "bm25")
 
 
 async def _fingerprint(session: AsyncSession, tenant_id: str) -> str:
@@ -99,11 +99,15 @@ class DbBm25Retriever:
 def build_retriever(
     stack: str,
     session_factory: async_sessionmaker[AsyncSession],
-    embedder: Embedder,
+    embedder: Embedder | None,
     reranker: Reranker | None = None,
 ) -> Retriever:
     if stack not in STACKS:
         raise ValueError(f"unknown stack {stack!r}; valid stacks: {', '.join(STACKS)}")
+    if stack == "bm25":  # W12: no embeddings at all (load tests, or no embedding provider)
+        return DbBm25Retriever(session_factory)
+    if embedder is None:
+        raise ValueError(f"the {stack!r} stack needs an embedder")
     dense = PgVectorRetriever(session_factory, embedder)
     if stack == "dense":
         return dense

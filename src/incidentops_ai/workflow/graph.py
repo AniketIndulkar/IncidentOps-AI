@@ -28,6 +28,7 @@ from langgraph.errors import GraphInterrupt
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from incidentops_ai.diagnosis.evidence import number_evidence
@@ -123,6 +124,8 @@ class WorkflowDeps:
     tenant_id: str = DEFAULT_TENANT
     tickets: Any = None  # TicketActions (AIENG-52): what act writes to; None: nothing is written
     cmdb: Any = None  # CmdbClient (W09): the legacy system of record for ownership; None: off
+    # W12: a hung vector store must not hang the run; past this, retrieval counts as failed.
+    retrieval_timeout_s: float = 5.0
     # Called with the node name before each node runs: tests use it to crash a run on purpose.
     fault: Callable[[str], None] | None = None
     # Model-call records still being written (W08): the runner waits for them before it records a
@@ -274,16 +277,19 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
             with get_tracer().span(
                 "retrieval", kind="retrieval", stack=deps.retriever.name, k=EVIDENCE_COUNT
             ) as span:
-                results = await deps.retriever.retrieve(
-                    _query(state),
-                    k=EVIDENCE_COUNT,
-                    filters=RetrievalFilter(tenant_id=state["tenant_id"]),
-                    hints=QueryHints(services=(state["incident"]["service"],)),
-                )
+                async with asyncio.timeout(deps.retrieval_timeout_s):
+                    results = await deps.retriever.retrieve(
+                        _query(state),
+                        k=EVIDENCE_COUNT,
+                        filters=RetrievalFilter(tenant_id=state["tenant_id"]),
+                        hints=QueryHints(services=(state["incident"]["service"],)),
+                    )
                 span.set(results=len(results), docs=sorted({r.chunk.doc_id for r in results}))
         except (EmbeddingError, RerankerError) as error:
             name = type(error).__name__
             return {"evidence": [], "retrieval_error": name, "_outcome": name}
+        except TimeoutError:
+            return {"evidence": [], "retrieval_error": "RetrievalTimeout", "_outcome": "timeout"}
         evidence = [
             {"chunk": _chunk_dict(r.chunk), "score": r.score, "rank": r.rank} for r in results
         ]
@@ -445,10 +451,17 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def act(state: WorkflowState) -> dict:
         if deps.tickets is None:
             return {"action_result": None, "status": "approved", "_outcome": "no ticket system"}
-        # Keyed on the run id: a retry after a timeout returns the ticket already created.
-        ticket = await deps.tickets.create(
-            state["proposed_action"], run_id=state["run_id"], decision=state["decision"]
-        )
+        # Keyed on the run id: a retry after a timeout returns the ticket already created. A
+        # PostgreSQL advisory lock on the run serialises concurrent attempts, in any process
+        # (W12): the second one then finds the first's ticket instead of racing it.
+        async with deps.sessions() as session, session.begin():
+            await session.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                {"key": f"act:{state['run_id']}"},
+            )
+            ticket = await deps.tickets.create(
+                state["proposed_action"], run_id=state["run_id"], decision=state["decision"]
+            )
         outcome = ticket["id"] if ticket["created"] else f"{ticket['id']} (already created)"
         return {"action_result": ticket, "status": "actioned", "_outcome": outcome}
 

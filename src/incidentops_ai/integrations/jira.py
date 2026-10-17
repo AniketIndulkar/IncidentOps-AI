@@ -181,6 +181,10 @@ class JiraTicketSink:
     def __init__(self, client: JiraClient) -> None:
         self._client = client
 
+    async def probe(self) -> None:
+        """A cheap read for the status page (W12)."""
+        await self._client.search('labels = "incidentops-health"', max_results=1)
+
     async def create(self, proposal: dict, *, run_id: str, decision: dict) -> dict:
         if decision.get("decision") != "approve":
             raise JiraError("not_approved", None, "create")

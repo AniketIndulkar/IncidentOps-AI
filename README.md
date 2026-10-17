@@ -184,6 +184,19 @@ Every model call goes through the gateway (`INCIDENTOPS_LLM_ROUTES`, e.g. `{"dia
 Traces go to `INCIDENTOPS_TRACE_FILE` (JSONL) and, with `INCIDENTOPS_LANGFUSE_HOST` and both keys, to
 Langfuse. A prompt change fails CI until the generation run is repeated and the baseline refreshed.
 
+## Reliability (W12)
+
+`GET /status` reports the tier (FULL, REDUCED, MANUAL) and each dependency's state; the
+[runbook](docs/runbook.md) says what users see and what to do. Runs left `running` by a process that
+died are marked `failed` at startup after `INCIDENTOPS_STALE_RUN_AFTER_S` (900 s) and can resume.
+
+```bash
+INCIDENTOPS_DATABASE_URL=<scratch db, corpus ingested> uv run python -m incidentops_ai.reliability.load
+```
+
+The load test runs the real API with `INCIDENTOPS_LLM_PROVIDER=simulated` (real recorded latencies and
+token counts) and `INCIDENTOPS_RETRIEVAL_STACK=bm25`.
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -202,6 +215,7 @@ Langfuse. A prompt change fails CI until the generation run is repeated and the 
   - `security/` — PII redaction, the guarded provider, injection flags, attack benchmark (W10)
   - `evals/` — the evaluation layers, the generation judge and calibration, the CI gate (W11)
   - `observability/` — tracing, the JSONL and Langfuse exporters, the trace report (W11)
+  - `reliability/` — load and burst testing, the status tiers (W12)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)

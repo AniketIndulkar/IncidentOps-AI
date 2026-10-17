@@ -67,6 +67,13 @@ class Gateway:
             or [config.model]
         )
 
+    def models(self, default: str) -> list[str]:
+        """Every model any route can use, the configured default included."""
+        seen = [default]
+        for models in self._routes.values():
+            seen += [m for m in models if m not in seen]
+        return seen
+
     def open_models(self) -> list[str]:
         now = self._clock()
         return sorted(m for m, h in self._health.items() if h.open_until and now < h.open_until)

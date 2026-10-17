@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -6,11 +7,12 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from neo4j import AsyncGraphDatabase
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, memory, ops, workflow
+from app.routes import analysis, attachments, incidents, memory, ops, status, workflow
 from incidentops_ai.auth.tokens import TokenVerifier
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
@@ -22,6 +24,7 @@ from incidentops_ai.integrations.jira import JiraClient, JiraTicketSink
 from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.gateway import Gateway
 from incidentops_ai.llm.provider import LLMProvider
+from incidentops_ai.llm.simulated import SimulatedProvider
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
 from incidentops_ai.observability.langfuse import LangfuseExporter
@@ -35,6 +38,8 @@ from incidentops_ai.security.guard import GuardedProvider
 from incidentops_ai.tickets.client import TicketActions, TicketClient
 from incidentops_ai.workflow.graph import WorkflowDeps
 from incidentops_ai.workflow.runner import WorkflowRunner, checkpoint_url
+
+logger = logging.getLogger(__name__)
 
 
 def _with_graph_scope(
@@ -91,26 +96,31 @@ def create_app(
             set_tracer(Tracer(exporters))
             resources.callback(set_tracer, Tracer())
         try:
-            if llm_provider is None and settings.openai_api_key:
+            if llm_provider is None and settings.llm_provider == "simulated":
+                owned_provider = SimulatedProvider(latency_scale=settings.simulated_latency_scale)
+            elif llm_provider is None and settings.openai_api_key:
                 owned_provider = build_provider(settings)
             # W10: every model call goes through the guard (canary, output PII), whoever made the
             # provider; closing it stays with whoever made it.
             # W11: through the gateway (routes, fallback, breaker), inside the guard, so the
             # canary is checked whichever model answered.
             inner = llm_provider or owned_provider
-            app.state.llm_provider = (
-                GuardedProvider(
-                    Gateway(
-                        inner,
-                        settings.llm_routes,
-                        per_model_per_minute=settings.llm_per_model_per_minute,
-                    )
+            app.state.gateway = (
+                Gateway(
+                    inner,
+                    settings.llm_routes,
+                    per_model_per_minute=settings.llm_per_model_per_minute,
                 )
                 if inner is not None
                 else None
             )
+            app.state.llm_provider = (
+                GuardedProvider(app.state.gateway) if app.state.gateway is not None else None
+            )
             # The retrieval stack embeds questions with OpenAI, so it needs the key too.
-            if retriever is None and settings.openai_api_key:
+            if retriever is None and settings.retrieval_stack == "bm25":
+                app.state.retriever = build_retriever("bm25", app.state.session_factory, None)
+            elif retriever is None and settings.openai_api_key:
                 owned_embedder = build_embedder(settings)
                 reranker = None
                 if settings.retrieval_stack == "hybrid-rerank":
@@ -149,7 +159,7 @@ def create_app(
                 pool = AsyncConnectionPool(
                     checkpoint_url(settings.database_url),
                     min_size=1,
-                    max_size=5,
+                    max_size=settings.checkpoint_pool_size,
                     timeout=5,
                     open=False,
                     kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
@@ -185,6 +195,10 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
+                try:  # W12: runs a dead process left "running" become resumable
+                    await app.state.workflow_runner.recover_stale(settings.stale_run_after_s)
+                except (DBAPIError, OSError):
+                    logger.warning("Stale-run recovery skipped: the database is not reachable.")
             # The ops database (W09) is read through its own engines, one reader login per tenant
             # (W10): row-level security admits each login's tenant only.
             ops_urls = dict(settings.ops_database_urls)
@@ -232,6 +246,7 @@ def create_app(
     app.include_router(workflow.router)
     app.include_router(memory.router)
     app.include_router(ops.router)
+    app.include_router(status.router)
     return app
 
 
