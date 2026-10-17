@@ -8,7 +8,9 @@ from incidentops_ai.incidents.models import IncidentCreate
 from incidentops_ai.retrieval.documents import load_corpus
 
 ROOT = Path(__file__).resolve().parent.parent
-CASES = [json.loads(line) for line in (ROOT / "evals/workflow/cases.jsonl").read_text().splitlines()]
+CASES = [
+    json.loads(line) for line in (ROOT / "evals/workflow/cases.jsonl").read_text().splitlines()
+]
 DOC_IDS = {d.id for d in load_corpus(ROOT / "data" / "corpus")}
 
 

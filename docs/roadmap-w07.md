@@ -24,11 +24,13 @@ resumed by running only the failed node. That is the behaviour AIENG-46 asks for
 ## The workflow
 
 ```
-           ┌──────────────── extract (model) ────────────────┐
-intake ────┤                                                 ├──▶ assess ──▶ recommend
-(determ.)  └─ retrieve (determ.) ┐                           │   (determ.)  (determ.)
-              graph (determ.) ───┴──▶ diagnose (model) ──────┘       └────▶ review
+intake ──┬─ retrieve (determ.) ─┬──▶ extract (model) ──┬──▶ assess ──┬──▶ recommend
+(determ.)└─ graph (determ.) ────┴──▶ diagnose (model) ─┘   (determ.) └──▶ review
 ```
+
+*Changed while building (AIENG-47):* the first layout started extraction straight after intake. A
+timing test showed no gain, because LangGraph runs in super-steps and diagnosis still waited for the
+whole step that held extraction. The two model calls now share a step.
 
 | Node | Kind | Reads | Writes | On failure |
 |---|---|---|---|---|
