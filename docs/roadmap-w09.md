@@ -3,8 +3,14 @@
 Source: Jira epic **AIENG-10** and tasks **AIENG-54 to AIENG-58**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W08 (branch `feat/w09-integration-text-to-sql`).
 
-> **Status:** design written before any W09 code. Decisions are mine (W05 to W13 built back to back
-> at the user's request).
+> **Status, 17 Oct 2026: built and measured.** Design written before any W09 code; decisions are mine
+> (W05 to W13 built back to back at the user's request).
+>
+> **Result:** H35 to H39 hold. Text-to-SQL answered 14 of 15 with the real model; the validator
+> refused 20 of 20 attacks; the model declined 8 of 8 malicious questions. Testing each layer alone
+> showed the database lets the reader read catalog tables and role names, so for those the validator
+> is the only wall. Findings: [w09-findings](../evals/sql/runs/2026-10-17-w09-findings.md); decision:
+> [ADR-006](adr/006-text-to-sql-and-integration-failures.md).
 
 ## Goal of the week
 
