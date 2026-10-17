@@ -94,6 +94,22 @@ class WorkflowNotResumableError(DomainError):
     code = "workflow_not_resumable"
 
 
+class WorkflowNotAwaitingDecisionError(DomainError):
+    """A decision was sent for a run that is not paused at the approval gate (AIENG-49)."""
+
+    code = "workflow_not_awaiting_decision"
+
+
+class MemoryNotFoundError(NotFoundError):
+    code = "memory_not_found"
+
+
+class MemoryAlreadySupersededError(DomainError):
+    """A note has one successor: correct the current note, not an old one (AIENG-50)."""
+
+    code = "memory_already_superseded"
+
+
 class WorkflowFailedError(DomainError):
     """A workflow run stopped part way. Its checkpoints are kept; it can be resumed by id."""
 
@@ -129,3 +145,17 @@ class RequestInProgressError(RetryLaterError):
     """Another request with the same Idempotency-Key is still running."""
 
     code = "request_in_progress"
+
+
+class WorkflowAbandonedError(WorkflowFailedError):
+    """A run failed again after its last allowed resume (AIENG-51). It is not resumed further."""
+
+    code = "workflow_abandoned"
+
+    def __init__(self, run_id: object) -> None:
+        DomainError.__init__(
+            self,
+            f"The workflow run {run_id} failed again after its last allowed resume and was "
+            "abandoned. Start a new run.",
+        )
+        self.run_id = run_id

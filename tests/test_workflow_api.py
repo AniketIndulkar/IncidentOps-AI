@@ -45,8 +45,8 @@ async def test_triage_runs_the_workflow_and_shows_its_steps(settings):
 
     assert started.status_code == 200
     body = started.json()
-    assert body["run"]["status"] == "recommended" and body["route"] == "recommend"
-    assert body["steps"][0]["node"] == "intake" and len(body["steps"]) == 7
+    assert body["run"]["status"] == "awaiting_approval" and body["route"] == "recommend"
+    assert body["steps"][0]["node"] == "intake" and len(body["steps"]) == 8
     assert body["recommendation"]["runbooks"][0]["doc_id"] == "rb-orders-db-pool"
     assert shown.json()["diagnosis"]["status"] == "answered"
     assert [r["id"] for r in listed.json()] == [run_id]
@@ -74,7 +74,7 @@ async def test_a_failed_run_is_resumed_through_the_api(settings, session_factory
         resumed = await c.post(f"/incidents/{incident_id}/triage/{run_id}/resume")
         again = await c.post(f"/incidents/{incident_id}/triage/{run_id}/resume")
 
-    assert resumed.status_code == 200 and resumed.json()["run"]["status"] == "recommended"
+    assert resumed.status_code == 200 and resumed.json()["run"]["status"] == "awaiting_approval"
     assert again.status_code == 409 and again.json()["code"] == "workflow_not_resumable"
     assert sorted(provider.calls) == ["IncidentExtraction", "ModelDiagnosis"]
 
@@ -113,3 +113,50 @@ async def test_the_api_starts_and_answers_503_when_the_database_is_down(settings
 
     assert resp.status_code == 503 and resp.json()["code"] == "database_unavailable"
     assert provider.calls == []
+
+
+async def test_a_decision_through_the_api_completes_the_run_and_is_audited(settings):
+    provider = ByType(EXTRACTION, model_says(cause("A leak exhausts the pool.", GOOD)))
+    async with client(settings, provider) as c:
+        incident_id = (await c.post("/incidents", json=INCIDENT)).json()["id"]
+        started = (await c.post(f"/incidents/{incident_id}/triage")).json()
+        run_id = started["run"]["id"]
+        base = f"/incidents/{incident_id}/triage/{run_id}"
+
+        malformed = await c.post(f"{base}/decision", json={"decision": "maybe", "reviewer": "A"})
+        decided = await c.post(
+            f"{base}/decision", json={"decision": "approve", "reviewer": "Amara Okafor"}
+        )
+        again = await c.post(f"{base}/decision", json={"decision": "reject", "reviewer": "B"})
+        events = (await c.get(f"{base}/events")).json()
+
+    assert started["proposed_action"]["kind"] == "create_ticket"
+    assert malformed.status_code == 422
+    assert decided.status_code == 200 and decided.json()["run"]["status"] == "approved"
+    assert decided.json()["decision"]["reviewer"] == "Amara Okafor"
+    assert again.status_code == 409 and again.json()["code"] == "workflow_not_awaiting_decision"
+    assert [e["kind"] for e in events] == ["started", "awaiting_approval", "decided", "completed"]
+    assert events[2]["actor"] == "Amara Okafor"
+
+
+async def test_with_a_ticket_system_an_approval_opens_the_ticket(settings, tmp_path):
+    from pydantic import SecretStr
+
+    with_tickets = settings.model_copy(
+        update={
+            "tickets_db": tmp_path / "tickets.db",
+            "approval_secret": SecretStr("test-approval-secret-0123456789"),
+        }
+    )
+    provider = ByType(EXTRACTION, model_says(cause("A leak exhausts the pool.", GOOD)))
+    async with client(with_tickets, provider) as c:
+        incident_id = (await c.post("/incidents", json=INCIDENT)).json()["id"]
+        run_id = (await c.post(f"/incidents/{incident_id}/triage")).json()["run"]["id"]
+        decided = await c.post(
+            f"/incidents/{incident_id}/triage/{run_id}/decision",
+            json={"decision": "approve", "reviewer": "Amara Okafor"},
+        )
+
+    body = decided.json()
+    assert body["run"]["status"] == "actioned"
+    assert body["action_result"]["id"].startswith("TCK-") and body["action_result"]["created"]

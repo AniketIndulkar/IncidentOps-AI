@@ -8,6 +8,7 @@ result it can read and correct.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -38,6 +39,19 @@ class ToolExecution(BaseModel):
     error: str | None = None
     arguments: dict | None = None  # validated arguments; None when rejected
     duration_ms: int = 0
+    fingerprint: str | None = None  # tool name + canonical arguments (W08 duplicate detection)
+    duplicate_of: str | None = None  # the earlier call this one repeated; it was not run again
+
+
+def fingerprint(call: ToolCall) -> str:
+    """The same tool with the same arguments, whatever their order or spacing, is the same call."""
+    try:
+        canonical = json.dumps(
+            json.loads(call.arguments_json), sort_keys=True, separators=(",", ":")
+        )
+    except ValueError:
+        canonical = call.arguments_json  # not JSON: the gate will reject it; compare as text
+    return hashlib.sha256(f"{call.name}\n{canonical}".encode()).hexdigest()[:16]
 
 
 class ToolRegistry:

@@ -32,6 +32,7 @@ class DocType(StrEnum):
     RUNBOOK = "runbook"
     POSTMORTEM = "postmortem"
     ATTACHMENT = "attachment"  # a file attached to one incident (W06); never in the shared corpus
+    MEMORY = "memory"  # a reviewer's note for a service (W08); recalled per tenant and service
 
 
 @dataclass(frozen=True, slots=True)

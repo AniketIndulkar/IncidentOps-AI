@@ -1,4 +1,5 @@
-"""The incident workflow over HTTP (AIENG-46): run it, inspect a run, resume a failed one."""
+"""The incident workflow over HTTP (AIENG-46, AIENG-49): run it, inspect a run and its audit
+trail, decide at the approval gate, resume a failed run."""
 
 import uuid
 
@@ -8,7 +9,12 @@ from pydantic import BaseModel
 from app.deps import WorkflowRunnerDep, enforce_llm_rate_limit, require_llm_access
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.errors import WorkflowRunNotFoundError
-from incidentops_ai.workflow.runner import WorkflowRunner, WorkflowRunRead
+from incidentops_ai.workflow.runner import (
+    Decision,
+    WorkflowEventRead,
+    WorkflowRunner,
+    WorkflowRunRead,
+)
 
 _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
@@ -38,14 +44,17 @@ class TriageResponse(BaseModel):
     diagnosis: dict | None
     recommendation: dict | None
     service_context: dict | None
-    steps: list[dict]  # one entry per step: node, kind (model or deterministic), ms, outcome
+    proposed_action: dict | None  # the ticket awaiting (or given) approval
+    decision: dict | None
+    action_result: dict | None
+    steps: list[dict]  # one entry per step: node, kind (model, deterministic, human), ms, outcome
 
 
 async def _response(runner: WorkflowRunner, run: WorkflowRunRead) -> TriageResponse:
     state = await runner.state(run.id)
     return TriageResponse(
         run=run,
-        status=state.get("status"),
+        status=run.status,  # the state says "running" at the gate; the run row knows it waits
         route=state.get("route"),
         reasons=state.get("reasons", []),
         extraction_status=state.get("extraction_status"),
@@ -54,6 +63,9 @@ async def _response(runner: WorkflowRunner, run: WorkflowRunRead) -> TriageRespo
         diagnosis=state.get("diagnosis"),
         recommendation=state.get("recommendation"),
         service_context=state.get("service_context"),
+        proposed_action=state.get("proposed_action"),
+        decision=state.get("decision"),
+        action_result=state.get("action_result"),
         steps=state.get("steps", []),
     )
 
@@ -70,8 +82,8 @@ async def _owned(
 @router.post("", response_model=TriageResponse)
 async def start_triage(incident_id: uuid.UUID, runner: WorkflowRunnerDep):
     """Run the workflow: retrieve and look up the graph, extract and diagnose, then recommend or
-    send to review. Takes several seconds. A run that stops part way answers 500 with its id and
-    can be resumed."""
+    send to review, and stop at the approval gate (`awaiting_approval`) with a proposed ticket.
+    Takes several seconds. A run that stops part way answers 500 with its id and can be resumed."""
     return await _response(runner, await runner.start(incident_id))
 
 
@@ -90,3 +102,20 @@ async def resume_triage_run(incident_id: uuid.UUID, run_id: uuid.UUID, runner: W
     """Continue a failed run from its last completed step. Finished steps are not repeated."""
     await _owned(runner, incident_id, run_id)
     return await _response(runner, await runner.resume(run_id))
+
+
+@router.post("/{run_id}/decision", response_model=TriageResponse)
+async def decide_triage_run(
+    incident_id: uuid.UUID, run_id: uuid.UUID, decision: Decision, runner: WorkflowRunnerDep
+):
+    """Approve or reject the proposed action of a run waiting at the gate. Recorded in the audit
+    trail with the reviewer's name; a run takes one decision only (409 afterwards)."""
+    await _owned(runner, incident_id, run_id)
+    return await _response(runner, await runner.decide(run_id, decision))
+
+
+@router.get("/{run_id}/events", response_model=list[WorkflowEventRead])
+async def list_triage_events(incident_id: uuid.UUID, run_id: uuid.UUID, runner: WorkflowRunnerDep):
+    """The run's audit trail, oldest first. Append-only: the database refuses changes."""
+    await _owned(runner, incident_id, run_id)
+    return await runner.events(run_id)

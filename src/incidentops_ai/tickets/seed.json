@@ -1,0 +1,6 @@
+[
+  {"title": "payments-gateway: eu-west-1 acquirer latency above SLO", "body": "Card authorisations in eu-west-1 take 8-9 s at peak. Acquirer failover not yet tested.", "service": "payments-gateway", "severity": "SEV2", "status": "open"},
+  {"title": "orders-db: raise pool size for the nightly batch", "body": "The 02:00 batch holds most pool connections for 20 minutes.", "service": "orders-api", "severity": "SEV3", "status": "open"},
+  {"title": "checkout-api: 502s after v2.29.0", "body": "Resolved by rolling back; root cause was the readiness probe.", "service": "checkout-api", "severity": "SEV2", "status": "closed"},
+  {"title": "search-indexer: memory limit too low for bulk reindex", "body": "Pods OOMKilled during full reindex; limit raised to 2 GiB.", "service": "search-indexer", "severity": "SEV3", "status": "closed"}
+]

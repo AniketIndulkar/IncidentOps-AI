@@ -1,0 +1,111 @@
+{
+  "model": "gpt-6-luna",
+  "rows": [
+    {
+      "case": "m1",
+      "condition": "no note",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ]
+    },
+    {
+      "case": "m1",
+      "condition": "note elsewhere",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ]
+    },
+    {
+      "case": "m1",
+      "condition": "own note",
+      "recalled": 1,
+      "status": "answered",
+      "cited": [
+        "M1"
+      ],
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review"
+      ]
+    },
+    {
+      "case": "m2",
+      "condition": "no note",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer"
+      ]
+    },
+    {
+      "case": "m2",
+      "condition": "note elsewhere",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer"
+      ]
+    },
+    {
+      "case": "m2",
+      "condition": "own note",
+      "recalled": 1,
+      "status": "answered",
+      "cited": [
+        "M1"
+      ],
+      "route": "recommend",
+      "reasons": []
+    },
+    {
+      "case": "m3",
+      "condition": "no note",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer"
+      ]
+    },
+    {
+      "case": "m3",
+      "condition": "note elsewhere",
+      "recalled": 0,
+      "status": "no_answer",
+      "cited": [],
+      "route": "review",
+      "reasons": [
+        "no_answer"
+      ]
+    },
+    {
+      "case": "m3",
+      "condition": "own note",
+      "recalled": 1,
+      "status": "answered",
+      "cited": [
+        "M1"
+      ],
+      "route": "recommend",
+      "reasons": []
+    }
+  ],
+  "calls": 18,
+  "input_tokens": 38099,
+  "output_tokens": 5245
+}

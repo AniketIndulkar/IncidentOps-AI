@@ -159,7 +159,7 @@ async def test_the_diagnosis_cites_an_attachment_with_the_box_of_the_quoted_line
     assert citation["region"] == [30, 110, 720, 132]
     assert [e["evidence_id"] for e in diagnosis["evidence"]] == ["A1"]
     prompt = provider.calls[0].prompt
-    assert "[A1] alert.png" in prompt.input and prompt.version == "v2"
+    assert "[A1] alert.png" in prompt.input and prompt.version == "v3"
 
 
 async def test_with_no_corpus_hits_and_no_attachments_the_model_is_still_not_called(settings):

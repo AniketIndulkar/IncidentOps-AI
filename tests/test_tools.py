@@ -260,8 +260,9 @@ async def test_loop_without_tool_calls_answers_in_one_round():
 
 async def test_loop_stops_at_the_round_limit_without_running_calls_nobody_will_answer():
     registry, ran = spy_registry()
-    again = [call({"service": "a", "limit": 1})]
-    provider = FakeProvider(tool_turns=[again, again, again, again])
+    # A different call each round: the same call repeated is a loop, stopped earlier (W08).
+    rounds = [[call({"service": f"s{i}", "limit": 1}, call_id=f"c{i}")] for i in range(4)]
+    provider = FakeProvider(tool_turns=rounds)
 
     result = await run_tool_loop(provider, PROMPT, registry, CONFIG, max_rounds=3)
 

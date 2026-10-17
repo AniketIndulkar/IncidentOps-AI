@@ -9,7 +9,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, workflow
+from app.routes import analysis, attachments, incidents, memory, workflow
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -23,6 +23,7 @@ from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
 from incidentops_ai.retrieval.stack import build_retriever
+from incidentops_ai.tickets.client import TicketActions, TicketClient
 from incidentops_ai.workflow.graph import WorkflowDeps
 from incidentops_ai.workflow.runner import WorkflowRunner, checkpoint_url
 
@@ -125,6 +126,13 @@ def create_app(
                     graph=app.state.graph_store,
                 )
                 # setup() creates or migrates LangGraph's own checkpoint tables, on first use.
+                if settings.tickets_db and settings.approval_secret:
+                    # The ticket MCP server runs as a child process for the app's lifetime.
+                    secret = settings.approval_secret.get_secret_value()
+                    tickets = await resources.enter_async_context(
+                        TicketClient.connect(db_path=settings.tickets_db, secret=secret)
+                    )
+                    deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
             app.state.api_token = settings.api_token
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
@@ -152,6 +160,7 @@ def create_app(
     app.include_router(analysis.router)
     app.include_router(attachments.router)
     app.include_router(workflow.router)
+    app.include_router(memory.router)
     return app
 
 
