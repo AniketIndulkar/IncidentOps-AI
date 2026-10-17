@@ -608,6 +608,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openai" },
     { name = "pgvector" },
+    { name = "pillow" },
     { name = "pydantic-settings" },
     { name = "pypdfium2" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -626,7 +627,6 @@ rerank = [
 dev = [
     { name = "fpdf2" },
     { name = "httpx" },
-    { name = "pillow" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -642,6 +642,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "openai", specifier = ">=3.29.0" },
     { name = "pgvector", specifier = ">=0.5.1" },
+    { name = "pillow", specifier = ">=12.3.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pypdfium2", specifier = ">=5.14.0" },
     { name = "rapidocr-onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.4.4" },
@@ -654,7 +655,6 @@ provides-extras = ["rerank", "ocr"]
 dev = [
     { name = "fpdf2", specifier = ">=2.8.9" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "pillow", specifier = ">=12.3.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "ruff", specifier = ">=0.16.10" },

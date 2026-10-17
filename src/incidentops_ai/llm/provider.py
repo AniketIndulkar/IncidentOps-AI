@@ -4,9 +4,10 @@ Rule: a result is a value, not an exception. Callers check `status`; a failed ca
 `value=None` and never partly filled or guessed data.
 """
 
+import base64
 from collections.abc import Sequence
 from enum import StrEnum
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -33,6 +34,19 @@ class ModelConfig(BaseModel):
     reasoning_effort: str | None = None
 
 
+class ImageInput(BaseModel):
+    """An image sent with a prompt (W06). `detail` trades tokens for resolution."""
+
+    model_config = ConfigDict(frozen=True)
+
+    media_type: Literal["image/png", "image/jpeg"]
+    data: bytes
+    detail: Literal["low", "high", "auto"] = "auto"
+
+    def data_url(self) -> str:
+        return f"data:{self.media_type};base64,{base64.b64encode(self.data).decode()}"
+
+
 class Prompt(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -40,6 +54,7 @@ class Prompt(BaseModel):
     version: str
     instructions: str
     input: str
+    images: tuple[ImageInput, ...] = ()
 
 
 class RunMetadata(BaseModel):
@@ -144,6 +159,7 @@ class LLMProvider(Protocol):
 
 
 __all__: Sequence[str] = (
+    "ImageInput",
     "LLMProvider",
     "LLMStatus",
     "ModelConfig",
