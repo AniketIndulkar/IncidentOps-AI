@@ -52,10 +52,10 @@ risks in [ROADMAP.md](ROADMAP.md); the release decisions are in [the v1.0 checkl
 
 ## Operations
 
-- **`GET /status` does not check that the corpus is ingested** (found in W13). An empty corpus
+- **`GET /status` does not check that the corpus is ingested** (found in W13) [54]. An empty corpus
   sends every run to review (`no_answer`) rather than to a wrong answer; step 4 of
   [deploy.md](deploy.md) covers it.
-- **The Langfuse send runs on the event loop** (found in W13). It is bounded at 5 s, but a slow
+- **The Langfuse send runs on the event loop** (found in W13) [53]. It is bounded at 5 s, but a slow
   Langfuse can stall other requests for that long at the end of each run. Prefer the JSONL trace
   file until this is moved to a background thread.
 - **Nothing expires**: idempotency keys [10], checkpoints, traces and `llm_runs` [33], and runs

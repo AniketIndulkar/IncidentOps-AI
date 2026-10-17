@@ -3,9 +3,17 @@
 Source: Jira epic **AIENG-14** and tasks **AIENG-74 to AIENG-78**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W12 (branch `feat/w13-v1-release`).
 
-> **Status:** design written before any W13 work. Decisions are mine (W05 to W13 built back to back
-> at the user's request). **Not done without the user:** tagging `v1.0` (and `v0.1`, `v0.2`),
-> recording the walkthrough, any AWS deployment, merging the stacked pull requests, Jira updates.
+> **Status, 17 Oct 2026: built; v1.0 ready to tag.** Design written before any W13 work; decisions
+> are mine (W05 to W13 built back to back at the user's request).
+>
+> **Result:** H54 to H56 hold. The guide was followed from an empty volume to a real triage and an
+> approved ticket; it found five gaps, all fixed or documented, the largest being a compose file
+> that passed only some settings to the API. Writing the cost model found a second must-fix (reads
+> and decisions spent the model budget). Findings:
+> [w13-findings](../evals/release/2026-10-17-w13-findings.md); [release notes](release/v1.0-release-notes.md).
+>
+> **Not done without the user:** tagging `v1.0` (and `v0.1`, `v0.2`), recording the walkthrough,
+> any AWS deployment, merging the stacked pull requests, Jira updates.
 
 ## Goal of the week
 

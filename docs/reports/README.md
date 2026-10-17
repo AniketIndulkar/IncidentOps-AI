@@ -18,7 +18,7 @@ Monthly cost estimates: [cost-model.md](../cost-model.md). What v1.0 cannot do o
 
 | Free (no model calls) | Paid (real model; spend as recorded) |
 |---|---|
-| `pytest` (958 tests, including 170 security tests: `-m redteam`) | `extraction.run_samples` (10 calls) |
+| `pytest` (961 tests, including 170 security tests: `-m redteam`) | `extraction.run_samples` (10 calls) |
 | `evals.gate` (retrieval, workflow routes, SQL, PII, injection; reads the recorded generation run) | `evals.generation generate` (16 calls, about $0.15) and `judge` |
 | `workflow.benchmark --overhead` | `workflow.benchmark` (24 runs, about $0.50) |
 | `graph.benchmark` (needs Neo4j) | `memory.benchmark` (about $0.15) |

@@ -212,6 +212,15 @@ runbook. Findings: [w12-findings](../evals/reliability/runs/2026-10-17-w12-findi
 - AIENG-77 README, deploy guide verified from clean, runbook, cost model, limitations.
 - AIENG-78 10–15 min walkthrough recording; **tag v1.0**.
 
+✅ Built 17 Oct, stacked on W12: [roadmap-w13](roadmap-w13.md). Scope frozen and every open item classified
+([checklist](release/v1.0-checklist.md)); four must-fixes done (a periodic stale-run sweep; compose passing every
+setting; reads and decisions no longer spending the model budget; the README); the deployment guide followed from an
+empty volume to a real triage and an approved ticket; [architecture](architecture.md), [ADR index](adr/README.md),
+[reports](reports/README.md), [cost model](cost-model.md), [known limitations](known-limitations.md), the
+[walkthrough script](release/walkthrough-script.md) and [release notes](release/v1.0-release-notes.md).
+Findings: [w13-findings](../evals/release/2026-10-17-w13-findings.md). **Not done (yours):** tags, the recording,
+merging the stack, Jira.
+
 ## Dependency / critical path
 
 ```
@@ -248,11 +257,17 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W12 complete; `v0.1` and `v0.2` not tagged yet)
+## Current state (17 Oct 2026, W13 complete: v1.0 ready to tag; no tags yet)
 
-- **W01 to W12 complete** (AIENG-2, 15–73). W03 and W04 were built on 16 Oct, W05 to W12 on 17 Oct,
-  as stacked pull requests (#3 W03 … #11 W11, W12 on top). Next: W13 (v1.0 release). Waiting on
-  you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- **W01 to W13 complete** (AIENG-2, 15–78). W03 and W04 were built on 16 Oct, W05 to W13 on 17 Oct,
+  as stacked pull requests (#3 W03 … #12 W12, W13 on top). Waiting on you: CI on the stack, merging it
+  in order, the `v0.1`, `v0.2` and `v1.0` tags, the walkthrough recording, and the Jira updates
+  ([checklist](release/v1.0-checklist.md)).
+- Release (W13): the [README](../README.md) for a newcomer, [architecture](architecture.md) with failure
+  behaviour per boundary, the [ADR index](adr/README.md), [reports](reports/README.md), [cost model](cost-model.md),
+  [known limitations](known-limitations.md), a [deployment guide](deploy.md) verified from clean,
+  `docker-compose.yml` passing every setting (test-guarded), a periodic stale-run sweep, and the model rate limit
+  only on routes that call a model.
 - Reliability (W12): `GET /status` (FULL/REDUCED/MANUAL), [runbook](runbook.md), retrieval timeout,
   stale-run recovery at startup, advisory lock around ticket writes, configurable pool sizes, the
   simulated provider and `bm25` stack for load tests, `reliability.load` and `reliability.burst`.
@@ -419,9 +434,13 @@ Hard dependencies to protect:
 45. **The LLM judge is not calibrated enough to gate** (77% agreement with 13 labels written by the assistant). The user's labels are the next step.
 46. **The Langfuse adapter has only met a fake** ingestion server.
 47. **Prompt changes cost a real-model run** before CI passes (about $0.15 for generation).
-48. **Stale runs are recovered only at startup**: after a database blip, interrupted runs stay `running` until a restart (v1.0 must-fix: a periodic sweep).
+48. ~~**Stale runs are recovered only at startup**~~ Fixed in W13: a periodic sweep (`INCIDENTOPS_STALE_RUN_SWEEP_S`).
 49. **Real provider limits are unmeasured**: the load test simulated the model; a real account's tokens-per-minute limit is likely the first wall at ~9 triages/s.
 50. **Ticket deduplication leans on the ticket system's search**: the advisory lock serialises our writers, but a lagging search index could still miss a just-created issue.
+51. ~~**Compose passed a hand-picked list of settings**~~ Fixed in W13 (found by the clean deployment): every setting reaches the container, test-guarded.
+52. ~~**Reads and decisions spent the model budget**~~ Fixed in W13: only routes that call a model take the rate limit.
+53. **The Langfuse send runs on the event loop** (bounded at 5 s): a slow Langfuse can stall other requests. Deferred; move it to a background thread before connecting one.
+54. **`GET /status` does not check that the corpus is ingested**: an empty corpus sends every run to review. Deferred.
 
 ## Weekly cadence
 

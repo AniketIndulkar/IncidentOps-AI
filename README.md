@@ -45,7 +45,8 @@ intake → retrieve ∥ graph ∥ memory ∥ CMDB → extract ∥ diagnose → a
 Two steps call a model: extraction (the incident's fields) and diagnosis (causes citing the
 evidence). `assess` turns problems into reason codes (`no_answer`, `unsupported_causes`, `sev1`,
 `model_failed`, …); any reason sends the run to review. Every run then waits at the approval gate.
-A triage takes about 6.5 seconds and costs about $0.019 in model calls (at an assumed price).
+A triage takes about 6.5 seconds and costs about $0.019 in model calls at an assumed price
+([performance and cost](docs/reports/performance-and-cost.md)).
 The full picture, boundary by boundary: [architecture.md](docs/architecture.md).
 
 ## The API
@@ -107,7 +108,7 @@ Tests use a real PostgreSQL and never call a model:
 ```bash
 docker exec incidentops-pg createdb -U postgres incidentops_test
 export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/incidentops_test
-uv run pytest                     # 960 tests
+uv run pytest                     # 961 tests
 uv run pytest -m redteam          # the 170 security tests on their own
 uv run ruff check . && uv run ruff format --check .
 INCIDENTOPS_DATABASE_URL=$TEST_DATABASE_URL uv run python -m incidentops_ai.evals.gate
