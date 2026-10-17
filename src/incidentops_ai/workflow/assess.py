@@ -12,6 +12,7 @@ REVIEW_REASONS = (
     "unsupported_causes",  # the model proposed causes that failed the citation check
     "extraction_needs_review",  # the W02 review rules flag the extraction
     "sev1",  # high impact: a person sees it before anyone acts
+    "integration_degraded",  # W09: the CMDB could not say who owns the service
 )
 
 
@@ -32,4 +33,6 @@ def review_reasons(state: Mapping) -> list[str]:
         reasons.append("extraction_needs_review")
     if state["incident"]["severity"] == "SEV1":
         reasons.append("sev1")
+    if state.get("cmdb_status") in {"unavailable", "invalid"}:
+        reasons.append("integration_degraded")
     return reasons

@@ -16,6 +16,7 @@ from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
 from incidentops_ai.graph.retriever import AnchoredRetriever, GraphNeighbourhood, OwnDocuments
 from incidentops_ai.graph.store import GraphStore
+from incidentops_ai.integrations.cmdb import CmdbClient
 from incidentops_ai.integrations.jira import JiraClient, JiraTicketSink
 from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMProvider
@@ -129,6 +130,10 @@ def create_app(
                     graph=app.state.graph_store,
                 )
                 # setup() creates or migrates LangGraph's own checkpoint tables, on first use.
+                if settings.cmdb_url and settings.cmdb_api_key:
+                    cmdb = CmdbClient(settings.cmdb_url, settings.cmdb_api_key.get_secret_value())
+                    resources.push_async_callback(cmdb.aclose)
+                    deps.cmdb = cmdb
                 if settings.jira_url and settings.jira_token:
                     jira = JiraClient(
                         settings.jira_url,

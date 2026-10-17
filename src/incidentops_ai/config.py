@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     jira_project: str = "OPS"
     # The ops database for text-to-SQL (W09): a login granted only incidentops_ops_reader.
     ops_database_url: str | None = None
+    # The legacy CMDB (W09, SOAP): the system of record for who owns a service.
+    cmdb_url: str | None = None
+    cmdb_api_key: SecretStr | None = None
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -76,6 +79,8 @@ class Settings(BaseSettings):
         "jira_url",
         "jira_token",
         "ops_database_url",
+        "cmdb_url",
+        "cmdb_api_key",
         mode="before",
     )
     @classmethod
