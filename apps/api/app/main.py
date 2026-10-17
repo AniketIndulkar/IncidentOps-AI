@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -195,10 +196,20 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
-                try:  # W12: runs a dead process left "running" become resumable
-                    await app.state.workflow_runner.recover_stale(settings.stale_run_after_s)
-                except (DBAPIError, OSError):
-                    logger.warning("Stale-run recovery skipped: the database is not reachable.")
+                runner = app.state.workflow_runner
+
+                async def sweep_stale_runs() -> None:
+                    # W12 at startup, W13 also periodically: runs a dead process left "running"
+                    # become resumable without restarting this one.
+                    while True:
+                        try:
+                            await runner.recover_stale(settings.stale_run_after_s)
+                        except (DBAPIError, OSError):
+                            logger.warning("Stale-run recovery skipped: the database is down.")
+                        await asyncio.sleep(settings.stale_run_sweep_s)
+
+                sweeper = asyncio.create_task(sweep_stale_runs())
+                resources.callback(sweeper.cancel)
             # The ops database (W09) is read through its own engines, one reader login per tenant
             # (W10): row-level security admits each login's tenant only.
             ops_urls = dict(settings.ops_database_urls)

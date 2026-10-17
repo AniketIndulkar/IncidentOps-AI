@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     # W12: "simulated" answers with the latencies and token counts of real runs, for load tests.
     llm_provider: Literal["openai", "simulated"] = "openai"
     # W12: a run still "running" this long after its last update belonged to a process that died.
-    stale_run_after_s: int = 900
+    stale_run_after_s: float = 900
+    # W13: how often the API looks for such runs (also once at startup).
+    stale_run_sweep_s: float = 60
     # W12: connection pools, configurable. Doubling them made no measurable difference under load
     # (the bottleneck was CPU on one event loop), so the defaults stay where they were.
     database_pool_size: int = Field(default=5, ge=1)
