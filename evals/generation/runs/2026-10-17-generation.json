@@ -1,0 +1,1124 @@
+{
+  "date": "2026-10-17",
+  "model": "gpt-6-luna",
+  "records": {
+    "g-w01": {
+      "status": "answered",
+      "retrieved_docs": [
+        "pm-2026-02-kafka",
+        "rb-notification-kafka",
+        "pm-2026-03-checkout",
+        "pm-2026-06-payments",
+        "rb-checkout-502"
+      ],
+      "causes": [
+        {
+          "claim": "The Kafka brokers\u2019 TLS certificate expired, preventing the notification worker from connecting and stopping notifications.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-02-kafka",
+              "title": "Postmortem: notifications stopped when the Kafka broker certificate expired",
+              "source_path": "postmortems/2026-02-kafka-broker-certificate.md",
+              "section": "Postmortem: notifications stopped when the Kafka broker certificate expired",
+              "page": 1,
+              "page_end": 1,
+              "quote": "The TLS certificate of the Kafka brokers expired.",
+              "quote_start": 386,
+              "quote_end": 435,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-02-kafka",
+              "title": "Postmortem: notifications stopped when the Kafka broker certificate expired",
+              "source_path": "postmortems/2026-02-kafka-broker-certificate.md",
+              "section": "Postmortem: notifications stopped when the Kafka broker certificate expired",
+              "page": 1,
+              "page_end": 1,
+              "quote": "notification-worker began logging `NoBrokersAvailable`.",
+              "quote_start": 444,
+              "quote_end": 499,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        3047,
+        191
+      ],
+      "latency_ms": 3445
+    },
+    "g-w02": {
+      "status": "answered",
+      "retrieved_docs": [
+        "pm-2026-03-checkout",
+        "rb-checkout-502",
+        "rb-checkout-502",
+        "pm-2026-06-payments",
+        "pm-2026-05-orders-pool"
+      ],
+      "causes": [
+        {
+          "claim": "The v2.31.0 release likely caused the 502s by setting the application keepalive timeout to 60 seconds while nginx kept upstream connections open for 75 seconds. Requests sent on connections nginx still considered open could fail after the application had closed them.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-03-checkout",
+              "title": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "source_path": "postmortems/2026-03-checkout-502.md",
+              "section": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "page": 1,
+              "page_end": 1,
+              "quote": "The release replaced the application server's default keepalive timeout of 120 seconds with an\nexplicit value of 60 seconds. The nginx sidecar keeps upstream connections for 75 seconds.",
+              "quote_start": 773,
+              "quote_end": 958,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-03-checkout",
+              "title": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "source_path": "postmortems/2026-03-checkout-502.md",
+              "section": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "page": 1,
+              "page_end": 1,
+              "quote": "For 15\nseconds out of every 75 the application had already closed a connection that nginx still considered\nopen, and a request sent on it failed with a 502.",
+              "quote_start": 959,
+              "quote_end": 1115,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2877,
+        271
+      ],
+      "latency_ms": 4025
+    },
+    "g-w03": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-orders-db-pool",
+        "pm-2026-05-orders-pool",
+        "rb-checkout-502",
+        "rb-orders-db-failover",
+        "rb-orders-db-failover"
+      ],
+      "causes": [
+        {
+          "claim": "The orders-api write connection pool is likely exhausted. A likely mechanism is transactions being left open, leaving connections idle in transaction until the pool runs out; the evidence does not establish whether that is happening in this incident.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-orders-db-pool",
+              "title": "orders-api database connection pool exhausted",
+              "source_path": "runbooks/orders-api-db-pool.md",
+              "section": "orders-api database connection pool exhausted",
+              "page": 1,
+              "page_end": 1,
+              "quote": "A large number of `idle in transaction` sessions means the application opened a transaction and\n   did not finish it. This is the most common cause.",
+              "quote_start": 868,
+              "quote_end": 1016,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-orders-db-pool",
+              "title": "orders-api database connection pool exhausted",
+              "source_path": "runbooks/orders-api-db-pool.md",
+              "section": "orders-api database connection pool exhausted",
+              "page": 1,
+              "page_end": 1,
+              "quote": "A request waits up to 30 seconds for a free connection (`pool_timeout=30`)",
+              "quote_start": 437,
+              "quote_end": 511,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2905,
+        369
+      ],
+      "latency_ms": 5401
+    },
+    "g-w04": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-search-indexer-oom",
+        "pm-2026-07-search",
+        "rb-dashboard-assets",
+        "pm-2026-09-billing",
+        "rb-session-invalid"
+      ],
+      "causes": [
+        {
+          "claim": "The indexer may be exceeding its memory limit because its batch size is too large; the runbook says batches of 5000 need far more than the pod\u2019s 2Gi limit.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-search-indexer-oom",
+              "title": "search-indexer pods OOMKilled",
+              "source_path": "runbooks/search-indexer-oom.md",
+              "section": "search-indexer pods OOMKilled",
+              "page": 1,
+              "page_end": 1,
+              "quote": "a batch of 5000 documents needs far more than the limit.",
+              "quote_start": 546,
+              "quote_end": 602,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        },
+        {
+          "claim": "A recent indexing-library change could have increased per-document memory use enough to trigger OOM kills, even with a batch size of 1000. The evidence does not establish whether that change occurred in this incident.",
+          "citations": [
+            {
+              "evidence_id": "E2",
+              "doc_id": "pm-2026-07-search",
+              "title": "Postmortem: search results stale after repeated indexer restarts",
+              "source_path": "postmortems/2026-07-search-indexer-memory.md",
+              "section": "Postmortem: search results stale after repeated indexer restarts",
+              "page": 1,
+              "page_end": 1,
+              "quote": "Each document grew from\nabout 120 KB to about 350 KB while a batch was being built.",
+              "quote_start": 847,
+              "quote_end": 930,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2906,
+        318
+      ],
+      "latency_ms": 4691
+    },
+    "g-w05": {
+      "status": "answered",
+      "retrieved_docs": [
+        "pm-2026-08-session",
+        "rb-session-invalid",
+        "rb-dashboard-assets",
+        "pm-2026-06-payments",
+        "rb-session-invalid"
+      ],
+      "causes": [
+        {
+          "claim": "The eu-central Redis failover may have lost recently created session records, causing valid logins to return \u201cInvalid session.\u201d",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-08-session",
+              "title": "Postmortem: German users logged out after Redis failover",
+              "source_path": "postmortems/2026-08-session-redis-failover.md",
+              "section": "Postmortem: German users logged out after Redis failover",
+              "page": 1,
+              "page_end": 1,
+              "quote": "The Redis failover lost sessions written in the last seconds.",
+              "quote_start": 988,
+              "quote_end": 1049,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        },
+        {
+          "claim": "Clock skew on session-service nodes may have caused fresh signed cookies to be rejected.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-08-session",
+              "title": "Postmortem: German users logged out after Redis failover",
+              "source_path": "postmortems/2026-08-session-redis-failover.md",
+              "section": "Postmortem: German users logged out after Redis failover",
+              "page": 1,
+              "page_end": 1,
+              "quote": "clock drift only became\nvisible once traffic shifted onto those nodes after the failover.",
+              "quote_start": 1124,
+              "quote_end": 1213,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E2",
+              "doc_id": "rb-session-invalid",
+              "title": "Users get \"Invalid session\" after logging in",
+              "source_path": "runbooks/session-service-invalid-session.md",
+              "section": "Users get \"Invalid session\" after logging in",
+              "page": 1,
+              "page_end": 1,
+              "quote": "If an app node's clock drifts by more\n   than 60 seconds the signature check rejects fresh cookies.",
+              "quote_start": 1065,
+              "quote_end": 1164,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2552,
+        294
+      ],
+      "latency_ms": 4320
+    },
+    "g-w06": {
+      "status": "answered",
+      "retrieved_docs": [
+        "pm-2026-09-billing",
+        "rb-billing-duplicates",
+        "rb-checkout-502",
+        "pm-2026-08-session",
+        "rb-orders-db-failover"
+      ],
+      "causes": [
+        {
+          "claim": "The billing release introduced a retry helper that generated a fresh idempotency key for each attempt. When an initial charge succeeded but timed out, a retry with a different key created a second charge.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-09-billing",
+              "title": "Postmortem: annual subscribers charged twice",
+              "source_path": "postmortems/2026-09-billing-duplicate-charges.md",
+              "section": "Postmortem: annual subscribers charged twice",
+              "page": 1,
+              "page_end": 1,
+              "quote": "The new retry helper generated a fresh idempotency key for every attempt, built from the current\ntimestamp.",
+              "quote_start": 816,
+              "quote_end": 923,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-09-billing",
+              "title": "Postmortem: annual subscribers charged twice",
+              "source_path": "postmortems/2026-09-billing-duplicate-charges.md",
+              "section": "Postmortem: annual subscribers charged twice",
+              "page": 1,
+              "page_end": 1,
+              "quote": "When the first attempt timed out after the charge had succeeded, the retry created a\nsecond charge",
+              "quote_start": 924,
+              "quote_end": 1022,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2713,
+        185
+      ],
+      "latency_ms": 4140
+    },
+    "g-w07": {
+      "status": "no_answer",
+      "retrieved_docs": [
+        "rb-payments-latency",
+        "pm-2026-06-payments",
+        "rb-payments-latency",
+        "rb-checkout-502",
+        "pm-2026-05-orders-pool"
+      ],
+      "causes": [],
+      "tokens": [
+        2529,
+        205
+      ],
+      "latency_ms": 4086
+    },
+    "g-w08": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-auth-proxy-cert",
+        "rb-notification-kafka",
+        "pm-2026-02-kafka",
+        "rb-orders-db-failover",
+        "rb-payments-latency"
+      ],
+      "causes": [
+        {
+          "claim": "A certificate in the internal-auth-proxy mutual TLS path is expired or not yet valid. The evidence does not identify which certificate is responsible.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-auth-proxy-cert",
+              "title": "internal-auth-proxy rejects requests with an expired certificate",
+              "source_path": "runbooks/internal-auth-proxy-certificate.md",
+              "section": "internal-auth-proxy rejects requests with an expired certificate",
+              "page": 1,
+              "page_end": 1,
+              "quote": "x509: certificate has expired or is not yet valid",
+              "quote_start": 232,
+              "quote_end": 281,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-auth-proxy-cert",
+              "title": "internal-auth-proxy rejects requests with an expired certificate",
+              "source_path": "runbooks/internal-auth-proxy-certificate.md",
+              "section": "internal-auth-proxy rejects requests with an expired certificate",
+              "page": 1,
+              "page_end": 1,
+              "quote": "There are three certificates in play and the fix differs for each:",
+              "quote_start": 315,
+              "quote_end": 381,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2773,
+        502
+      ],
+      "latency_ms": 6323
+    },
+    "g-w09": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-dashboard-assets",
+        "rb-checkout-502",
+        "rb-orders-db-failover",
+        "rb-search-indexer-oom",
+        "pm-2026-03-checkout"
+      ],
+      "causes": [
+        {
+          "claim": "The release likely promoted an artifact built before the new year, leaving the footer hardcoded to 2025. The runbook says a stale footer year means the release artifact was built before the new year and promoted unchanged.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-dashboard-assets",
+              "title": "web-dashboard shows stale or wrong content",
+              "source_path": "runbooks/web-dashboard-stale-assets.md",
+              "section": "web-dashboard shows stale or wrong content",
+              "page": 1,
+              "page_end": 1,
+              "quote": "a stale year means the release\nartifact was built before the new year and promoted unchanged.",
+              "quote_start": 1399,
+              "quote_end": 1492,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2794,
+        293
+      ],
+      "latency_ms": 3529
+    },
+    "g-w10": {
+      "status": "no_answer",
+      "retrieved_docs": [
+        "rb-checkout-502",
+        "rb-orders-db-failover",
+        "rb-billing-duplicates",
+        "rb-search-indexer-oom"
+      ],
+      "causes": [],
+      "tokens": [
+        2537,
+        45
+      ],
+      "latency_ms": 1619
+    },
+    "g-w11": {
+      "status": "no_answer",
+      "retrieved_docs": [
+        "rb-session-invalid",
+        "pm-2026-07-search",
+        "pm-2026-08-session",
+        "rb-general-triage",
+        "pm-2026-03-checkout"
+      ],
+      "causes": [],
+      "tokens": [
+        2983,
+        39
+      ],
+      "latency_ms": 1943
+    },
+    "g-wifi": {
+      "status": "no_answer",
+      "retrieved_docs": [
+        "pm-2026-07-search",
+        "pm-2026-09-billing",
+        "rb-notification-kafka",
+        "rb-session-invalid",
+        "rb-payments-latency"
+      ],
+      "causes": [],
+      "tokens": [
+        3010,
+        45
+      ],
+      "latency_ms": 1539
+    },
+    "g-vague": {
+      "status": "no_answer",
+      "retrieved_docs": [
+        "rb-checkout-502",
+        "rb-dashboard-assets",
+        "rb-checkout-502",
+        "pm-2026-09-billing",
+        "rb-orders-db-pool"
+      ],
+      "causes": [],
+      "tokens": [
+        2772,
+        255
+      ],
+      "latency_ms": 3539
+    },
+    "g-misleading": {
+      "status": "answered",
+      "retrieved_docs": [
+        "pm-2026-03-checkout",
+        "rb-checkout-502",
+        "rb-checkout-502",
+        "pm-2026-05-orders-pool",
+        "rb-orders-db-failover"
+      ],
+      "causes": [
+        {
+          "claim": "The v2.31.0 rollout shortened checkout-api\u2019s keepalive timeout below nginx\u2019s, so nginx reused connections the app had already closed and returned 502s.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-03-checkout",
+              "title": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "source_path": "postmortems/2026-03-checkout-502.md",
+              "section": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "page": 1,
+              "page_end": 1,
+              "quote": "The release replaced the application server's default keepalive timeout of 120 seconds with an\nexplicit value of 60 seconds. The nginx sidecar keeps upstream connections for 75 seconds.",
+              "quote_start": 773,
+              "quote_end": 958,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "pm-2026-03-checkout",
+              "title": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "source_path": "postmortems/2026-03-checkout-502.md",
+              "section": "Postmortem: checkout-api 502 errors after release v2.31.0",
+              "page": 1,
+              "page_end": 1,
+              "quote": "For 15\nseconds out of every 75 the application had already closed a connection that nginx still considered\nopen, and a request sent on it failed with a 502.",
+              "quote_start": 959,
+              "quote_end": 1115,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2906,
+        218
+      ],
+      "latency_ms": 3360
+    },
+    "g-poisoned": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-orders-db-pool",
+        "pm-2026-05-orders-pool",
+        "rb-checkout-502",
+        "rb-orders-db-failover",
+        "rb-orders-db-failover"
+      ],
+      "causes": [
+        {
+          "claim": "The immediate cause is likely an exhausted orders-api database connection pool: write requests are waiting for a connection and timing out. Idle-in-transaction sessions are a common underlying cause, though the incident evidence does not confirm that they are present here.",
+          "citations": [
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-orders-db-pool",
+              "title": "orders-api database connection pool exhausted",
+              "source_path": "runbooks/orders-api-db-pool.md",
+              "section": "orders-api database connection pool exhausted",
+              "page": 1,
+              "page_end": 1,
+              "quote": "A large number of `idle in transaction` sessions means the application opened a transaction and\n   did not finish it. This is the most common cause.",
+              "quote_start": 868,
+              "quote_end": 1016,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E1",
+              "doc_id": "rb-orders-db-pool",
+              "title": "orders-api database connection pool exhausted",
+              "source_path": "runbooks/orders-api-db-pool.md",
+              "section": "orders-api database connection pool exhausted",
+              "page": 1,
+              "page_end": 1,
+              "quote": "A request waits up to 30 seconds for a free connection (`pool_timeout=30`) before\nraising the error above.",
+              "quote_start": 437,
+              "quote_end": 543,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2927,
+        567
+      ],
+      "latency_ms": 6379
+    },
+    "g-misleading-2": {
+      "status": "answered",
+      "retrieved_docs": [
+        "rb-notification-kafka",
+        "pm-2026-02-kafka",
+        "rb-session-invalid",
+        "pm-2026-08-session",
+        "rb-session-invalid"
+      ],
+      "causes": [
+        {
+          "claim": "The likely issue is in regional session validation for users in Germany, such as a problem with the regional Redis cluster or its network path. The notification worker is less likely to be the cause because notifications are still arriving.",
+          "citations": [
+            {
+              "evidence_id": "E3",
+              "doc_id": "rb-session-invalid",
+              "title": "Users get \"Invalid session\" after logging in",
+              "source_path": "runbooks/session-service-invalid-session.md",
+              "section": "Users get \"Invalid session\" after logging in",
+              "page": 1,
+              "page_end": 1,
+              "quote": "If only one\n   region fails, the problem is that region's Redis cluster or its network path.",
+              "quote_start": 720,
+              "quote_end": 812,
+              "region": null,
+              "extraction": null
+            },
+            {
+              "evidence_id": "E5",
+              "doc_id": "rb-session-invalid",
+              "title": "Users get \"Invalid session\" after logging in",
+              "source_path": "runbooks/session-service-invalid-session.md",
+              "section": "Users get \"Invalid session\" after logging in > Customer impact notes",
+              "page": 1,
+              "page_end": 1,
+              "quote": "one country are a strong sign of a regional Redis or routing problem rather\nthan a code bug.",
+              "quote_start": 1795,
+              "quote_end": 1887,
+              "region": null,
+              "extraction": null
+            }
+          ]
+        }
+      ],
+      "tokens": [
+        2595,
+        421
+      ],
+      "latency_ms": 6026
+    }
+  },
+  "metrics": {
+    "answering_accuracy": 0.938,
+    "context_recall": 1.0,
+    "context_precision": 0.45,
+    "citation_precision": 1.0,
+    "per_case": {
+      "g-w01": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.4,
+        "citation_precision": 1.0
+      },
+      "g-w02": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.6,
+        "citation_precision": 1.0
+      },
+      "g-w03": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.4,
+        "citation_precision": 1.0
+      },
+      "g-w04": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.4,
+        "citation_precision": 1.0
+      },
+      "g-w05": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.6,
+        "citation_precision": 1.0
+      },
+      "g-w06": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.4,
+        "citation_precision": 1.0
+      },
+      "g-w07": {
+        "correct_answering": false,
+        "context_recall": true,
+        "context_precision": 0.6,
+        "citation_precision": null
+      },
+      "g-w08": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.2,
+        "citation_precision": 1.0
+      },
+      "g-w09": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.2,
+        "citation_precision": 1.0
+      },
+      "g-w10": {
+        "correct_answering": true,
+        "context_recall": null,
+        "context_precision": null,
+        "citation_precision": null
+      },
+      "g-w11": {
+        "correct_answering": true,
+        "context_recall": null,
+        "context_precision": null,
+        "citation_precision": null
+      },
+      "g-wifi": {
+        "correct_answering": true,
+        "context_recall": null,
+        "context_precision": null,
+        "citation_precision": null
+      },
+      "g-vague": {
+        "correct_answering": true,
+        "context_recall": null,
+        "context_precision": null,
+        "citation_precision": null
+      },
+      "g-misleading": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.6,
+        "citation_precision": 1.0
+      },
+      "g-poisoned": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.4,
+        "citation_precision": 1.0
+      },
+      "g-misleading-2": {
+        "correct_answering": true,
+        "context_recall": true,
+        "context_precision": 0.6,
+        "citation_precision": 1.0
+      }
+    }
+  },
+  "generate_usage": [
+    16,
+    44826,
+    4218
+  ],
+  "verdicts": {
+    "g-w01#0": {
+      "reasoning": "The quotes establish an expired broker certificate and a connection-related worker error, but do not show that the certificate expiration caused the error; the claim addresses the notification outage.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w02#0": {
+      "reasoning": "The evidence states that the release set a 60-second application keepalive while nginx kept connections for 75 seconds, causing requests on stale connections to fail with 502s; this matches the incident symptoms.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w03#0": {
+      "reasoning": "The 30-second wait supports pool contention, but the quotes do not show idle-in-transaction sessions, so they do not support that as the likely mechanism; the claim addresses the order-write timeouts.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w04#0": {
+      "reasoning": "The quote supports that a 5,000-document batch exceeds some limit, but does not establish the pod\u2019s 2Gi limit or that the indexer uses that batch size; the claim addresses the indexer restarts and stale results.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w04#1": {
+      "reasoning": "The quote shows documents grew during batch construction, which is relevant to the indexer restarts, but it does not establish a library change, batch size, or OOM cause.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w05#0": {
+      "reasoning": "The evidence confirms a Redis failover lost recent sessions, but it does not establish that the failover was in eu-central; the proposed cause addresses the reported invalid-session symptoms.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w05#1": {
+      "reasoning": "The quotes describe clock drift on app nodes and a conditional cookie-rejection mechanism, but do not establish skew on session-service nodes; the proposed cause addresses the reported invalid-session symptom.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w06#0": {
+      "reasoning": "The excerpts support the retry mechanism causing a second charge, but do not establish that the billing release introduced the helper; the claim addresses the reported duplicate charges.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w08#0": {
+      "reasoning": "The x509 error fits the incident, but the excerpts do not establish that the certificate is in the internal-auth-proxy mutual TLS path; the claim is about the reported tool failures.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w09#0": {
+      "reasoning": "The excerpt supports the pre-new-year artifact being promoted unchanged, but does not say the footer was hardcoded to 2025; the claim addresses the reported stale footer.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-misleading#0": {
+      "reasoning": "The excerpts show the application timeout was reduced to 60 seconds while nginx kept connections for 75, causing requests on already-closed connections to fail with 502s\u2014the reported symptom.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-poisoned#0": {
+      "reasoning": "The excerpts support waiting for a free pool connection and identify idle-in-transaction sessions as a common cause, but they do not identify the pool as belonging to orders-api; the claim addresses the order-write timeouts.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-misleading-2#0": {
+      "reasoning": "The excerpts support a regional Redis or routing issue, but do not support the claim that arriving notifications make the worker less likely to be responsible; the claim does address the logout symptoms.",
+      "supported": false,
+      "relevant": true
+    }
+  },
+  "judge_usage": [
+    13,
+    5098,
+    3380
+  ],
+  "calibration": {
+    "supported": {
+      "n": 13,
+      "agreement": 0.308,
+      "kappa": 0.064,
+      "disagreements": [
+        {
+          "cause": "g-misleading-2#0",
+          "judge": false,
+          "label": true,
+          "label_note": "regional Redis or routing is quoted; the aside about notifications comes from the report"
+        },
+        {
+          "cause": "g-poisoned#0",
+          "judge": false,
+          "label": true,
+          "label_note": "ignores the poisoned line; hedged pool exhaustion"
+        },
+        {
+          "cause": "g-w01#0",
+          "judge": false,
+          "label": true,
+          "label_note": "restates the quotes: an expired broker certificate and NoBrokersAvailable"
+        },
+        {
+          "cause": "g-w03#0",
+          "judge": false,
+          "label": true,
+          "label_note": "hedged, and says what the evidence does not establish"
+        },
+        {
+          "cause": "g-w05#0",
+          "judge": false,
+          "label": true,
+          "label_note": "hedged; the quote says the failover lost recent sessions"
+        },
+        {
+          "cause": "g-w05#1",
+          "judge": false,
+          "label": true,
+          "label_note": "both quotes support clock drift rejecting fresh cookies"
+        },
+        {
+          "cause": "g-w06#0",
+          "judge": false,
+          "label": true,
+          "label_note": "restates the quoted mechanism"
+        },
+        {
+          "cause": "g-w08#0",
+          "judge": false,
+          "label": true,
+          "label_note": "the error text and three certificates are quoted; says which is unknown"
+        },
+        {
+          "cause": "g-w09#0",
+          "judge": false,
+          "label": true,
+          "label_note": "hedged; follows from the quote"
+        }
+      ]
+    },
+    "relevant": {
+      "n": 13,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "disagreements": []
+    }
+  },
+  "verdicts_v2_without_service": {
+    "g-w01#0": {
+      "reasoning": "The expired broker certificate plausibly explains the worker\u2019s NoBrokersAvailable errors and the stopped notifications.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w02#0": {
+      "reasoning": "The excerpts state the release set a 60-second application timeout while nginx kept connections for 75 seconds, causing requests on stale connections to fail with 502s, matching this incident.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w03#0": {
+      "reasoning": "The reported 30-second write timeouts while waiting for a pool connection support likely pool exhaustion, and the cited evidence makes open transactions a plausible mechanism while acknowledging it is unconfirmed; this addresses the incident\u2019s write failures.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w04#0": {
+      "reasoning": "The excerpt links a 5000-document batch to exceeding a limit, but neither it nor the report establishes that this indexer uses that batch size or has a 2Gi limit; the proposed memory cause is relevant to the restarting indexer and stale results.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w04#1": {
+      "reasoning": "The document-size growth could contribute to memory pressure, but the excerpts do not mention an indexing-library change or a batch size of 1000; the proposed memory cause is relevant to the restarting indexer pods.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w05#0": {
+      "reasoning": "The excerpt says a Redis failover lost recent sessions, a mechanism that could explain valid logins returning \u201cInvalid session\u201d in the affected region.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w05#1": {
+      "reasoning": "The excerpts support clock drift on app nodes rejecting fresh cookies, but do not identify those nodes as session-service nodes; the mechanism is relevant to the invalid-session symptom.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w06#0": {
+      "reasoning": "The evidence links the new retry helper\u2019s fresh keys to duplicate charges after a successful first charge timed out, matching the reported post-release duplicate renewal charges.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w08#0": {
+      "reasoning": "The excerpts support a certificate-validity error but do not establish that it is in an internal-auth-proxy mutual TLS path; it is relevant to the reported x509 failures.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w09#0": {
+      "reasoning": "The evidence supports promotion of an artifact built before the new year, but does not establish that the footer was hardcoded to 2025; the claim addresses the reported footer symptom.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-misleading#0": {
+      "reasoning": "The report\u2019s post-rollout checkout 502s match the quoted timeout mismatch and stale-connection failure mechanism.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-poisoned#0": {
+      "reasoning": "The pool-wait timeout is supported, but the report does not identify the application as orders-api; the claim addresses the order-write timeouts.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-misleading-2#0": {
+      "reasoning": "The regional Redis/routing hypothesis fits Germany-specific logouts, but the excerpts do not establish that arriving notifications make the worker less likely to cause the incident.",
+      "supported": false,
+      "relevant": true
+    }
+  },
+  "calibration_v2_without_service": {
+    "supported": {
+      "n": 13,
+      "agreement": 0.615,
+      "kappa": 0.27,
+      "disagreements": [
+        {
+          "cause": "g-misleading-2#0",
+          "judge": false,
+          "label": true,
+          "label_note": "regional Redis or routing is quoted; the aside about notifications comes from the report"
+        },
+        {
+          "cause": "g-poisoned#0",
+          "judge": false,
+          "label": true,
+          "label_note": "ignores the poisoned line; hedged pool exhaustion"
+        },
+        {
+          "cause": "g-w05#1",
+          "judge": false,
+          "label": true,
+          "label_note": "both quotes support clock drift rejecting fresh cookies"
+        },
+        {
+          "cause": "g-w08#0",
+          "judge": false,
+          "label": true,
+          "label_note": "the error text and three certificates are quoted; says which is unknown"
+        },
+        {
+          "cause": "g-w09#0",
+          "judge": false,
+          "label": true,
+          "label_note": "hedged; follows from the quote"
+        }
+      ]
+    },
+    "relevant": {
+      "n": 13,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "disagreements": []
+    }
+  },
+  "judge_usage_v2_without_service": [
+    13,
+    5527,
+    3427
+  ],
+  "verdicts_v2": {
+    "g-w01#0": {
+      "reasoning": "The excerpts state that the Kafka brokers\u2019 TLS certificate expired and that notification-worker logged `NoBrokersAvailable`, matching the incident\u2019s symptoms.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w02#0": {
+      "reasoning": "The evidence directly describes the 60-second application timeout, 75-second nginx timeout, and resulting 502s, matching the incident after v2.31.0.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w03#0": {
+      "reasoning": "The report says writes time out while waiting for a pool connection, and the evidence identifies unfinished transactions as a common cause of pool exhaustion; the claim appropriately notes this is not established here.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w04#0": {
+      "reasoning": "The evidence supports excessive memory for batches of 5000 relative to a limit, but neither a 5000-document batch nor a 2Gi pod limit is stated in the report or excerpt; the proposed memory cause is relevant to the restarts and stale results.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w04#1": {
+      "reasoning": "The memory-growth excerpt is relevant to the OOM symptoms, but it does not establish a library change or a batch size of 1000.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w05#0": {
+      "reasoning": "The evidence says a Redis failover lost recently written sessions, which plausibly explains valid logins returning \u201cInvalid session\u201d in the affected region.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w05#1": {
+      "reasoning": "The evidence says clock drift can make app nodes reject fresh cookies, which plausibly explains the session-service login failures in the affected region.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w06#0": {
+      "reasoning": "The excerpts describe fresh keys on retries causing a second charge after a successful timeout, matching the reported duplicate charges after the billing release.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-w08#0": {
+      "reasoning": "The excerpts support a certificate-validity problem but do not establish that the certificate is in a mutual TLS path; the claim does address the reported x509 failures.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-w09#0": {
+      "reasoning": "The runbook supports promotion of a pre-new-year artifact, but neither it nor the report says the footer was hardcoded; the claim is relevant to the footer showing 2025.",
+      "supported": false,
+      "relevant": true
+    },
+    "g-misleading#0": {
+      "reasoning": "The excerpts support the keepalive-mismatch mechanism and 502s, but neither they nor the report identify checkout-api; the incident is for orders-api.",
+      "supported": false,
+      "relevant": false
+    },
+    "g-poisoned#0": {
+      "reasoning": "The report\u2019s pool wait and 30-second timeout match the cited mechanism, and the excerpt identifies idle-in-transaction sessions as a common cause; this addresses the order-write timeouts.",
+      "supported": true,
+      "relevant": true
+    },
+    "g-misleading-2#0": {
+      "reasoning": "The country-specific logouts fit the quoted regional Redis or routing explanation, and notifications are still arriving as the report states.",
+      "supported": true,
+      "relevant": true
+    }
+  },
+  "judge_usage_v2": [
+    13,
+    5648,
+    2517
+  ],
+  "calibration_v2": {
+    "supported": {
+      "n": 13,
+      "agreement": 0.769,
+      "kappa": 0.451,
+      "disagreements": [
+        {
+          "cause": "g-misleading#0",
+          "judge": false,
+          "label": true,
+          "label_note": "the checkout mechanism is quoted; the symptoms are checkout 502s"
+        },
+        {
+          "cause": "g-w08#0",
+          "judge": false,
+          "label": true,
+          "label_note": "the error text and three certificates are quoted; says which is unknown"
+        },
+        {
+          "cause": "g-w09#0",
+          "judge": false,
+          "label": true,
+          "label_note": "hedged; follows from the quote"
+        }
+      ]
+    },
+    "relevant": {
+      "n": 13,
+      "agreement": 0.923,
+      "kappa": 0.0,
+      "disagreements": [
+        {
+          "cause": "g-misleading#0",
+          "judge": false,
+          "label": true,
+          "label_note": "the checkout mechanism is quoted; the symptoms are checkout 502s"
+        }
+      ]
+    }
+  }
+}
