@@ -24,6 +24,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from typing import Annotated, Any, Literal, TypedDict
 
+from langgraph.errors import GraphInterrupt
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -44,6 +45,7 @@ from incidentops_ai.multimodal.attachments import (
     attachment_evidence,
 )
 from incidentops_ai.multimodal.extract import TextLine
+from incidentops_ai.observability.tracing import get_tracer
 from incidentops_ai.retrieval.chunking import Chunk
 from incidentops_ai.retrieval.documents import DEFAULT_TENANT, DocType
 from incidentops_ai.retrieval.embeddings import EmbeddingError
@@ -171,11 +173,15 @@ def _step(name: str, deps: WorkflowDeps, body: Node) -> Node:
         if deps.fault is not None:
             deps.fault(name)
         started = time.perf_counter()
-        update = await body(state)
-        outcome = update.pop("_outcome", "ok")
         kind = (
             "model" if name in MODEL_STEPS else "human" if name in HUMAN_STEPS else "deterministic"
         )
+        with get_tracer().span(
+            f"step.{name}", kind="step", node=name, step_kind=kind, ok_exceptions=(GraphInterrupt,)
+        ) as span:
+            update = await body(state)
+            outcome = update.pop("_outcome", "ok")
+            span.set(outcome=outcome)
         entry = {
             "node": name,
             "kind": kind,
@@ -265,12 +271,16 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
 
     async def retrieve(state: WorkflowState) -> dict:
         try:
-            results = await deps.retriever.retrieve(
-                _query(state),
-                k=EVIDENCE_COUNT,
-                filters=RetrievalFilter(tenant_id=state["tenant_id"]),
-                hints=QueryHints(services=(state["incident"]["service"],)),
-            )
+            with get_tracer().span(
+                "retrieval", kind="retrieval", stack=deps.retriever.name, k=EVIDENCE_COUNT
+            ) as span:
+                results = await deps.retriever.retrieve(
+                    _query(state),
+                    k=EVIDENCE_COUNT,
+                    filters=RetrievalFilter(tenant_id=state["tenant_id"]),
+                    hints=QueryHints(services=(state["incident"]["service"],)),
+                )
+                span.set(results=len(results), docs=sorted({r.chunk.doc_id for r in results}))
         except (EmbeddingError, RerankerError) as error:
             name = type(error).__name__
             return {"evidence": [], "retrieval_error": name, "_outcome": name}

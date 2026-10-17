@@ -15,6 +15,7 @@ from collections import deque
 from collections.abc import Callable
 
 from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig, Prompt
+from incidentops_ai.observability.tracing import estimate_cost_usd, get_tracer
 
 RETRYABLE = frozenset({LLMStatus.TIMED_OUT, LLMStatus.RATE_LIMITED, LLMStatus.PROVIDER_ERROR})
 TASKS = {
@@ -98,7 +99,24 @@ class Gateway:
         models = self.route(prompt, config)
         candidates = [m for m in models if self._available(m)] or models[-1:]
         for model in candidates:
-            result = await call(config.model_copy(update={"model": model}))
+            with get_tracer().span(
+                f"model.{task_of(prompt.name)}",
+                kind="model",
+                model=model,
+                prompt=f"{prompt.name}/{prompt.version}",
+                fallback_from=tried[:] or None,
+            ) as span:
+                result = await call(config.model_copy(update={"model": model}))
+                meta = result.metadata
+                span.set(
+                    outcome=result.status.value,
+                    input_tokens=meta.input_tokens,
+                    output_tokens=meta.output_tokens,
+                    attempts=meta.attempts,
+                    cost_usd=estimate_cost_usd(meta.input_tokens, meta.output_tokens),
+                )
+                if result.status is not LLMStatus.SUCCEEDED:
+                    span.status, span.error = "error", result.status.value
             self._record(model, result.status)
             result = result.model_copy(
                 update={"metadata": result.metadata.model_copy(update={"fallback_from": tried[:]})}

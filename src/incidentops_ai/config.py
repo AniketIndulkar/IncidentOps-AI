@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # W11 gateway: per-task model routes, e.g. {"diagnosis": ["gpt-6-luna", "gpt-6-mini"]}; a task
     # without a route uses llm_model. Optional calls-per-minute cap per model.
     llm_routes: dict[str, list[str]] = {}
+    # W11 tracing: a JSONL file of spans, and/or Langfuse (host and both keys).
+    trace_file: Path | None = None
+    langfuse_host: str | None = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: SecretStr | None = None
     llm_per_model_per_minute: int | None = None
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0

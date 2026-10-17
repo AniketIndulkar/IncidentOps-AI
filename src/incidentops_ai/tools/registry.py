@@ -19,6 +19,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from incidentops_ai.llm.provider import ToolCall, ToolOutput, ToolSpec
+from incidentops_ai.observability.tracing import get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,8 @@ class ToolRegistry:
 
         started = time.perf_counter()
         try:
-            value = await tool.handler(arguments)
+            with get_tracer().span(f"tool.{call.name}", kind="tool", tool=call.name):
+                value = await tool.handler(arguments)
         except Exception:
             logger.exception("Tool %s failed", call.name)
             execution = ToolExecution(

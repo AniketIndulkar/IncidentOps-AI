@@ -24,6 +24,8 @@ from incidentops_ai.llm.gateway import Gateway
 from incidentops_ai.llm.provider import LLMProvider
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
+from incidentops_ai.observability.langfuse import LangfuseExporter
+from incidentops_ai.observability.tracing import JsonlExporter, Tracer, set_tracer
 from incidentops_ai.ops.database import OpsDatabase
 from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
@@ -73,6 +75,21 @@ def create_app(
         owned_embedder = None
         owned_graph_driver = None
         resources = AsyncExitStack()  # opened here, closed at shutdown (W07: the checkpointer)
+        # Tracing (W11): spans to a file and/or Langfuse; without settings it stays a no-op.
+        exporters = []
+        if settings.trace_file:
+            exporters.append(JsonlExporter(settings.trace_file))
+        if settings.langfuse_host and settings.langfuse_public_key and settings.langfuse_secret_key:
+            langfuse = LangfuseExporter(
+                settings.langfuse_host,
+                settings.langfuse_public_key,
+                settings.langfuse_secret_key.get_secret_value(),
+            )
+            resources.callback(langfuse.close)
+            exporters.append(langfuse)
+        if exporters:
+            set_tracer(Tracer(exporters))
+            resources.callback(set_tracer, Tracer())
         try:
             if llm_provider is None and settings.openai_api_key:
                 owned_provider = build_provider(settings)
