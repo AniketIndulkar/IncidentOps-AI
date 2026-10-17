@@ -16,7 +16,12 @@ from dataclasses import replace
 from typing import Any, Protocol
 
 from incidentops_ai.retrieval.bm25 import tokenize
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk, Retriever
+from incidentops_ai.retrieval.retriever import (
+    QueryHints,
+    RetrievalFilter,
+    RetrievedChunk,
+    Retriever,
+)
 
 RERANK_DEPTH = 20  # candidates taken from the stage below
 # ONNX export of cross-encoder/ms-marco-MiniLM-L-6-v2 (22M parameters, about 80 MB), run without torch.
@@ -122,12 +127,17 @@ class RerankingRetriever:
         self._depth = depth
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         """Only the top `depth` results of the base stage can appear, however large `k` is."""
         if k <= 0:
             raise ValueError("k must be positive")
-        candidates = await self._base.retrieve(query, k=self._depth, filters=filters)
+        candidates = await self._base.retrieve(query, k=self._depth, filters=filters, hints=hints)
         if not candidates:
             return []
         scores = await self._reranker.score(

@@ -7,7 +7,12 @@ from dataclasses import dataclass
 from incidentops_ai.retrieval.documents import Document
 from incidentops_ai.retrieval.evalset import Question, resolve_question
 from incidentops_ai.retrieval.metrics import DEFAULT_KS, QuestionScore, score_question
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk, Retriever
+from incidentops_ai.retrieval.retriever import (
+    QueryHints,
+    RetrievalFilter,
+    RetrievedChunk,
+    Retriever,
+)
 
 
 @dataclass(frozen=True)
@@ -24,7 +29,10 @@ async def evaluate_retriever(
     *,
     k: int,
     use_service_filter: bool = False,
+    use_service_hint: bool = False,
 ) -> Evaluation:
+    """`use_service_filter` restricts each question to its service's documents; `use_service_hint`
+    only tells the retriever the service (W05), the way an incident would."""
     if not documents or not questions:
         raise ValueError("an evaluation needs documents and questions")
     tenant_id = documents[0].tenant_id
@@ -37,8 +45,13 @@ async def evaluate_retriever(
     for question in questions:
         services = (question.service,) if use_service_filter and question.service else None
         filters = RetrievalFilter(tenant_id=tenant_id, services=services)
+        hints = (
+            QueryHints(services=(question.service,))
+            if use_service_hint and question.service
+            else None
+        )
         started = time.perf_counter()
-        ranked = await retriever.retrieve(question.text, k=k, filters=filters)
+        ranked = await retriever.retrieve(question.text, k=k, filters=filters, hints=hints)
         latencies.append((time.perf_counter() - started) * 1000)
         rankings[question.id] = ranked
         gold = resolve_question(question, by_id)

@@ -13,7 +13,7 @@ from incidentops_ai.retrieval.chunking import Chunk
 from incidentops_ai.retrieval.documents import DEFAULT_TENANT, DocType
 from incidentops_ai.retrieval.embeddings import Embedder
 from incidentops_ai.retrieval.orm import EMBEDDING_DIMENSIONS, ChunkRow, DocumentRow
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk
+from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, RetrievedChunk
 
 
 def row_to_chunk(row: ChunkRow, *, title: str, source_path: str) -> Chunk:
@@ -122,7 +122,12 @@ class PgVectorRetriever:
         self._embedder = embedder
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         if k <= 0:
             raise ValueError("k must be positive")
@@ -137,6 +142,8 @@ class PgVectorRetriever:
             conditions.append(ChunkRow.service.in_(filters.services))
         if filters.doc_types is not None:
             conditions.append(ChunkRow.doc_type.in_([t.value for t in filters.doc_types]))
+        if filters.doc_ids is not None:
+            conditions.append(ChunkRow.doc_id.in_(filters.doc_ids))
 
         statement = (
             select(ChunkRow, DocumentRow.title, DocumentRow.source_path, distance)

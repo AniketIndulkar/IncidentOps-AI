@@ -101,11 +101,16 @@ Findings: [hybrid-findings](../evals/retrieval/runs/2026-10-16-hybrid-findings.m
 
 ### Phase 3 — Richer evidence (W05–W06, 2–13 Nov)
 
-**W05 · Knowledge graph** (AIENG-6)
-- AIENG-34 Schema: Service, Incident, Runbook, Engineer, Fix + 5 traversal questions.
-- AIENG-35 Load into Neo4j/Aura with constraints → AIENG-36 Cypher (impact, history, ownership, fixes; one query plan).
-- AIENG-37 Graph context behind retriever interface, toggleable.
-- AIENG-38 Vector-only vs graph-assisted on graph-sensitive questions; **ADR: where graph belongs and where not**.
+**W05 · Knowledge graph** (AIENG-6) — *exit: Neo4j graph, Cypher queries and comparative retrieval evaluation*
+
+Plan and hypotheses: [roadmap-w05.md](roadmap-w05.md). Built 17 Oct, stacked on W04. Findings:
+[graph-findings](../evals/graph/runs/2026-10-17-graph-findings.md); decision: [ADR-002](adr/002-knowledge-graph.md).
+
+- ✅ AIENG-34 Schema (Service, Team, Engineer, Incident, Fix, Runbook), a synthetic catalogue validated against the corpus, 5 traversal questions, 12 graph-sensitive questions written first.
+- ✅ AIENG-35 Local Neo4j (`neo4j:5-community`), uid uniqueness constraint per label, a tenant's graph replaced in one transaction; `python -m incidentops_ai.graph.load`.
+- ✅ AIENG-36 Cypher for impact, history, ownership, open upstream fixes and runbook coverage; identical answers from an in-memory reference; `PROFILE` of T2 in the ADR (~150 db hits).
+- ✅ AIENG-37 `QueryHints` (a service suggests, never filters), `AnchoredRetriever` (own documents or graph neighbourhood, fused by RRF), switchable with `INCIDENTOPS_GRAPH_RETRIEVAL`; diagnosis returns `service_context`, degrades when Neo4j is down.
+- ✅ AIENG-38 **Graph does not help retrieval here**: hybrid already reaches Recall@5 1.000 on the graph set; the soft anchor costs 0.196 MRR, the graph +0.000, a hard filter loses every dependency question. ADR-002: the graph answers structured questions and is shown as context.
 
 **W06 · Multimodal** (AIENG-7)
 - AIENG-39 Benchmark (screenshots, diagrams, PDF pages) + hypotheses written first.
@@ -201,13 +206,17 @@ Hard dependencies to protect:
 | Repo layout | Keep `apps/api` (HTTP) thin, domain logic in `src/incidentops_ai` | Workflow, evals and CLI reuse the same code |
 | Eval data | `evals/` dir with versioned datasets + results | W03, W11 and W13 all depend on reproducible runs |
 | ADRs | `docs/adr/NNN-title.md`, numbered from ADR-001 (W02) | W13 needs a clean index |
+| Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (16 Oct 2026, W04 complete; `v0.1` not tagged yet)
+## Current state (17 Oct 2026, W05 complete; `v0.1` not tagged yet)
 
-- **W01 to W04 complete** (AIENG-2, 15–33). W03 and W04 were built and measured on 16 Oct, ahead of
-  their 19–23 Oct and 26–30 Oct slots. Next: W05 (knowledge graph), starting with AIENG-34. Waiting on
-  you: the `v0.1` tag, the pull request and the Jira updates.
+- **W01 to W05 complete** (AIENG-2, 15–38). W03 and W04 were built on 16 Oct and W05 on 17 Oct, as
+  stacked pull requests (#3 W03, #4 W04, W05 on top). Next: W06 (multimodal), starting with AIENG-39.
+  Waiting on you: the `v0.1` tag, merging the stack, and the Jira updates.
+- Knowledge graph (W05, `src/incidentops_ai/graph/`): catalogue loader and validation, Neo4j store with
+  uid constraints, Cypher for five traversal questions plus related documents and service context, an
+  in-memory reference, graph-anchored retrieval (off by default), and the `graph.benchmark` harness.
 - API: incidents (`POST`, `GET`, idempotency keys), `POST /incidents/{id}/extraction`,
   `POST /incidents/{id}/related-incidents`, **`POST /incidents/{id}/diagnosis`** (W04), `/health`; RFC 9457
   errors (new: `retrieval_failed`, 502). The diagnosis route uses the same bearer token, rate limit and
@@ -322,6 +331,8 @@ Hard dependencies to protect:
 23. **No relevance gate for "nothing relevant was retrieved".** Off-corpus incidents still retrieve five chunks and reach the model, which refused 2 of 2 in the spot check. A score threshold needs off-corpus incidents to calibrate against: W11 (AIENG-64).
 24. **BM25 without stemming** misses "updates" vs "update" (q10). Left out on purpose (parameters fixed before the run); try it on the larger golden set (W11).
 25. **The reranker is too heavy to run in the 1 GB Lightsail deploy** (0.65 to 1.3 GB). It is off by default and an optional extra, so the default image is unaffected. If a later corpus needs it: depth 10 and a small batch, then a hosted reranker, then a bigger instance.
+26. **The graph is measured on my own catalogue and questions.** Graph value could be under- or over-stated for incidents that describe only the reporting service's view. A new question set would be needed to test that (W11).
+27. **Neo4j adds a second datastore** to development and CI (and to the deploy, if service context is wanted there). The API runs without it; with it down, diagnosis degrades to `graph_status: "unavailable"`.
 
 ## Weekly cadence
 

@@ -19,6 +19,7 @@ class RetrievalFilter:
     tenant_id: str
     services: tuple[str, ...] | None = None
     doc_types: tuple[DocType, ...] | None = None
+    doc_ids: tuple[str, ...] | None = None  # e.g. the documents a graph says are related (W05)
 
     def __post_init__(self) -> None:
         if not self.tenant_id.strip():
@@ -29,7 +30,19 @@ class RetrievalFilter:
             chunk.tenant_id == self.tenant_id
             and (self.services is None or chunk.service in self.services)
             and (self.doc_types is None or chunk.doc_type in self.doc_types)
+            and (self.doc_ids is None or chunk.doc_id in self.doc_ids)
         )
+
+
+@dataclass(frozen=True, slots=True)
+class QueryHints:
+    """What the caller knows about the question, offered to retrievers that can use it (W05).
+
+    A hint never restricts results the way a filter does: a retriever may use it to look in more
+    places, and every retriever may ignore it.
+    """
+
+    services: tuple[str, ...] | None = None  # e.g. the service recorded on the incident
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,5 +68,10 @@ class Retriever(Protocol):
     name: str
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]: ...

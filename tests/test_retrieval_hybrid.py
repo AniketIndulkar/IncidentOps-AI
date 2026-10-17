@@ -83,7 +83,7 @@ class Recording:
         self._results = results
         self.asked_k: int | None = None
 
-    async def retrieve(self, query: str, *, k: int, filters: RetrievalFilter):
+    async def retrieve(self, query: str, *, k: int, filters: RetrievalFilter, hints=None):
         self.asked_k = k
         return self._results[:k]
 

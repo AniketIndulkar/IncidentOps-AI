@@ -12,7 +12,7 @@ from incidentops_ai.diagnosis.evidence import (
 from incidentops_ai.diagnosis.models import Diagnosis, ModelDiagnosis
 from incidentops_ai.llm.prompts import load_prompt
 from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig, RunMetadata
-from incidentops_ai.retrieval.retriever import RetrievalFilter, Retriever
+from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, Retriever
 
 DIAGNOSE_PROMPT = "diagnose_incident"
 DIAGNOSE_PROMPT_VERSION = "v1"
@@ -42,11 +42,14 @@ async def diagnose(
     tenant_id: str,
     config: ModelConfig,
     k: int = EVIDENCE_COUNT,
+    hints: QueryHints | None = None,
 ) -> DiagnosisResult:
     """Retrieve, ask the model, check its citations. Never raises for LLM failures: check
     `status`. With nothing retrieved the model is not called at all."""
     started = time.perf_counter()
-    results = await retriever.retrieve(query, k=k, filters=RetrievalFilter(tenant_id=tenant_id))
+    results = await retriever.retrieve(
+        query, k=k, filters=RetrievalFilter(tenant_id=tenant_id), hints=hints
+    )
     retrieval_ms = (time.perf_counter() - started) * 1000
     evidence = number_evidence(results)
 

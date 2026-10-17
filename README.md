@@ -74,6 +74,26 @@ With nothing relevant it answers `no_answer`, never a guess. It needs the corpus
 (commands above), `OPENAI_API_KEY`, `INCIDENTOPS_LLM_MODEL` and `INCIDENTOPS_API_TOKEN`;
 `INCIDENTOPS_RETRIEVAL_STACK` picks `dense`, `hybrid` (default) or `hybrid-rerank`.
 
+## Knowledge graph (W05)
+
+Services, teams, engineers, incidents, fixes and runbook coverage live in a Neo4j graph built from
+`data/graph/catalogue.toml` (synthetic, validated against the corpus). The diagnosis response adds a
+`service_context` from it: owning team, on-call engineer, dependencies, dependents and recent
+incidents. The comparison found no retrieval gain from graph context, so retrieval does not use it by
+default ([findings](evals/graph/runs/2026-10-17-graph-findings.md), [ADR-002](docs/adr/002-knowledge-graph.md)).
+
+```bash
+docker run -d --name incidentops-neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/<password> neo4j:5-community
+uv run python -m incidentops_ai.graph.load          # needs INCIDENTOPS_NEO4J_URI and _PASSWORD
+uv run python -m incidentops_ai.graph.benchmark     # graph vs no graph on two question sets
+```
+
+Tests need a second container for the graph (port 7688, as in CI):
+
+```bash
+docker run -d --name incidentops-neo4j-test -p 7688:7687 -e NEO4J_AUTH=neo4j/incidentops-test neo4j:5-community
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -81,7 +101,9 @@ With nothing relevant it answers `no_answer`, never a guess. It needs the corpus
   - `llm/`, `extraction/`, `tools/` — provider layer, structured extraction, read-only tools (W02)
   - `retrieval/` — documents, chunking, embeddings, retrievers, metrics, benchmark (W03); BM25, hybrid, reranker, stacks (W04)
   - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
+  - `graph/` — service catalogue, Neo4j store and Cypher, graph-anchored retrieval (W05)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
+- `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04)
 - `migrations` — Alembic schema migrations
 - `docs` — roadmap, notes, ADRs

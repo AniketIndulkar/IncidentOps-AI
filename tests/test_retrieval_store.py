@@ -240,3 +240,17 @@ async def test_load_chunks_returns_one_tenants_stored_chunks_in_corpus_order(
     assert [c.text for c in loaded] == [c.text for c in expected]
     assert {c.tenant_id for c in loaded} == {"default"}
     assert loaded[0].title and loaded[0].source_path  # provenance comes with the chunk
+
+
+async def test_the_document_filter_is_applied_in_the_database(session_factory: Factory):
+    await ingest(session_factory)
+    await index(session_factory)
+    store = PgVectorRetriever(session_factory, FakeEmbedder())
+
+    results = await store.retrieve(
+        "orders database failover promote the standby",
+        k=20,
+        filters=RetrievalFilter("default", doc_ids=("rb-checkout-502", "pm-2026-02-kafka")),
+    )
+
+    assert results and {r.chunk.doc_id for r in results} <= {"rb-checkout-502", "pm-2026-02-kafka"}

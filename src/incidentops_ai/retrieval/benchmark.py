@@ -72,9 +72,15 @@ async def run_benchmark(
     *,
     k: int = TOP_K,
     use_service_filter: bool = False,
+    use_service_hint: bool = False,
 ) -> BenchmarkResult:
     evaluation = await evaluate_retriever(
-        retriever, documents, questions, k=k, use_service_filter=use_service_filter
+        retriever,
+        documents,
+        questions,
+        k=k,
+        use_service_filter=use_service_filter,
+        use_service_hint=use_service_hint,
     )
     by_id = {document.id: document for document in documents}
     misses: list[Miss] = []

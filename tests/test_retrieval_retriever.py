@@ -4,7 +4,7 @@ from incidentops_ai.retrieval.chunking import Chunk, FixedChunker
 from incidentops_ai.retrieval.documents import DocType, parse_document
 from incidentops_ai.retrieval.embeddings import FakeEmbedder
 from incidentops_ai.retrieval.memory import InMemoryDenseRetriever
-from incidentops_ai.retrieval.retriever import RetrievalFilter
+from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter
 
 
 def chunks_of(
@@ -121,3 +121,24 @@ async def test_results_point_at_their_source_span():
     [hit] = await r.retrieve("pool", k=1, filters=DEFAULT)
 
     assert (hit.doc_id, hit.start, hit.end) == ("pool", hit.chunk.start, hit.chunk.end)
+
+
+def test_a_document_filter_keeps_only_the_listed_documents():
+    [pool] = chunks_of("pool", POOL)
+    [kafka] = chunks_of("kafka", KAFKA)
+    only_pool = RetrievalFilter("default", doc_ids=("pool",))
+
+    assert only_pool.allows(pool) and not only_pool.allows(kafka)
+
+
+async def test_the_dense_retriever_applies_the_document_filter_and_accepts_hints():
+    r = await retriever(chunks_of("pool", POOL), chunks_of("kafka", KAFKA), chunks_of("cdn", CACHE))
+
+    results = await r.retrieve(
+        "connection pool exhausted",
+        k=5,
+        filters=RetrievalFilter("default", doc_ids=("kafka", "cdn")),
+        hints=QueryHints(services=("orders-api",)),
+    )
+
+    assert {x.chunk.doc_id for x in results} == {"kafka", "cdn"}
