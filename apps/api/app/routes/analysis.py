@@ -4,12 +4,15 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import asdict
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
 from app.deps import (
     LLM,
+    Graph,
     LLMConfig,
     LLMIdempotencyKey,
     Retrieval,
@@ -24,6 +27,7 @@ from incidentops_ai.errors import LLMCallFailedError, RetrievalFailedError
 from incidentops_ai.extraction.models import IncidentExtraction
 from incidentops_ai.extraction.review import ReviewDecision, assess
 from incidentops_ai.extraction.service import RecordedFields, extract_incident
+from incidentops_ai.graph.store import GraphStore, GraphUnavailableError, ServiceContext
 from incidentops_ai.incidents.models import IncidentRead
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMStatus, RunMetadata
@@ -33,6 +37,7 @@ from incidentops_ai.related import find_related_incidents
 from incidentops_ai.retrieval.documents import DEFAULT_TENANT
 from incidentops_ai.retrieval.embeddings import EmbeddingError
 from incidentops_ai.retrieval.rerank import RerankerError
+from incidentops_ai.retrieval.retriever import QueryHints
 from incidentops_ai.tools.recent_incidents import make_recent_incidents_tool
 from incidentops_ai.tools.registry import ToolExecution, ToolRegistry
 
@@ -81,12 +86,31 @@ class RetrievalInfo(BaseModel):
     latency_ms: float
 
 
+GraphStatus = Literal["off", "ok", "unavailable"]
+
+
 class DiagnosisResponse(BaseModel):
     run_id: uuid.UUID
     incident_id: uuid.UUID
     diagnosis: Diagnosis  # only causes whose citations the server has checked
     retrieval: RetrievalInfo
+    # From the knowledge graph (W05): who owns the service, what it depends on, recent incidents.
+    # Structured facts, shown beside the diagnosis, never as citations.
+    service_context: ServiceContext | None = None
+    graph_status: GraphStatus = "off"
     run: RunMetadata
+
+
+async def _service_context(
+    graph: GraphStore | None, service: str
+) -> tuple[ServiceContext | None, GraphStatus]:
+    if graph is None:
+        return None, "off"
+    try:
+        return await graph.service_context(service, tenant=DEFAULT_TENANT), "ok"
+    except GraphUnavailableError as error:
+        logger.warning("Service context unavailable: %s", error)
+        return None, "unavailable"
 
 
 async def _load(sessions: SessionFactory, incident_id: uuid.UUID) -> IncidentRead:
@@ -243,6 +267,7 @@ async def diagnose_incident(
     llm: LLM,
     config: LLMConfig,
     retriever: Retrieval,
+    graph: Graph,
     response: Response,
     idempotency_key: LLMIdempotencyKey = None,
 ):
@@ -257,6 +282,8 @@ async def diagnose_incident(
             incident_id=incident.id,
             diagnosis=Diagnosis.model_validate(replay.output["diagnosis"]),
             retrieval=RetrievalInfo.model_validate(replay.output["retrieval"]),
+            service_context=replay.output.get("service_context"),
+            graph_status=replay.output.get("graph_status", "off"),
             run=replay.metadata,
         )
 
@@ -268,6 +295,7 @@ async def diagnose_incident(
                 query=_report_text(incident),
                 tenant_id=DEFAULT_TENANT,
                 config=config,
+                hints=QueryHints(services=(incident.service,)),
             )
         except (EmbeddingError, RerankerError) as error:
             # The detail may name providers or limits; it goes to the log, not to the client.
@@ -277,6 +305,7 @@ async def diagnose_incident(
             ) from error
 
         retrieval = RetrievalInfo(stack=result.stack, latency_ms=round(result.retrieval_ms, 1))
+        context, graph_status = await _service_context(graph, incident.service)
         async with sessions() as session:
             run_id = await LLMRunRepository(session).record(
                 operation=DIAGNOSE_OPERATION,
@@ -288,6 +317,8 @@ async def diagnose_incident(
                     {
                         "diagnosis": result.diagnosis.model_dump(mode="json"),
                         "retrieval": retrieval.model_dump(mode="json"),
+                        "service_context": asdict(context) if context else None,
+                        "graph_status": graph_status,
                     }
                     if result.diagnosis
                     else None
@@ -301,5 +332,7 @@ async def diagnose_incident(
         incident_id=incident.id,
         diagnosis=result.diagnosis,
         retrieval=retrieval,
+        service_context=context,
+        graph_status=graph_status,
         run=result.metadata,
     )

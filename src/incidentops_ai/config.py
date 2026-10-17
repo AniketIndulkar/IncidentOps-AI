@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     # reranker did not earn its cost (evals/retrieval/runs/2026-10-16-hybrid-findings.md). It needs
     # the optional "rerank" extra: uv sync --extra rerank.
     retrieval_stack: Literal["dense", "hybrid", "hybrid-rerank"] = "hybrid"
+
+    # Knowledge graph (W05). With a URI and a password the API reads service context from Neo4j.
+    # graph_retrieval: "off" (default; the W05 comparison found no gain), "anchor" (the incident's
+    # service's own documents, fused in) or "graph" (documents the graph links to that service).
+    neo4j_uri: str | None = None
+    neo4j_user: str = "neo4j"
+    neo4j_password: SecretStr | None = None
+    graph_retrieval: Literal["off", "anchor", "graph"] = "off"
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -45,7 +53,9 @@ class Settings(BaseSettings):
     # Calls per minute across all callers, per process (see app.rate_limit).
     llm_rate_limit_per_minute: int = Field(default=10, ge=1)
 
-    @field_validator("openai_api_key", "llm_model", "api_token", mode="before")
+    @field_validator(
+        "openai_api_key", "llm_model", "api_token", "neo4j_uri", "neo4j_password", mode="before"
+    )
     @classmethod
     def _blank_means_unset(cls, value):
         # docker compose passes VAR="" when the variable is not set; that is "not configured",

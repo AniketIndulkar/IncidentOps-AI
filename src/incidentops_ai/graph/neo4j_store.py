@@ -15,10 +15,12 @@ tenant's whole graph in one transaction: readers see the old graph or the new on
 from collections.abc import Sequence
 
 from neo4j import AsyncDriver, AsyncManagedTransaction
+from neo4j.exceptions import DriverError, Neo4jError
 
 from incidentops_ai.graph.catalogue import Catalogue
 from incidentops_ai.graph.store import (
     FixRef,
+    GraphUnavailableError,
     ImpactedService,
     IncidentRef,
     Ownership,
@@ -201,9 +203,12 @@ class Neo4jGraphStore:
         self._database = database
 
     async def _read(self, query: str, **params) -> list[dict]:
-        async with self._driver.session(database=self._database) as session:
-            result = await session.run(query, **params)
-            return await result.data()
+        try:
+            async with self._driver.session(database=self._database) as session:
+                result = await session.run(query, **params)
+                return await result.data()
+        except (DriverError, Neo4jError, OSError) as exc:
+            raise GraphUnavailableError(f"graph query failed: {type(exc).__name__}") from exc
 
     async def known_services(self, *, tenant: str) -> set[str]:
         rows = await self._read(

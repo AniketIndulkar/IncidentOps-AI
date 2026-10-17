@@ -15,6 +15,11 @@ from typing import Literal, Protocol
 MAX_HOPS = 4
 
 
+class GraphUnavailableError(RuntimeError):
+    """The graph database could not answer (down, unreachable, refused). Callers degrade: the
+    graph is context, never the only way to an answer."""
+
+
 def check_hops(hops: int, *, minimum: int = 0) -> int:
     if not minimum <= hops <= MAX_HOPS:
         raise ValueError(f"hops must be between {minimum} and {MAX_HOPS}, not {hops}")

@@ -24,3 +24,10 @@ def test_the_stack_is_read_from_the_environment(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("INCIDENTOPS_RETRIEVAL_STACK", "dense")
 
     assert Settings(_env_file=None).retrieval_stack == "dense"
+
+
+def test_graph_retrieval_is_off_unless_chosen():
+    assert Settings(_env_file=None).graph_retrieval == "off"
+    assert Settings(_env_file=None, graph_retrieval="graph").graph_retrieval == "graph"
+    with pytest.raises(ValidationError, match="graph_retrieval"):
+        Settings(_env_file=None, graph_retrieval="everything")

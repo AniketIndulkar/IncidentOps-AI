@@ -174,3 +174,18 @@ async def test_tenants_never_see_each_others_graph(store: GraphStore):
 async def test_hop_limits_are_bounded(store: GraphStore):
     with pytest.raises(ValueError, match="hops"):
         await store.downstream_impact("kafka", tenant=T, max_hops=9)
+
+
+async def test_an_unreachable_neo4j_is_reported_as_graph_unavailable():
+    from neo4j import AsyncGraphDatabase
+
+    from incidentops_ai.graph.store import GraphUnavailableError
+
+    driver = AsyncGraphDatabase.driver(
+        "bolt://127.0.0.1:1", auth=("neo4j", "x"), connection_timeout=1
+    )
+    try:
+        with pytest.raises(GraphUnavailableError):
+            await Neo4jGraphStore(driver).known_services(tenant=T)
+    finally:
+        await driver.close()

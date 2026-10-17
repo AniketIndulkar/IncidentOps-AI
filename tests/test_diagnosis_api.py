@@ -4,6 +4,7 @@ import sys
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -14,10 +15,14 @@ from test_diagnosis import POOL, StaticRetriever, cause, chunks_of, model_says, 
 
 from app.main import create_app
 from incidentops_ai.config import Settings
+from incidentops_ai.graph.catalogue import load_catalogue
+from incidentops_ai.graph.memory import InMemoryGraphStore
+from incidentops_ai.graph.store import GraphUnavailableError
 from incidentops_ai.llm.fake_provider import FakeProvider
 from incidentops_ai.llm.provider import LLMStatus
 from incidentops_ai.retrieval.embeddings import EmbeddingError
 from incidentops_ai.retrieval.rerank import RerankerError
+from incidentops_ai.retrieval.retriever import QueryHints
 
 KEY = {"Idempotency-Key": "diagnose-me-0001"}
 GOOD = ("E1", "exhausts it within minutes")
@@ -231,3 +236,99 @@ async def test_the_default_hybrid_stack_starts_with_a_key_and_needs_no_reranker(
 
     async with app.router.lifespan_context(app):
         assert app.state.retriever.name == "hybrid-rrf"
+
+
+GRAPH = InMemoryGraphStore(
+    [load_catalogue(Path(__file__).resolve().parent.parent / "data" / "graph" / "catalogue.toml")]
+)
+
+
+@asynccontextmanager
+async def graph_client(settings, provider, retriever, graph) -> AsyncIterator[AsyncClient]:
+    app = create_app(settings, llm_provider=provider, retriever=retriever, graph_store=graph)
+    headers = {"Authorization": f"Bearer {settings.api_token.get_secret_value()}"}
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://t", headers=headers
+        ) as client,
+    ):
+        yield client
+
+
+async def test_the_incidents_service_is_passed_to_retrieval_as_a_hint(settings):
+    retriever = pool_retriever()
+    async with client_for(
+        settings, FakeProvider([model_says(cause("Leak.", GOOD))]), retriever
+    ) as c:
+        await c.post(f"/incidents/{await new_incident(c)}/diagnosis")
+
+    assert retriever.hints_seen == [QueryHints(services=("checkout-api",))]
+
+
+async def test_with_a_graph_the_diagnosis_carries_the_services_context(settings, session_factory):
+    provider = FakeProvider([model_says(cause("Leak.", GOOD))])
+    async with graph_client(settings, provider, pool_retriever(), GRAPH) as client:
+        resp = await client.post(f"/incidents/{await new_incident(client)}/diagnosis")
+
+    body = resp.json()
+    assert resp.status_code == 200 and body["graph_status"] == "ok"
+    context = body["service_context"]
+    assert (context["team_name"], context["on_call"]) == ("Commerce Platform", "Amara Okafor")
+    assert context["depends_on"] == ["orders-api", "payments-gateway", "session-service"]
+    assert [i["id"] for i in context["recent_incidents"]] == ["pm-2026-03-checkout"]
+    [run] = await runs(session_factory)
+    assert run["output"]["service_context"]["on_call"] == "Amara Okafor"
+
+
+async def test_without_a_graph_there_is_no_context_and_the_status_says_off(settings):
+    async with client_for(
+        settings, FakeProvider([model_says(cause("Leak.", GOOD))]), pool_retriever()
+    ) as c:
+        body = (await c.post(f"/incidents/{await new_incident(c)}/diagnosis")).json()
+
+    assert (body["graph_status"], body["service_context"]) == ("off", None)
+
+
+async def test_a_graph_outage_does_not_stop_the_diagnosis(settings):
+    class Down:
+        async def service_context(self, service, *, tenant):
+            raise GraphUnavailableError("neo4j unreachable")
+
+    provider = FakeProvider([model_says(cause("Leak.", GOOD))])
+    async with graph_client(settings, provider, pool_retriever(), Down()) as client:
+        resp = await client.post(f"/incidents/{await new_incident(client)}/diagnosis")
+
+    assert resp.status_code == 200
+    assert (resp.json()["graph_status"], resp.json()["service_context"]) == ("unavailable", None)
+    assert resp.json()["diagnosis"]["status"] == "answered"
+
+
+async def test_graph_retrieval_without_neo4j_settings_refuses_to_start(settings):
+    configured = settings.model_copy(
+        update={"graph_retrieval": "graph", "openai_api_key": SecretStr("sk-test-0000")}
+    )
+    app = create_app(configured)
+
+    with pytest.raises(ValueError, match="INCIDENTOPS_NEO4J_URI"):
+        async with app.router.lifespan_context(app):
+            pass
+
+
+async def test_neo4j_settings_build_a_graph_store_that_is_closed_on_shutdown(settings):
+    from graph_support import TEST_NEO4J_AUTH, TEST_NEO4J_URI
+
+    from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
+
+    configured = settings.model_copy(
+        update={
+            "neo4j_uri": TEST_NEO4J_URI,
+            "neo4j_user": TEST_NEO4J_AUTH[0],
+            "neo4j_password": SecretStr(TEST_NEO4J_AUTH[1]),
+        }
+    )
+    app = create_app(configured)
+
+    async with app.router.lifespan_context(app):
+        assert isinstance(app.state.graph_store, Neo4jGraphStore)
+        assert isinstance(await app.state.graph_store.known_services(tenant="default"), set)

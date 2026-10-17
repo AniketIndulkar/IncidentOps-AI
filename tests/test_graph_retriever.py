@@ -12,6 +12,7 @@ from incidentops_ai.graph.retriever import (
     OwnDocuments,
     link_services,
 )
+from incidentops_ai.graph.store import GraphUnavailableError
 from incidentops_ai.retrieval.chunking import Chunk, FixedChunker
 from incidentops_ai.retrieval.documents import parse_document
 from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, RetrievedChunk
@@ -142,3 +143,23 @@ async def test_names_and_argument_checks():
     assert AnchoredRetriever(base, GraphNeighbourhood(GRAPH, hops=1)).name == "list+graph1"
     with pytest.raises(ValueError, match="k must"):
         await AnchoredRetriever(base, OwnDocuments()).retrieve("q", k=0, filters=DEFAULT)
+
+
+class BrokenGraph:
+    """A graph store whose database is down."""
+
+    async def known_services(self, *, tenant):
+        raise GraphUnavailableError("neo4j unreachable")
+
+    async def related_documents(self, services, *, tenant, hops=1):
+        raise GraphUnavailableError("neo4j unreachable")
+
+
+async def test_a_graph_outage_falls_back_to_open_retrieval_instead_of_failing():
+    base = ListRetriever(CHUNKS)
+
+    results = await AnchoredRetriever(base, GraphNeighbourhood(BrokenGraph(), hops=1)).retrieve(
+        "q", k=2, filters=DEFAULT, hints=QueryHints(services=("payments-gateway",))
+    )
+
+    assert [r.chunk.doc_id for r in results] == ["rb-checkout-502", "rb-search-indexer-oom"]

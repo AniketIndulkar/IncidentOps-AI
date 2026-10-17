@@ -8,12 +8,13 @@ the right document whenever it belongs to another service.
 """
 
 import asyncio
+import logging
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from typing import Protocol
 
-from incidentops_ai.graph.store import GraphStore, check_hops
+from incidentops_ai.graph.store import GraphStore, GraphUnavailableError, check_hops
 from incidentops_ai.retrieval.hybrid import CANDIDATE_DEPTH, reciprocal_rank_fusion
 from incidentops_ai.retrieval.retriever import (
     QueryHints,
@@ -21,6 +22,8 @@ from incidentops_ai.retrieval.retriever import (
     RetrievedChunk,
     Retriever,
 )
+
+logger = logging.getLogger(__name__)
 
 _NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
@@ -114,8 +117,13 @@ class AnchoredRetriever:
         if k <= 0:
             raise ValueError("k must be positive")
         fetch = max(self._depth, k)
-        anchors = await self._anchors(query, filters.tenant_id, hints)
-        scoped = await self._scope.narrow(filters, anchors) if anchors else None
+        try:
+            anchors = await self._anchors(query, filters.tenant_id, hints)
+            scoped = await self._scope.narrow(filters, anchors) if anchors else None
+        except GraphUnavailableError as exc:
+            # The scope is a help, not a requirement: without it, retrieval is the open search.
+            logger.warning("Graph scope unavailable, using open retrieval only: %s", exc)
+            scoped = None
         if scoped is None:
             return (await self._base.retrieve(query, k=fetch, filters=filters, hints=hints))[:k]
         open_list, scoped_list = await asyncio.gather(

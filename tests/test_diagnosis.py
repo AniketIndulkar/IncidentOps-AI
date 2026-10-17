@@ -48,9 +48,11 @@ class StaticRetriever:
     def __init__(self, results: list[RetrievedChunk]) -> None:
         self.results = results
         self.asked: list[tuple[str, int, RetrievalFilter]] = []
+        self.hints_seen: list = []
 
     async def retrieve(self, query: str, *, k: int, filters: RetrievalFilter, hints=None):
         self.asked.append((query, k, filters))
+        self.hints_seen.append(hints)
         return self.results[:k]
 
 

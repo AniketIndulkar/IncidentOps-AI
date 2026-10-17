@@ -11,6 +11,7 @@ from incidentops_ai.errors import (
     RateLimitExceededError,
     UnauthorizedError,
 )
+from incidentops_ai.graph.store import GraphStore
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
 from incidentops_ai.retrieval.retriever import Retriever
@@ -56,6 +57,11 @@ def get_retriever(request: Request) -> Retriever:
     if retriever is None:
         raise LLMNotConfiguredError("Evidence retrieval is off: OPENAI_API_KEY is not configured.")
     return retriever
+
+
+def get_graph_store(request: Request) -> GraphStore | None:
+    """Optional: None when no graph is configured. Routes treat the graph as context."""
+    return request.app.state.graph_store
 
 
 def _idempotency_header(description: str):
@@ -114,3 +120,4 @@ SessionFactory = Annotated[async_sessionmaker[AsyncSession], Depends(get_session
 LLM = Annotated[LLMProvider, Depends(get_llm_provider)]
 LLMConfig = Annotated[ModelConfig, Depends(get_llm_config)]
 Retrieval = Annotated[Retriever, Depends(get_retriever)]
+Graph = Annotated[GraphStore | None, Depends(get_graph_store)]
