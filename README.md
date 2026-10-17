@@ -1,223 +1,180 @@
 # IncidentOps AI
 
-Production-grade incident triage and diagnosis service. Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md).
+IncidentOps triages production incidents. You send it an incident report; it finds the runbooks
+and postmortems that bear on it, asks a model for a diagnosis that must cite them, adds what it
+knows about the service (owner, on-call, dependencies), and proposes one action, a ticket, that a
+person approves before anything is written.
 
-## Local development
+It is built to be trusted with that job rather than to look clever:
 
-Requires Python 3.13, [uv](https://docs.astral.sh/uv/), and PostgreSQL 17 **with the
-[pgvector](https://github.com/pgvector/pgvector) extension** (the retrieval tables need it). The
-simplest way to get one is the image the project uses in CI and docker compose:
+- **Every cause cites its evidence**, and the citations are checked against the retrieved text.
+- **The model never decides what happens next.** The workflow is a fixed graph; the route
+  (recommend or send to review) and the recommendation are code.
+- **Nothing is written without a person's approval**, and the write carries a signature over its
+  exact arguments.
+- **Every failure ends in a named state**: a dependency that is down or slow sends the run to review
+  with a reason, never to a guess. `GET /status` says how degraded the service is.
+
+v1.0 is the end of a thirteen-week build ([ROADMAP.md](docs/ROADMAP.md)). What it cannot do yet:
+[known limitations](docs/known-limitations.md).
+
+## Quick start (Docker)
+
+You need Docker with Compose, and an OpenAI API key for triage.
+
+```bash
+cp .env.example .env    # set POSTGRES_PASSWORD, INCIDENTOPS_API_TOKEN (openssl rand -hex 24),
+                        # OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL
+docker compose up -d --build
+docker compose run --rm -v "$PWD/data/corpus:/corpus:ro" api \
+    python -m incidentops_ai.retrieval.ingest /corpus
+docker compose run --rm api python -m incidentops_ai.retrieval.index
+curl -s -H "Authorization: Bearer <your token>" localhost:8000/status    # "tier": "FULL"
+```
+
+Then create an incident and triage it: [deploy.md](docs/deploy.md) walks through it, including the
+optional parts (the knowledge graph, a ticket system, the CMDB, ops questions, tracing). That guide
+was followed from an empty Docker volume for v1.0.
+
+## How a triage works
+
+```
+intake → retrieve ∥ graph ∥ memory ∥ CMDB → extract ∥ diagnose → assess → recommend | review → approval → act
+```
+
+Two steps call a model: extraction (the incident's fields) and diagnosis (causes citing the
+evidence). `assess` turns problems into reason codes (`no_answer`, `unsupported_causes`, `sev1`,
+`model_failed`, …); any reason sends the run to review. Every run then waits at the approval gate.
+A triage takes about 6.5 seconds and costs about $0.019 in model calls (at an assumed price).
+The full picture, boundary by boundary: [architecture.md](docs/architecture.md).
+
+## The API
+
+All routes except `/health` need `Authorization: Bearer <token>`: a JWT from your identity provider
+(roles `viewer`, `responder`, `approver`, `admin`) or the static machine token. Interactive docs
+at `/docs`.
+
+| Route | What it does |
+|---|---|
+| `POST /incidents` | create an incident (`Idempotency-Key` supported) |
+| `GET /incidents/{id}` | read it |
+| `POST /incidents/{id}/attachments` | attach a screenshot or PDF; its text becomes evidence |
+| `POST /incidents/{id}/triage` | run the workflow; stops at the approval gate |
+| `GET /incidents/{id}/triage[/{run}]` | the runs, or one run with its steps, diagnosis and proposal |
+| `POST /incidents/{id}/triage/{run}/decision` | `{"decision": "approve" \| "reject"}` |
+| `POST /incidents/{id}/triage/{run}/resume` | resume a failed run without repeating finished steps |
+| `GET /incidents/{id}/triage/{run}/events` | the append-only audit trail |
+| `POST /incidents/{id}/extraction`, `/diagnosis`, `/related-incidents` | the single steps on their own |
+| `GET /memory`, `POST /memory`, `POST /memory/{note}/supersede` | reviewer notes recalled in later diagnoses |
+| `POST /ops/query` | a question about operational data, answered with validated read-only SQL |
+| `GET /status` | `FULL`, `REDUCED` or `MANUAL`, and each dependency's state |
+
+Errors are `application/problem+json` with a stable `code`.
+
+## Results
+
+Every number links to a committed result and the command that reproduces it. The sets are small
+and were written by the assistant that built the system: read them as evidence of the design, not
+as accuracy on real incidents.
+
+| What | Result | Details |
+|---|---|---|
+| Retrieval, 30 questions | Recall@5 1.000, MRR@10 0.967 (hybrid) | [evaluation](docs/reports/evaluation.md#retrieval-w03-w04) |
+| Diagnosis, 16 golden incidents | answers or declines correctly 15/16; citation precision 1.000 | [evaluation](docs/reports/evaluation.md#generation-w04-w11) |
+| Workflow, 12 cases, real model | task success 11/12 | [evaluation](docs/reports/evaluation.md#workflow-w07-w08) |
+| Text-to-SQL, 15 questions | 14/15 correct; 20/20 attack queries refused | [evaluation](docs/reports/evaluation.md#text-to-sql-w09), [security](docs/reports/security.md) |
+| Injection, real model | 0 of 6 followed | [security](docs/reports/security.md) |
+| Load, 100 concurrent responders | 0 errors, triage P95 9.1 s (simulated model) | [performance](docs/reports/performance-and-cost.md) |
+| The faithfulness judge | 77% agreement with labels: **reported, not gated** | [evaluation](docs/reports/evaluation.md#generation-w04-w11) |
+
+## Development
+
+Python 3.13, [uv](https://docs.astral.sh/uv/), and PostgreSQL 17 with
+[pgvector](https://github.com/pgvector/pgvector):
 
 ```bash
 docker run -d --name incidentops-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=incidentops \
   -p 5433:5432 pgvector/pgvector:pg17
-```
-
-```bash
 uv sync
-cp .env.example .env   # set INCIDENTOPS_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/incidentops
+cp .env.example .env   # INCIDENTOPS_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/incidentops
 uv run alembic upgrade head
+uv run python -m incidentops_ai.retrieval.ingest data/corpus
 uv run uvicorn app.main:app --app-dir apps/api --reload
 ```
 
-API docs: http://localhost:8000/docs
-
-## Tests
+Tests use a real PostgreSQL and never call a model:
 
 ```bash
 docker exec incidentops-pg createdb -U postgres incidentops_test
-TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/incidentops_test uv run pytest
+export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/incidentops_test
+uv run pytest                     # 960 tests
+uv run pytest -m redteam          # the 170 security tests on their own
+uv run ruff check . && uv run ruff format --check .
+INCIDENTOPS_DATABASE_URL=$TEST_DATABASE_URL uv run python -m incidentops_ai.evals.gate
 ```
 
-Tests run Alembic migrations against a real PostgreSQL with pgvector (default
-`postgresql+asyncpg://localhost:5432/incidentops_test`, override with `TEST_DATABASE_URL`). They
-never call a model: embeddings and LLM calls are faked, so no API key is needed.
+The gate checks the offline evaluation layers against `evals/thresholds.toml` and fails when a
+prompt changed since the recorded real-model run. Optional extras: `uv sync --extra ocr` (OCR for
+attachments), `--extra rerank` (the cross-encoder, off by default).
 
-## Retrieval (W03)
+## Operating it
 
-Runbooks and postmortems in `data/corpus/` are parsed, chunked, embedded into pgvector and
-searched. Ground truth is in `evals/retrieval/questions.jsonl` (30 questions, each pointing at the
-exact text that answers it). Design and decisions: [docs/roadmap-w03.md](docs/roadmap-w03.md).
+- [deploy.md](docs/deploy.md): installing, upgrading, backups.
+- [runbook.md](docs/runbook.md): what users see and what to do when each dependency fails.
+- [cost-model.md](docs/cost-model.md): per-triage and monthly estimates, and how to cap spend.
+- [threat-model.md](docs/threat-model.md): what is defended, how, and the residual risks.
+- [known-limitations.md](docs/known-limitations.md).
 
-```bash
-uv run python -m incidentops_ai.retrieval.ingest data/corpus                         # parse, chunk, store
-uv run python -m incidentops_ai.retrieval.index                                       # embed (needs OPENAI_API_KEY)
-uv run python -m incidentops_ai.retrieval.benchmark                                   # Recall@K, Precision@K, MRR -> evals/retrieval/runs/
-uv run python -m incidentops_ai.retrieval.chunking_experiment                         # compare chunking configs
-```
+## Documentation
 
-Ingestion is repeatable: unchanged documents are skipped. The default chunker is `fixed-2000-200`,
-chosen by the chunking experiment (see the
-[findings](evals/retrieval/runs/2026-10-16-dense-baseline-findings.md), including its caveat for long
-documents); choose another with `--chunker`. Dense baseline on this corpus: Recall@5 0.983, MRR 0.961.
-Add `--fake` to the benchmark and
-experiment commands for an offline wiring check (clearly labelled; not a measurement).
-
-## Hybrid retrieval and cited diagnosis (W04)
-
-Dense search and BM25 are fused by reciprocal rank (the default stack, chosen by a rule fixed before the
-run; see the [findings](evals/retrieval/runs/2026-10-16-hybrid-findings.md) and
-[docs/roadmap-w04.md](docs/roadmap-w04.md)). A cross-encoder reranker is built and measured but off by
-default: it did not earn its cost on this corpus.
-
-```bash
-uv run python -m incidentops_ai.retrieval.stack_benchmark --fake              # offline wiring check, all stages
-uv run python -m incidentops_ai.retrieval.stack_benchmark --stages dense,bm25,hybrid   # real run, no model download
-uv sync --extra rerank                                                        # optional: the local reranker (~87 MB model on first use)
-uv run --extra rerank python -m incidentops_ai.retrieval.stack_benchmark      # all four stages, three chunk configs
-```
-
-`POST /incidents/{id}/diagnosis` (same bearer token, rate limit and `Idempotency-Key` as the other LLM
-routes) retrieves evidence, asks the model for likely causes and returns only causes whose citation the
-server has checked against the stored chunk, with the source document, section, page and character span.
-With nothing relevant it answers `no_answer`, never a guess. It needs the corpus ingested and indexed
-(commands above), `OPENAI_API_KEY`, `INCIDENTOPS_LLM_MODEL` and `INCIDENTOPS_API_TOKEN`;
-`INCIDENTOPS_RETRIEVAL_STACK` picks `dense`, `hybrid` (default) or `hybrid-rerank`.
-
-## Knowledge graph (W05)
-
-Services, teams, engineers, incidents, fixes and runbook coverage live in a Neo4j graph built from
-`data/graph/catalogue.toml` (synthetic, validated against the corpus). The diagnosis response adds a
-`service_context` from it: owning team, on-call engineer, dependencies, dependents and recent
-incidents. The comparison found no retrieval gain from graph context, so retrieval does not use it by
-default ([findings](evals/graph/runs/2026-10-17-graph-findings.md), [ADR-002](docs/adr/002-knowledge-graph.md)).
-
-```bash
-docker run -d --name incidentops-neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/<password> neo4j:5-community
-uv run python -m incidentops_ai.graph.load          # needs INCIDENTOPS_NEO4J_URI and _PASSWORD
-uv run python -m incidentops_ai.graph.benchmark     # graph vs no graph on two question sets
-```
-
-Tests need a second container for the graph (port 7688, as in CI):
-
-```bash
-docker run -d --name incidentops-neo4j-test -p 7688:7687 -e NEO4J_AUTH=neo4j/incidentops-test neo4j:5-community
-```
-
-## Multimodal evidence (W06)
-
-Incidents take attachments (PNG, JPEG or PDF, up to 5 MB): `POST /incidents/{id}/attachments` with a
-multipart `file`. Text is extracted at upload (PDF text layer, OCR for scans, a vision-model
-transcript for images) and the diagnosis cites it as evidence `A1..An`
-([findings](evals/multimodal/runs/2026-10-17-multimodal-findings.md), [ADR-003](docs/adr/003-multimodal-routing.md)).
-
-```bash
-uv sync --extra ocr                                            # local OCR (RapidOCR, ~250 MB with OpenCV)
-uv run python -m incidentops_ai.multimodal.assets              # regenerate the benchmark assets
-uv run --extra ocr python -m incidentops_ai.multimodal.benchmark   # OCR vs vision on 28 questions
-```
-
-## Incident workflow (W07)
-
-`POST /incidents/{id}/triage` runs the triage workflow (LangGraph): intake, retrieval and service
-context, extraction and diagnosis side by side, then a routing rule in code that sends the incident to
-**recommend** (cited runbooks, on-call, open fixes) or **review** with reason codes. Every step is
-checkpointed in PostgreSQL; `GET /incidents/{id}/triage/{run_id}` shows the state and step log, and
-`POST /incidents/{id}/triage/{run_id}/resume` continues a failed run without repeating finished steps
-([findings](evals/workflow/runs/2026-10-17-workflow-findings.md), [ADR-004](docs/adr/004-agentic-vs-deterministic-steps.md)).
-The checkpoint tables are created by LangGraph on first use, not by Alembic.
-
-```bash
-uv run python -m incidentops_ai.workflow.benchmark --overhead   # LangGraph vs a plain function, scripted (free)
-uv run python -m incidentops_ai.workflow.benchmark              # 12 incidents, real models (scratch DB, costs)
-```
-
-## Approval, memory and the ticket tool (W08)
-
-Every triage run stops at `awaiting_approval` with a proposed ticket. `POST
-/incidents/{id}/triage/{run_id}/decision` with `{"decision": "approve" | "reject", "reviewer": "...",
-"memory": "..."}` decides it (once); `GET .../events` is the audit trail, append-only in the database.
-Reviewer notes (`/memory`) are recalled per service and cited as evidence `M1..M3`. With
-`INCIDENTOPS_TICKETS_DB` and `INCIDENTOPS_APPROVAL_SECRET` set, the API starts the ticket MCP server
-and an approval opens the ticket there ([trust boundary](docs/notes/mcp-trust-boundary.md),
-[ADR-005](docs/adr/005-approval-gate-and-tool-trust-boundary.md)).
-
-```bash
-uv run python -m incidentops_ai.workflow.faults      # five injected faults (scratch DB, free)
-uv run python -m incidentops_ai.memory.benchmark     # reviewer notes with real models (scratch DB, costs)
-```
-
-## Integrations and text-to-SQL (W09)
-
-- **Ticket API**: with `INCIDENTOPS_JIRA_URL` and `INCIDENTOPS_JIRA_TOKEN`, approved runs open a Jira
-  issue labelled with the run (found again after a timeout, never duplicated).
-- **Ops questions**: `POST /ops/query {"question": "..."}` answers from the `ops` schema (deployments,
-  alerts, on-call, error budgets). The model writes one SELECT; it runs only if the validator accepts
-  it, as a read-only role (`INCIDENTOPS_OPS_DATABASE_URL`, a login granted `incidentops_ops_reader`).
-- **CMDB**: with `INCIDENTOPS_CMDB_URL` and `INCIDENTOPS_CMDB_API_KEY`, each run looks up the service's
-  owner over SOAP; if the CMDB is down or answers nonsense, the run goes to review
-  (`integration_degraded`). Contracts: [docs/notes/integration-contracts.md](docs/notes/integration-contracts.md).
-
-```bash
-uv run python -m incidentops_ai.ops.benchmark   # text-to-SQL, 15 questions + 8 malicious (real model)
-```
-
-## Identity, access and security (W10)
-
-Every route except `/health` needs a caller. Production callers present a JWT from the identity
-provider (`INCIDENTOPS_JWT_SECRET` for HS256 or `INCIDENTOPS_JWT_PUBLIC_KEY` for RS256, issuer
-`INCIDENTOPS_JWT_ISSUER`, audience `incidentops`, claims `sub`, `name`, `tid`, `roles`); the static
-`INCIDENTOPS_API_TOKEN` is a machine credential (admin, default tenant). Roles: viewer, responder,
-approver, admin ([permissions](docs/roadmap-w10.md#aieng-60-server-side-rbac)). The tenant comes from the
-token; ops SQL uses a reader login per tenant (`INCIDENTOPS_OPS_DATABASE_URLS`, row-level security).
-Incident text, attachments, notes and questions are redacted before any prompt, and every model output
-passes a guard. [Threat model](docs/threat-model.md).
-
-```bash
-uv run python -m incidentops_ai.auth.dev_token --sub u-1 --name "Amara Okafor" --role approver
-uv run pytest -m redteam                            # the security regression suite (its own CI step)
-uv run python -m incidentops_ai.security.benchmark  # injections against the real model (scratch DB)
-```
-
-## Evaluation, gateway and tracing (W11)
-
-```bash
-uv run python -m incidentops_ai.evals.gate                       # the CI gate; writes evals/dashboard.md
-uv run python -m incidentops_ai.evals.generation generate        # real model: golden-set diagnoses
-uv run python -m incidentops_ai.evals.generation judge           # real model: judge verdicts
-uv run python -m incidentops_ai.evals.gate --refresh-baseline    # after a prompt change and a new run
-uv run python -m incidentops_ai.observability.report traces.jsonl --trace <run id without dashes>
-```
-
-Every model call goes through the gateway (`INCIDENTOPS_LLM_ROUTES`, e.g. `{"diagnosis": ["model-a",
-"model-b"]}`: fallback on timeouts, rate limits and provider errors; a circuit breaker per model).
-Traces go to `INCIDENTOPS_TRACE_FILE` (JSONL) and, with `INCIDENTOPS_LANGFUSE_HOST` and both keys, to
-Langfuse. A prompt change fails CI until the generation run is repeated and the baseline refreshed.
-
-## Reliability (W12)
-
-`GET /status` reports the tier (FULL, REDUCED, MANUAL) and each dependency's state; the
-[runbook](docs/runbook.md) says what users see and what to do. Runs left `running` by a process that
-died are marked `failed` at startup after `INCIDENTOPS_STALE_RUN_AFTER_S` (900 s) and can resume.
-
-```bash
-INCIDENTOPS_DATABASE_URL=<scratch db, corpus ingested> uv run python -m incidentops_ai.reliability.load
-```
-
-The load test runs the real API with `INCIDENTOPS_LLM_PROVIDER=simulated` (real recorded latencies and
-token counts) and `INCIDENTOPS_RETRIEVAL_STACK=bm25`.
+| Read this | For |
+|---|---|
+| [architecture.md](docs/architecture.md) | the system, boundary by boundary, with failure behaviour |
+| [adr/](docs/adr/README.md) | the nine decisions and their evidence |
+| [reports/](docs/reports/README.md) | evaluation, performance and cost, security |
+| [ROADMAP.md](docs/ROADMAP.md) | the plan, the risk list, how each week went |
+| `docs/roadmap-wNN.md` | each week's design and pre-registered hypotheses |
+| `evals/*/runs/` | every recorded result, with its findings |
+| [release/](docs/release/v1.0-checklist.md) | the v1.0 checklist, release notes and walkthrough script |
 
 ## Layout
 
-- `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
-- `src/incidentops_ai` — domain models, persistence, config (reused by workers/evals later)
-  - `llm/`, `extraction/`, `tools/` — provider layer, structured extraction, read-only tools (W02)
-  - `retrieval/` — documents, chunking, embeddings, retrievers, metrics, benchmark (W03); BM25, hybrid, reranker, stacks (W04)
-  - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
-  - `graph/` — service catalogue, Neo4j store and Cypher, graph-anchored retrieval (W05)
-  - `multimodal/` — attachments, PDF text, OCR, vision transcripts, the multimodal benchmark (W06)
-  - `workflow/` — the LangGraph triage workflow, routing rule, runs and checkpoints, benchmark (W07); approval gate, budgets, fault injection (W08)
-  - `memory/` — reviewer notes: append-only, scoped, recalled as evidence (W08)
-  - `tickets/` — the ticket system as an MCP server, its client and signed approvals (W08)
-  - `integrations/` — Jira-style and SOAP CMDB adapters, and fakes of both (W09)
-  - `ops/` — the ops database: allow-list, reader, SQL validator, text-to-SQL (W09)
-  - `auth/` — JWT verification, roles and permissions (W10)
-  - `security/` — PII redaction, the guarded provider, injection flags, attack benchmark (W10)
-  - `evals/` — the evaluation layers, the generation judge and calibration, the CI gate (W11)
-  - `observability/` — tracing, the JSONL and Langfuse exporters, the trace report (W11)
-  - `reliability/` — load and burst testing, the status tiers (W12)
-- `data/corpus` — runbooks and postmortems (synthetic) for retrieval
-- `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
-- `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)
-- `migrations` — Alembic schema migrations
-- `docs` — roadmap, notes, ADRs
+- `apps/api/app`: the HTTP layer (app factory and lifespan, routes, auth dependencies, errors)
+- `src/incidentops_ai`:
+  - `llm/`: providers, the gateway (routes, fallback, breakers), retries, recorded runs
+  - `extraction/`, `diagnosis/`: the two model steps and their checks
+  - `retrieval/`: ingestion, chunking, embeddings, dense, BM25 and hybrid retrieval, benchmarks
+  - `graph/`: the service catalogue in Neo4j
+  - `multimodal/`: attachments, PDF text, OCR, vision transcripts
+  - `workflow/`: the LangGraph triage graph, routing, the runner, checkpoints, fault injection
+  - `memory/`: reviewer notes, append-only
+  - `tickets/`, `integrations/`, `tools/`: the MCP ticket server and signed approvals, Jira and CMDB adapters, read-only tools
+  - `ops/`: text-to-SQL behind a validator and a read-only login
+  - `auth/`, `security/`: JWTs, roles, PII redaction, the model guard, injection flags
+  - `evals/`, `observability/`: evaluation layers and the CI gate; tracing and exporters
+  - `reliability/`: load and burst tests, the status tiers
+- `data/`: the synthetic corpus and service catalogue
+- `evals/`: datasets, thresholds, recorded runs and findings
+- `migrations/`: Alembic
+- `docs/`: everything above
+
+## How it was built
+
+Thirteen weekly stages, each with a design written before the code, hypotheses fixed before the
+measurement, and a findings file afterwards (including the hypotheses that were refuted):
+
+| Week | Stage | Design |
+|---|---|---|
+| W01 | API, incidents, idempotency, Docker, CI | [ROADMAP](docs/ROADMAP.md) |
+| W02 | structured extraction, LLM failure handling | [w02](docs/roadmap-w02.md) |
+| W03 | retrieval foundations | [w03](docs/roadmap-w03.md) |
+| W04 | hybrid retrieval, cited diagnosis | [w04](docs/roadmap-w04.md) |
+| W05 | knowledge graph | [w05](docs/roadmap-w05.md) |
+| W06 | multimodal evidence | [w06](docs/roadmap-w06.md) |
+| W07 | the LangGraph workflow | [w07](docs/roadmap-w07.md) |
+| W08 | approval gate, memory, MCP | [w08](docs/roadmap-w08.md) |
+| W09 | integrations, text-to-SQL | [w09](docs/roadmap-w09.md) |
+| W10 | identity, RBAC, AI security | [w10](docs/roadmap-w10.md) |
+| W11 | evaluation layers, gateway, tracing | [w11](docs/roadmap-w11.md) |
+| W12 | reliability and failure engineering | [w12](docs/roadmap-w12.md) |
+| W13 | the v1.0 release | [w13](docs/roadmap-w13.md) |
