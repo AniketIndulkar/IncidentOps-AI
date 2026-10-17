@@ -1,9 +1,13 @@
-"""Running, recording and resuming workflow runs (AIENG-46).
+"""Running, recording, gating and resuming workflow runs (AIENG-46, AIENG-49).
 
 A run gets a row in `workflow_runs` before it starts. LangGraph writes a checkpoint after every step
 (thread id = run id). If a step raises, the run is marked failed and its checkpoints stay; `resume`
 continues from the last completed step, in this process or another, without repeating the steps
 that finished (and so without paying for their model calls again).
+
+Every run stops at the approval gate (`awaiting_approval`). Only `decide` moves it on, and only once:
+the run row is locked while the decision is recorded. Every transition writes an event to the
+append-only `workflow_events` table.
 """
 
 import asyncio
@@ -11,17 +15,21 @@ import uuid
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 
+from langgraph.types import Command
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from incidentops_ai.errors import (
     WorkflowFailedError,
+    WorkflowNotAwaitingDecisionError,
     WorkflowNotResumableError,
     WorkflowRunNotFoundError,
 )
 from incidentops_ai.incidents.repository import IncidentRepository
-from incidentops_ai.workflow.graph import WorkflowDeps, build_workflow, initial_state
-from incidentops_ai.workflow.orm import WorkflowRunRow
+from incidentops_ai.workflow.graph import Decision, WorkflowDeps, build_workflow, initial_state
+from incidentops_ai.workflow.orm import WorkflowEventRow, WorkflowRunRow
+
+__all__ = ["Decision", "WorkflowEventRead", "WorkflowRunRead", "WorkflowRunner", "checkpoint_url"]
 
 
 def checkpoint_url(database_url: str) -> str:
@@ -40,6 +48,14 @@ class WorkflowRunRead(BaseModel):
     updated_at: datetime
 
 
+class WorkflowEventRead(BaseModel):
+    id: uuid.UUID
+    kind: str
+    actor: str
+    data: dict
+    created_at: datetime
+
+
 class WorkflowRunner:
     def __init__(
         self,
@@ -56,6 +72,11 @@ class WorkflowRunner:
         self._prepare = prepare
         self._prepared = asyncio.Lock()
 
+    @property
+    def graph(self):
+        """The compiled graph (tests use it to try to get past the gate without the runner)."""
+        return self._graph
+
     async def _ready(self) -> None:
         async with self._prepared:
             if self._prepare is not None:
@@ -65,6 +86,11 @@ class WorkflowRunner:
     @staticmethod
     def _config(run_id: uuid.UUID) -> dict:
         return {"configurable": {"thread_id": str(run_id)}}
+
+    def _event(self, run_id: uuid.UUID, kind: str, data: dict | None = None, *, actor="system"):
+        return WorkflowEventRow(
+            tenant_id=self._deps.tenant_id, run_id=run_id, kind=kind, actor=actor, data=data or {}
+        )
 
     async def start(self, incident_id: uuid.UUID) -> WorkflowRunRead:
         await self._ready()
@@ -78,21 +104,49 @@ class WorkflowRunner:
                 reasons=[],
             )
             session.add(run)
+            await session.flush()
+            session.add(self._event(run.id, "started", {"incident_id": str(incident_id)}))
             await session.commit()
         state = initial_state(incident_id, str(run.id), self._deps.tenant_id)
         return await self._drive(run.id, state)
 
     async def resume(self, run_id: uuid.UUID) -> WorkflowRunRead:
+        """Continue a failed run. A run paused at the gate is not failed: only `decide` moves it."""
         await self._ready()
         async with self._deps.sessions() as session:
-            run = await session.get(WorkflowRunRow, run_id)
+            run = await session.get(WorkflowRunRow, run_id, with_for_update=True)
             if run is None:
                 raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
             if run.status != "failed":
                 raise WorkflowNotResumableError(f"Run {run_id} is {run.status}, not failed.")
             run.status, run.error = "running", None
+            session.add(self._event(run_id, "resumed"))
             await session.commit()
         return await self._drive(run_id, None)  # None: continue from the last checkpoint
+
+    async def decide(self, run_id: uuid.UUID, decision: Decision) -> WorkflowRunRead:
+        """Apply a person's decision to a run waiting at the gate, exactly once."""
+        await self._ready()
+        async with self._deps.sessions() as session:
+            # The row lock makes a concurrent second decision wait, then see the run is not waiting.
+            run = await session.get(WorkflowRunRow, run_id, with_for_update=True)
+            if run is None:
+                raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
+            if run.status != "awaiting_approval":
+                raise WorkflowNotAwaitingDecisionError(
+                    f"Run {run_id} is {run.status}; only a run awaiting approval takes a decision."
+                )
+            run.status = "running"
+            event = self._event(
+                run_id,
+                "decided",
+                {"decision": decision.decision, "comment": decision.comment},
+                actor=decision.reviewer,
+            )
+            session.add(event)
+            await session.commit()
+        resume = {**decision.model_dump(), "decision_id": str(event.id)}
+        return await self._drive(run_id, Command(resume=resume))
 
     async def get(self, run_id: uuid.UUID) -> WorkflowRunRead:
         async with self._deps.sessions() as session:
@@ -110,22 +164,46 @@ class WorkflowRunner:
             )
             return [WorkflowRunRead.model_validate(r, from_attributes=True) for r in rows.scalars()]
 
+    async def events(self, run_id: uuid.UUID) -> list[WorkflowEventRead]:
+        async with self._deps.sessions() as session:
+            rows = await session.execute(
+                select(WorkflowEventRow)
+                .where(WorkflowEventRow.run_id == run_id)
+                .order_by(WorkflowEventRow.created_at)
+            )
+            return [
+                WorkflowEventRead.model_validate(r, from_attributes=True) for r in rows.scalars()
+            ]
+
     async def state(self, run_id: uuid.UUID) -> dict:
         await self._ready()
         snapshot = await self._graph.aget_state(self._config(run_id))
         return dict(snapshot.values)
 
-    async def _drive(self, run_id: uuid.UUID, state: dict | None) -> WorkflowRunRead:
+    async def _drive(self, run_id: uuid.UUID, payload) -> WorkflowRunRead:
         try:
-            final = await self._graph.ainvoke(state, self._config(run_id))
+            final = await self._graph.ainvoke(payload, self._config(run_id))
         except Exception as error:  # any step that raises stops the run; its checkpoints stay
-            await self._finish(run_id, status="failed", error=type(error).__name__)
+            name = type(error).__name__
+            await self._finish(
+                run_id, status="failed", error=name, event=("failed", {"error": name})
+            )
             raise WorkflowFailedError(run_id) from error
+        route, reasons = final.get("route"), final.get("reasons", [])
+        if final.get("__interrupt__"):
+            return await self._finish(
+                run_id,
+                status="awaiting_approval",
+                route=route,
+                reasons=reasons,
+                event=("awaiting_approval", {"route": route, "reasons": reasons}),
+            )
         return await self._finish(
             run_id,
             status=final["status"],
-            route=final.get("route"),
-            reasons=final.get("reasons", []),
+            route=route,
+            reasons=reasons,
+            event=("completed", {"status": final["status"]}),
         )
 
     async def _finish(
@@ -133,12 +211,16 @@ class WorkflowRunner:
         run_id: uuid.UUID,
         *,
         status: str,
+        event: tuple[str, dict],
         route: str | None = None,
         reasons: list[str] | None = None,
         error: str | None = None,
     ) -> WorkflowRunRead:
         async with self._deps.sessions() as session:
             run = await session.get(WorkflowRunRow, run_id)
+            if status == "failed":  # a failure keeps what the run had already decided
+                route, reasons = run.route, run.reasons
             run.status, run.route, run.reasons, run.error = status, route, reasons or [], error
+            session.add(self._event(run_id, *event))
             await session.commit()
             return WorkflowRunRead.model_validate(run, from_attributes=True)

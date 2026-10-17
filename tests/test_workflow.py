@@ -108,7 +108,9 @@ async def test_a_clear_incident_is_recommended_with_its_cited_runbook(session_fa
 
     state = await run(deps(session_factory, provider), await incident(session_factory))
 
-    assert (state["route"], state["status"], state["reasons"]) == ("recommend", "recommended", [])
+    assert (state["route"], state["reasons"]) == ("recommend", [])
+    assert "__interrupt__" in state  # stopped at the approval gate (W08)
+    assert state["proposed_action"]["title"].startswith("Apply runbook:")
     assert state["recommendation"]["runbooks"][0]["doc_id"] == "rb-orders-db-pool"
     assert state["recommendation"]["on_call"] == "Amara Okafor"
     nodes = {step["node"]: step for step in state["steps"]}
@@ -151,7 +153,7 @@ async def test_each_review_reason_routes_to_review(
         await incident(session_factory, severity=severity),
     )
 
-    assert (state["route"], state["status"]) == ("review", "needs_review")
+    assert state["route"] == "review" and "__interrupt__" in state
     assert reason in state["reasons"]
     assert "recommendation" not in state or state["recommendation"] is None
 

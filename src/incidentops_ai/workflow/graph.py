@@ -1,7 +1,7 @@
-"""The incident workflow as a LangGraph state machine (AIENG-45, AIENG-47).
+"""The incident workflow as a LangGraph state machine (AIENG-45, AIENG-47; the gate: AIENG-49).
 
-    intake ─┬─ retrieve ─┬─▶ extract (model) ──┬─▶ assess ─┬─▶ recommend
-            └─ graph ────┴─▶ diagnose (model) ─┘            └─▶ review
+    intake ─┬─ retrieve ─┬─▶ extract (model) ──┬─▶ assess ─┬─▶ recommend ─┬─▶ approval ─┬─▶ act
+            └─ graph ────┴─▶ diagnose (model) ─┘            └─▶ review ────┘  (a person) └─▶ rejected
 
 LangGraph runs in super-steps: every node of a step must finish before the next step starts, so
 branches of different lengths do not overlap. The two slow model calls are therefore placed in the
@@ -11,6 +11,9 @@ the diagnosis.
 Two steps call a model (extract, diagnose); everything else, including the route, is code. The
 state holds plain JSON-friendly values so a checkpoint can be written after every step and a run
 resumed in another process. Every node appends one entry to the step log: name, kind, time, outcome.
+
+`approval` is a LangGraph interrupt: the run stops there, checkpointed, until a person's decision
+resumes it (W08). Nothing after it runs without one; re-invoking the paused run stops there again.
 """
 
 import operator
@@ -18,9 +21,11 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import interrupt
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from incidentops_ai.diagnosis.evidence import number_evidence
@@ -51,6 +56,23 @@ from incidentops_ai.workflow.assess import review_reasons
 
 EVIDENCE_COUNT = 5
 MODEL_STEPS = frozenset({"extract", "diagnose"})
+HUMAN_STEPS = frozenset({"approval"})
+
+
+class Decision(BaseModel):
+    """A person's decision at the approval gate, as the API accepts it."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    decision: Literal["approve", "reject"]
+    reviewer: str = Field(min_length=1, max_length=128)
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class RecordedDecision(Decision):
+    """The decision as the workflow receives it: with the id of its audit event."""
+
+    decision_id: str
 
 
 class WorkflowState(TypedDict, total=False):
@@ -71,6 +93,9 @@ class WorkflowState(TypedDict, total=False):
     route: str
     reasons: list[str]
     recommendation: dict | None
+    proposed_action: dict | None  # the ticket a person is asked to approve
+    decision: dict | None  # their decision, with its audit event id
+    action_result: dict | None  # what act did (the ticket), when it did anything
     status: str
     steps: Annotated[list[dict], operator.add]  # concurrent branches append without conflict
 
@@ -83,6 +108,7 @@ class WorkflowDeps:
     retriever: Retriever
     graph: GraphStore | None
     tenant_id: str = DEFAULT_TENANT
+    tickets: Any = None  # the ticket system act writes to (AIENG-52); None: nothing is written
     # Called with the node name before each node runs: tests use it to crash a run on purpose.
     fault: Callable[[str], None] | None = None
 
@@ -132,7 +158,9 @@ def _step(name: str, deps: WorkflowDeps, body: Node) -> Node:
         started = time.perf_counter()
         update = await body(state)
         outcome = update.pop("_outcome", "ok")
-        kind = "model" if name in MODEL_STEPS else "deterministic"
+        kind = (
+            "model" if name in MODEL_STEPS else "human" if name in HUMAN_STEPS else "deterministic"
+        )
         entry = {
             "node": name,
             "kind": kind,
@@ -302,24 +330,45 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
                 ]
             except GraphUnavailableError:
                 open_fixes = []
+        recommendation = {
+            "causes": [c["claim"] for c in state["diagnosis"]["causes"]],
+            "runbooks": list(runbooks.values()),
+            "team": context.get("team_name"),
+            "on_call": context.get("on_call"),
+            "open_fixes": open_fixes,
+        }
         return {
-            "recommendation": {
-                "causes": [c["claim"] for c in state["diagnosis"]["causes"]],
-                "runbooks": list(runbooks.values()),
-                "team": context.get("team_name"),
-                "on_call": context.get("on_call"),
-                "open_fixes": open_fixes,
-            },
-            "status": "recommended",
+            "recommendation": recommendation,
+            "proposed_action": _proposed_ticket(state, recommendation),
             "_outcome": f"{len(runbooks)} runbooks",
         }
 
     async def review(state: WorkflowState) -> dict:
         return {
             "recommendation": None,
-            "status": "needs_review",
+            "proposed_action": _proposed_ticket(state, None),
             "_outcome": ",".join(state["reasons"]),
         }
+
+    async def approval(state: WorkflowState) -> dict:
+        # Everything before interrupt() runs again on resume, so nothing here has side effects.
+        value = interrupt(
+            {
+                "route": state["route"],
+                "reasons": state["reasons"],
+                "proposed_action": state["proposed_action"],
+            }
+        )
+        decision = RecordedDecision.model_validate(value)  # anything else fails the run
+        return {"decision": decision.model_dump(), "_outcome": decision.decision}
+
+    async def act(state: WorkflowState) -> dict:
+        if deps.tickets is None:
+            return {"action_result": None, "status": "approved", "_outcome": "no ticket system"}
+        raise NotImplementedError("the ticket system arrives with AIENG-52")
+
+    async def rejected(state: WorkflowState) -> dict:
+        return {"action_result": None, "status": "rejected", "_outcome": "rejected"}
 
     bodies = {
         "intake": intake,
@@ -330,6 +379,9 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         "assess": assess,
         "recommend": recommend,
         "review": review,
+        "approval": approval,
+        "act": act,
+        "rejected": rejected,
     }
     return {name: _step(name, deps, body) for name, body in bodies.items()}
 
@@ -358,6 +410,46 @@ def build_workflow(deps: WorkflowDeps, *, checkpointer=None, parallel: bool = Tr
     builder.add_conditional_edges(
         "assess", lambda state: state["route"], {"recommend": "recommend", "review": "review"}
     )
-    builder.add_edge("recommend", END)
-    builder.add_edge("review", END)
+    builder.add_edge("recommend", "approval")
+    builder.add_edge("review", "approval")
+    builder.add_conditional_edges(
+        "approval",
+        lambda state: state["decision"]["decision"],
+        {"approve": "act", "reject": "rejected"},
+    )
+    builder.add_edge("act", END)
+    builder.add_edge("rejected", END)
     return builder.compile(checkpointer=checkpointer)
+
+
+def _proposed_ticket(state: WorkflowState, recommendation: dict | None) -> dict:
+    """The ticket a person is asked to approve: what to do, and the evidence it rests on."""
+    incident = state["incident"]
+    cited = []
+    for cause in (state.get("diagnosis") or {}).get("causes", []):
+        for citation in cause["citations"]:
+            line = f"- {citation['doc_id']}: {citation['title']} ({citation['source_path']})"
+            if line not in cited:
+                cited.append(line)
+    if recommendation is not None:
+        title = f"Apply runbook: {incident['title']}"
+        body = ["Likely causes:", *(f"- {c}" for c in recommendation["causes"])]
+        if recommendation["runbooks"]:
+            body += ["", "Runbooks:"]
+            body += [f"- {r['doc_id']}: {r['title']}" for r in recommendation["runbooks"]]
+        if recommendation["on_call"]:
+            body += ["", f"On call: {recommendation['on_call']}"]
+    else:
+        title = f"Investigate: {incident['title']}"
+        body = [f"Sent to review: {', '.join(state['reasons'])}."]
+    if cited:
+        body += ["", "Evidence cited:", *cited]
+    body += ["", f"Incident {incident['id']} ({incident['severity']}, {incident['environment']})."]
+    return {
+        "kind": "create_ticket",
+        "title": title[:200],
+        "body": "\n".join(body),
+        "service": incident["service"],
+        "severity": incident["severity"],
+        "incident_id": incident["id"],
+    }

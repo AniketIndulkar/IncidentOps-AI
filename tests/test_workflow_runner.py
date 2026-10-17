@@ -58,11 +58,11 @@ async def test_a_completed_run_is_recorded_with_its_route(settings, session_fact
         run = await runner.start(await incident(session_factory))
         state = await runner.state(run.id)
 
-    assert (run.status, run.route, run.reasons) == ("recommended", "recommend", [])
+    assert (run.status, run.route, run.reasons) == ("awaiting_approval", "recommend", [])
     assert state["route"] == "recommend" and len(state["steps"]) == 7
     async with session_factory() as session:
         row = (await session.execute(text("SELECT status, route FROM workflow_runs"))).one()
-    assert tuple(row) == ("recommended", "recommend")
+    assert tuple(row) == ("awaiting_approval", "recommend")
 
 
 async def test_a_run_that_crashes_resumes_in_a_new_process_without_repeating_model_calls(
@@ -96,7 +96,7 @@ async def test_a_run_that_crashes_resumes_in_a_new_process_without_repeating_mod
     out, err = await process.communicate()
 
     assert process.returncode == 0, err.decode()[-2000:]
-    assert out.decode().split() == ["recommended", "recommend"]
+    assert out.decode().split() == ["awaiting_approval", "recommend"]
     assert sorted(first_model.calls) == ["IncidentExtraction", "ModelDiagnosis"]
     async with session_factory() as session:
         model_runs = (

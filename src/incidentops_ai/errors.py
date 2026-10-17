@@ -94,6 +94,12 @@ class WorkflowNotResumableError(DomainError):
     code = "workflow_not_resumable"
 
 
+class WorkflowNotAwaitingDecisionError(DomainError):
+    """A decision was sent for a run that is not paused at the approval gate (AIENG-49)."""
+
+    code = "workflow_not_awaiting_decision"
+
+
 class WorkflowFailedError(DomainError):
     """A workflow run stopped part way. Its checkpoints are kept; it can be resumed by id."""
 
