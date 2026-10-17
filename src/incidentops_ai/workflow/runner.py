@@ -8,6 +8,9 @@ that finished (and so without paying for their model calls again).
 Every run stops at the approval gate (`awaiting_approval`). Only `decide` moves it on, and only once:
 the run row is locked while the decision is recorded. Every transition writes an event to the
 append-only `workflow_events` table.
+
+Budgets (AIENG-51): LangGraph's recursion limit caps the steps of one invocation (`max_steps`), and a
+run that fails again after `max_resumes` resumes is `abandoned` instead of `failed`.
 """
 
 import asyncio
@@ -17,9 +20,10 @@ from datetime import datetime
 
 from langgraph.types import Command
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from incidentops_ai.errors import (
+    WorkflowAbandonedError,
     WorkflowFailedError,
     WorkflowNotAwaitingDecisionError,
     WorkflowNotResumableError,
@@ -29,6 +33,9 @@ from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.memory.repository import MemoryRepository
 from incidentops_ai.workflow.graph import Decision, WorkflowDeps, build_workflow, initial_state
 from incidentops_ai.workflow.orm import WorkflowEventRow, WorkflowRunRow
+
+MAX_STEPS = 25  # super-steps per invocation; the graph needs about ten
+MAX_RESUMES = 3
 
 __all__ = ["Decision", "WorkflowEventRead", "WorkflowRunRead", "WorkflowRunner", "checkpoint_url"]
 
@@ -65,10 +72,14 @@ class WorkflowRunner:
         *,
         parallel: bool = True,
         prepare: Callable[[], Awaitable[None]] | None = None,
+        max_steps: int = MAX_STEPS,
+        max_resumes: int = MAX_RESUMES,
     ) -> None:
         """`prepare` runs once, before the first use: the app passes the saver's `setup`, so a
         database that is down at boot fails the first request (503), not the server."""
         self._deps = deps
+        self._max_steps = max_steps
+        self._max_resumes = max_resumes
         self._graph = build_workflow(deps, checkpointer=checkpointer, parallel=parallel)
         self._prepare = prepare
         self._prepared = asyncio.Lock()
@@ -84,9 +95,16 @@ class WorkflowRunner:
                 await self._prepare()
                 self._prepare = None
 
-    @staticmethod
-    def _config(run_id: uuid.UUID) -> dict:
-        return {"configurable": {"thread_id": str(run_id)}}
+    def _config(self, run_id: uuid.UUID) -> dict:
+        return {"configurable": {"thread_id": str(run_id)}, "recursion_limit": self._max_steps}
+
+    async def _resumes(self, run_id: uuid.UUID) -> int:
+        async with self._deps.sessions() as session:
+            return await session.scalar(
+                select(func.count())
+                .select_from(WorkflowEventRow)
+                .where(WorkflowEventRow.run_id == run_id, WorkflowEventRow.kind == "resumed")
+            )
 
     def _event(self, run_id: uuid.UUID, kind: str, data: dict | None = None, *, actor="system"):
         return WorkflowEventRow(
@@ -192,6 +210,11 @@ class WorkflowRunner:
             final = await self._graph.ainvoke(payload, self._config(run_id))
         except Exception as error:  # any step that raises stops the run; its checkpoints stay
             name = type(error).__name__
+            if await self._resumes(run_id) >= self._max_resumes:
+                await self._finish(
+                    run_id, status="abandoned", error=name, event=("abandoned", {"error": name})
+                )
+                raise WorkflowAbandonedError(run_id) from error
             await self._finish(
                 run_id, status="failed", error=name, event=("failed", {"error": name})
             )
@@ -225,7 +248,7 @@ class WorkflowRunner:
     ) -> WorkflowRunRead:
         async with self._deps.sessions() as session:
             run = await session.get(WorkflowRunRow, run_id)
-            if status == "failed":  # a failure keeps what the run had already decided
+            if status in {"failed", "abandoned"}:  # a failure keeps what the run had decided
                 route, reasons = run.route, run.reasons
             run.status, run.route, run.reasons, run.error = status, route, reasons or [], error
             session.add(self._event(run_id, *event))

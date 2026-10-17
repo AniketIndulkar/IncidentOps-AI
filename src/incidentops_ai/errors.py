@@ -145,3 +145,17 @@ class RequestInProgressError(RetryLaterError):
     """Another request with the same Idempotency-Key is still running."""
 
     code = "request_in_progress"
+
+
+class WorkflowAbandonedError(WorkflowFailedError):
+    """A run failed again after its last allowed resume (AIENG-51). It is not resumed further."""
+
+    code = "workflow_abandoned"
+
+    def __init__(self, run_id: object) -> None:
+        DomainError.__init__(
+            self,
+            f"The workflow run {run_id} failed again after its last allowed resume and was "
+            "abandoned. Start a new run.",
+        )
+        self.run_id = run_id
