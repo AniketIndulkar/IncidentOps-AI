@@ -54,6 +54,8 @@ from incidentops_ai.retrieval.retriever import (
     RetrievedChunk,
     Retriever,
 )
+from incidentops_ai.security.injection import suspicious_content
+from incidentops_ai.security.pii import redact
 from incidentops_ai.workflow.assess import review_reasons
 
 EVIDENCE_COUNT = 5
@@ -71,6 +73,7 @@ class Decision(BaseModel):
     reviewer: str = Field(min_length=1, max_length=128)
     comment: str | None = Field(default=None, max_length=2000)
     memory: str | None = Field(default=None, max_length=2000)  # a note for the service (AIENG-50)
+    user_id: str | None = Field(default=None, max_length=256)  # the reviewer's id from the token
 
 
 class RecordedDecision(Decision):
@@ -93,6 +96,7 @@ class WorkflowState(TypedDict, total=False):
     service_context: dict | None
     memories: list[dict]  # the notes recalled for this run (W08), as they were when recalled
     cmdb_status: str  # ok | unknown_service | unavailable | invalid | off (W09)
+    suspicious: list[dict]  # W10: what the model read that looks like instructions to it
     cmdb_record: dict | None
     graph_status: str
     diagnosis: dict | None
@@ -186,13 +190,20 @@ def _step(name: str, deps: WorkflowDeps, body: Node) -> Node:
 def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def intake(state: WorkflowState) -> dict:
         async with deps.sessions() as session:
-            incident = await IncidentRepository(session).get(uuid.UUID(state["incident_id"]))
+            incident = await IncidentRepository(session).get(
+                uuid.UUID(state["incident_id"]), tenant_id=state["tenant_id"]
+            )
             sources = await AttachmentRepository(session).texts_for_incident(incident.id)
+        # W10: PII and secrets are replaced before anything the model reads is put in the state.
+        sources = [s.redacted() for s in sources]
+        fields = incident.model_dump(
+            mode="json",
+            include={"id", "title", "description", "service", "severity", "environment"},
+        )
+        fields["title"] = redact(fields["title"]).text
+        fields["description"] = redact(fields["description"]).text
         return {
-            "incident": incident.model_dump(
-                mode="json",
-                include={"id", "title", "description", "service", "severity", "environment"},
-            ),
+            "incident": fields,
             "attachments": [
                 {
                     "id": s.id,
@@ -302,7 +313,7 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
             {
                 "id": str(n.id),
                 "service": n.service,
-                "text": n.text,
+                "text": redact(n.text).text,
                 "author": n.author,
                 "created_at": n.created_at.isoformat(),
             }
@@ -349,9 +360,10 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         }
 
     async def assess(state: WorkflowState) -> dict:
-        reasons = review_reasons(state)
+        suspicious = suspicious_content(state)
+        reasons = review_reasons({**state, "suspicious": suspicious})
         route = "review" if reasons else "recommend"
-        return {"reasons": reasons, "route": route, "_outcome": route}
+        return {"reasons": reasons, "route": route, "suspicious": suspicious, "_outcome": route}
 
     async def recommend(state: WorkflowState) -> dict:
         types = {e["chunk"]["doc_id"]: e["chunk"]["doc_type"] for e in state.get("evidence", [])}

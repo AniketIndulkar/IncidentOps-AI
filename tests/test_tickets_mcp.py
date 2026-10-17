@@ -13,6 +13,8 @@ from incidentops_ai.tickets.approval import sign
 from incidentops_ai.tickets.client import TicketActions, TicketClient, TicketToolError
 from incidentops_ai.workflow.runner import Decision, WorkflowRunner, checkpoint_url
 
+pytestmark = pytest.mark.redteam  # security regressions: their own CI step (W10)
+
 SECRET = "test-approval-secret-0123456789"
 RUN = str(uuid.uuid4())
 ARGS = {

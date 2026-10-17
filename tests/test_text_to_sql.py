@@ -48,7 +48,8 @@ async def test_a_write_the_model_wrote_is_refused_and_never_runs(ops, settings):
     assert (answer.status, answer.rule) == ("refused", "select_only") and answer.rows == []
     engine = create_async_engine(settings.database_url)
     async with engine.connect() as conn:
-        assert await conn.scalar(text("SELECT count(*) FROM ops.alerts")) == 16
+        count = "SELECT count(*) FROM ops.alerts WHERE tenant_id = 'default'"
+        assert await conn.scalar(text(count)) == 16
     await engine.dispose()
 
 

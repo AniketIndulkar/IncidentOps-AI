@@ -171,6 +171,12 @@ attacks refused; SOAP CMDB with `integration_degraded` routing. Findings:
 - AIENG-62 Prompt injection, system-prompt extraction, poisoned retrieval, PII (Presidio) attacks + mitigations.
 - AIENG-63 Threat model + red-team cases in CI.
 
+✅ Built 17 Oct, stacked on W09: [roadmap-w10](roadmap-w10.md). JWT principals and four roles enforced per route (a
+matrix over all routes); tenant enforced in lookups, idempotency keys, retrieval, tools, notes and ops RLS; PII
+redaction and a guarded provider; injection flags; 170 red-team tests in their own CI step. Findings:
+[w10-findings](../evals/security/runs/2026-10-17-w10-findings.md); [threat model](threat-model.md); decision:
+[ADR-007](adr/007-identity-tenancy-and-model-controls.md).
+
 **W11 · Evals, gateway, observability** (AIENG-12)
 - AIENG-64 Four eval layers: retrieval, generation, workflow/agent, system.
 - AIENG-65 RAGAS/DeepEval; calibrate LLM judges vs manual labels.
@@ -230,11 +236,15 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W09 complete; `v0.1` and `v0.2` not tagged yet)
+## Current state (17 Oct 2026, W10 complete; `v0.1` and `v0.2` not tagged yet)
 
-- **W01 to W09 complete** (AIENG-2, 15–58). W03 and W04 were built on 16 Oct, W05 to W09 on 17 Oct,
-  as stacked pull requests (#3 W03 … #8 W08, W09 on top). Next: W10 (IAM, RBAC, AI security).
+- **W01 to W10 complete** (AIENG-2, 15–63). W03 and W04 were built on 16 Oct, W05 to W10 on 17 Oct,
+  as stacked pull requests (#3 W03 … #9 W09, W10 on top). Next: W11 (evals, gateway, observability).
   Waiting on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- Security (W10): `auth` (JWT verification, roles, `permit` per route; the static token is a machine
+  credential), tenant on incidents and idempotency keys, ops row-level security per reader login,
+  `security` (PII redaction, `GuardedProvider`, injection flags → `suspicious_evidence`), the
+  `redteam` marker and CI step, [threat model](threat-model.md).
 - Integrations (W09): `integrations.jira` (Jira-style REST, safe retries, labelled approved writes;
   used by `act` when `INCIDENTOPS_JIRA_URL` is set), `integrations.cmdb` (SOAP CMDB, `cmdb` workflow
   step, `integration_degraded`), `ops` (schema `ops`, reader role, allow-list, validator, text-to-SQL,
@@ -376,13 +386,17 @@ Hard dependencies to protect:
 31. **The workflow route is deterministic about noisy inputs.** Three of 12 cases changed route between two real runs because the extraction listed 3 open questions once and 4 once (`many_open_questions` fires at 4). Decide in W08/W09 whether a count a model chooses belongs in the route.
 32. ~~**A model call cancelled by a failing sibling step is not recorded**~~ Fixed in W08: the record is a shielded task the runner waits for.
 33. **Checkpoints hold incident data** in the incident database, with no retention yet (W12/W13).
-34. **Reviewer identity is self-declared** at the approval gate until W10 adds per-user access.
+34. ~~**Reviewer identity is self-declared**~~ Fixed in W10: the reviewer is the authenticated principal.
 35. **A recommendation can rest on a single reviewer's note** (2 of 3 in the W08 memory check). The gate still requires a person; nothing flags it yet (W09/W10).
 36. **The approval secret mints approvals**: whoever holds `INCIDENTOPS_APPROVAL_SECRET` can sign a ticket write.
 37. **Runs can wait at the gate indefinitely**: no expiry or reminder yet.
 38. **Catalog reads depend on the SQL validator alone.** The reader role can read `information_schema`, `pg_user` (role names) and call `set_config`; PostgreSQL grants those to every role. Fix: the ops data in its own database or cluster.
 39. **The adapters are tested against fakes.** Real Jira and a real CMDB paginate, version and fail in more ways; run the contract tests against sandboxes before production.
-40. **Ops data is not filtered per tenant** yet (W10, AIENG-61).
+40. ~~**Ops data is not filtered per tenant**~~ Fixed in W10: row-level security per reader login.
+41. **The static API token is an admin credential with no expiry.** Development and automation only.
+42. **PII detection is pattern-based**: names and addresses are not redacted.
+43. **The injection detector is a phrase list**; the real-model run found a phrasing it missed. It routes to review, it does not block.
+44. **No real identity provider has been connected**; tokens were minted for the tests.
 
 ## Weekly cadence
 

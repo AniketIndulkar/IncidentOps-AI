@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
 from app.routes import analysis, attachments, incidents, memory, ops, workflow
+from incidentops_ai.auth.tokens import TokenVerifier
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -27,6 +28,7 @@ from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
 from incidentops_ai.retrieval.stack import build_retriever
+from incidentops_ai.security.guard import GuardedProvider
 from incidentops_ai.tickets.client import TicketActions, TicketClient
 from incidentops_ai.workflow.graph import WorkflowDeps
 from incidentops_ai.workflow.runner import WorkflowRunner, checkpoint_url
@@ -73,7 +75,10 @@ def create_app(
         try:
             if llm_provider is None and settings.openai_api_key:
                 owned_provider = build_provider(settings)
-            app.state.llm_provider = llm_provider or owned_provider
+            # W10: every model call goes through the guard (canary, output PII), whoever made the
+            # provider; closing it stays with whoever made it.
+            inner = llm_provider or owned_provider
+            app.state.llm_provider = GuardedProvider(inner) if inner is not None else None
             # The retrieval stack embeds questions with OpenAI, so it needs the key too.
             if retriever is None and settings.openai_api_key:
                 owned_embedder = build_embedder(settings)
@@ -150,13 +155,26 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
-            # The ops database (W09) is read through its own engine, as the read-only role.
-            app.state.ops_database = None
+            # The ops database (W09) is read through its own engines, one reader login per tenant
+            # (W10): row-level security admits each login's tenant only.
+            ops_urls = dict(settings.ops_database_urls)
             if settings.ops_database_url:
-                ops_engine = create_async_engine(settings.ops_database_url, pool_pre_ping=True)
+                ops_urls.setdefault("default", settings.ops_database_url)
+            app.state.ops_databases = {}
+            for tenant, url in ops_urls.items():
+                ops_engine = create_async_engine(url, pool_pre_ping=True)
                 resources.push_async_callback(ops_engine.dispose)
-                app.state.ops_database = OpsDatabase(ops_engine)
+                app.state.ops_databases[tenant] = OpsDatabase(ops_engine)
             app.state.api_token = settings.api_token
+            app.state.token_verifier = (
+                TokenVerifier(
+                    secret=settings.jwt_secret.get_secret_value() if settings.jwt_secret else None,
+                    public_key=settings.jwt_public_key,
+                    issuer=settings.jwt_issuer,
+                )
+                if settings.jwt_secret or settings.jwt_public_key
+                else None
+            )
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
         finally:

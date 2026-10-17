@@ -99,8 +99,9 @@ async def test_incident_survives_app_restart(settings: Settings):
 async def _fresh_client(settings: Settings) -> AsyncIterator[AsyncClient]:
     """New app instance with its own engine/pool, simulating a process restart."""
     app = create_app(settings)
+    headers = {"Authorization": f"Bearer {settings.api_token.get_secret_value()}"}
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c,
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://t", headers=headers) as c,
     ):
         yield c

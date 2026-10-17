@@ -63,6 +63,7 @@ class IncidentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    tenant_id: str
     title: str
     description: str
     service: str

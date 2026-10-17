@@ -75,6 +75,10 @@ TABLES = (
 
 ALLOWED: dict[str, frozenset[str]] = {t.name: frozenset(t.columns) for t in TABLES}
 
+# Real columns the model never sees nor selects (W10): row-level security filters on the tenant,
+# so a query has no reason to name it, and naming it is refused.
+HIDDEN_COLUMNS = frozenset({"tenant_id"})
+
 
 def schema_text() -> str:
     """The allow-listed schema as the model sees it."""

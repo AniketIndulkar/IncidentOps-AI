@@ -22,6 +22,7 @@ dependencies = [
     "pillow>=12.3.0",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.15.0",
+    "pyjwt[crypto]>=2.15.1",
     "pypdfium2>=5.14.0",
     "python-multipart>=0.0.32",
     "sqlalchemy[asyncio]>=2.1.4",
@@ -58,6 +59,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["apps/api"]
 testpaths = ["tests"]
+markers = [
+    "redteam: security regression tests (W10); CI runs them as their own step",
+]
 
 [tool.ruff]
 line-length = 100

@@ -165,3 +165,15 @@ class OpsNotConfiguredError(DomainError):
     """The ops database (W09) is not configured: INCIDENTOPS_OPS_DATABASE_URL is not set."""
 
     code = "ops_not_configured"
+
+
+class ForbiddenError(DomainError):
+    """The caller is known but their roles do not grant this permission (W10)."""
+
+    code = "forbidden"
+
+
+class AuthNotConfiguredError(DomainError):
+    """Neither INCIDENTOPS_API_TOKEN nor a JWT key is set: no caller can be authenticated."""
+
+    code = "auth_not_configured"

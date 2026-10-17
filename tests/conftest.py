@@ -54,7 +54,9 @@ async def client(settings: Settings) -> AsyncIterator[AsyncClient]:
     app = create_app(settings)
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        # Every route needs a caller since W10: the static machine token (admin, default tenant).
+        headers = {"Authorization": f"Bearer {TEST_API_TOKEN}"}
+        async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as c:
             yield c
 
 

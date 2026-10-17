@@ -40,16 +40,21 @@ SPEC = ToolSpec(
 
 
 def make_recent_incidents_tool(
-    session_factory: async_sessionmaker[AsyncSession], *, exclude_id: uuid.UUID | None = None
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    exclude_id: uuid.UUID | None = None,
+    tenant_id: str = "default",
 ) -> Tool:
-    """`exclude_id`: the incident being analysed, so it is never reported as related to itself."""
+    """`exclude_id`: the incident being analysed, so it is never reported as related to itself.
+    `tenant_id` is bound here, out of the model's reach: the model chooses the service and the
+    limit, never whose incidents it reads (W10)."""
 
     async def handler(args: GetRecentIncidentsArgs) -> list[dict]:
         # Own session per call: tool calls run concurrently, and a session must not be shared
         # between concurrent tasks.
         async with session_factory() as session:
             incidents = await IncidentRepository(session).list_recent_by_service(
-                args.service, args.limit, exclude_id=exclude_id
+                args.service, args.limit, exclude_id=exclude_id, tenant_id=tenant_id
             )
         # Titles only, never descriptions: less sensitive text sent to the model, and less room
         # for text planted in an old incident to steer it.

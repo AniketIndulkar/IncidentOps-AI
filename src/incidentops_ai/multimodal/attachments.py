@@ -9,6 +9,7 @@ Routing (from evals/multimodal, docs/adr/003): a PDF with a text layer uses it; 
 OCR'd; an image goes to the vision model when one is configured, else to OCR.
 """
 
+import dataclasses
 import hashlib
 import io
 import logging
@@ -136,6 +137,13 @@ class AttachmentText:
     filename: str
     method: str
     lines: tuple[TextLine, ...]
+
+    def redacted(self) -> "AttachmentText":
+        """The same text with PII and secrets replaced (W10), line boxes kept."""
+        from incidentops_ai.security.pii import redact
+
+        lines = tuple(dataclasses.replace(line, text=redact(line.text).text) for line in self.lines)
+        return dataclasses.replace(self, lines=lines)
 
 
 def _read(row: AttachmentRow) -> AttachmentRead:
