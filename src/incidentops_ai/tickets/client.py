@@ -94,6 +94,10 @@ class TicketActions:
         self._secret = secret
         self._timeout_s = timeout_s
 
+    async def probe(self) -> None:
+        """A cheap read for the status page (W12)."""
+        await self._client.search("health", limit=1)
+
     async def create(self, proposal: dict, *, run_id: str, decision: dict) -> dict:
         if decision.get("decision") != "approve":
             raise TicketToolError("no approval: the write is not attempted")

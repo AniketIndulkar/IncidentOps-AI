@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, memory, ops, workflow
+from app.routes import analysis, attachments, incidents, memory, ops, status, workflow
 from incidentops_ai.auth.tokens import TokenVerifier
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
@@ -105,16 +105,17 @@ def create_app(
             # W11: through the gateway (routes, fallback, breaker), inside the guard, so the
             # canary is checked whichever model answered.
             inner = llm_provider or owned_provider
-            app.state.llm_provider = (
-                GuardedProvider(
-                    Gateway(
-                        inner,
-                        settings.llm_routes,
-                        per_model_per_minute=settings.llm_per_model_per_minute,
-                    )
+            app.state.gateway = (
+                Gateway(
+                    inner,
+                    settings.llm_routes,
+                    per_model_per_minute=settings.llm_per_model_per_minute,
                 )
                 if inner is not None
                 else None
+            )
+            app.state.llm_provider = (
+                GuardedProvider(app.state.gateway) if app.state.gateway is not None else None
             )
             # The retrieval stack embeds questions with OpenAI, so it needs the key too.
             if retriever is None and settings.retrieval_stack == "bm25":
@@ -245,6 +246,7 @@ def create_app(
     app.include_router(workflow.router)
     app.include_router(memory.router)
     app.include_router(ops.router)
+    app.include_router(status.router)
     return app
 
 
