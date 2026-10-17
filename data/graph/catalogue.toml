@@ -1,0 +1,563 @@
+# Synthetic service catalogue for the IncidentOps corpus (W05, AIENG-34 and AIENG-35).
+#
+# What a service registry would hold: teams, people, services and their dependencies, incidents and
+# their fixes, and which runbooks cover which services. Facts stated in the corpus are kept as written
+# (checkout-api depends on the payments-gateway circuit breaker, orders-api on orders-db, …); the rest
+# is consistent with it. Every person is fictional. Validated against data/corpus by the tests.
+
+tenant = "default"
+
+# ── Teams and people ────────────────────────────────────────────────────────────────────────────
+
+[[teams]]
+id = "commerce-platform"
+name = "Commerce Platform"
+
+[[teams]]
+id = "database-reliability"
+name = "Database Reliability"
+
+[[teams]]
+id = "payments"
+name = "Payments"
+
+[[teams]]
+id = "billing"
+name = "Billing"
+
+[[teams]]
+id = "messaging"
+name = "Messaging"
+
+[[teams]]
+id = "discovery"
+name = "Discovery"
+
+[[teams]]
+id = "identity"
+name = "Identity"
+
+[[teams]]
+id = "web"
+name = "Web Experience"
+
+[[teams]]
+id = "platform"
+name = "Platform"
+
+[[engineers]]
+id = "amara-okafor"
+name = "Amara Okafor"
+team = "commerce-platform"
+on_call = true
+
+[[engineers]]
+id = "lukas-becker"
+name = "Lukas Becker"
+team = "commerce-platform"
+on_call = false
+
+[[engineers]]
+id = "priya-nair"
+name = "Priya Nair"
+team = "database-reliability"
+on_call = true
+
+[[engineers]]
+id = "tom-hughes"
+name = "Tom Hughes"
+team = "database-reliability"
+on_call = false
+
+[[engineers]]
+id = "sofia-marquez"
+name = "Sofia Marquez"
+team = "payments"
+on_call = true
+
+[[engineers]]
+id = "daniel-kim"
+name = "Daniel Kim"
+team = "payments"
+on_call = false
+
+[[engineers]]
+id = "hannah-weber"
+name = "Hannah Weber"
+team = "billing"
+on_call = true
+
+[[engineers]]
+id = "omar-haddad"
+name = "Omar Haddad"
+team = "billing"
+on_call = false
+
+[[engineers]]
+id = "chen-wei"
+name = "Chen Wei"
+team = "messaging"
+on_call = true
+
+[[engineers]]
+id = "grace-mensah"
+name = "Grace Mensah"
+team = "messaging"
+on_call = false
+
+[[engineers]]
+id = "mateo-rossi"
+name = "Mateo Rossi"
+team = "discovery"
+on_call = true
+
+[[engineers]]
+id = "aiko-tanaka"
+name = "Aiko Tanaka"
+team = "discovery"
+on_call = false
+
+[[engineers]]
+id = "ines-duarte"
+name = "Ines Duarte"
+team = "identity"
+on_call = true
+
+[[engineers]]
+id = "ravi-menon"
+name = "Ravi Menon"
+team = "identity"
+on_call = false
+
+[[engineers]]
+id = "noah-fischer"
+name = "Noah Fischer"
+team = "web"
+on_call = true
+
+[[engineers]]
+id = "leila-ahmadi"
+name = "Leila Ahmadi"
+team = "web"
+on_call = false
+
+[[engineers]]
+id = "elena-petrova"
+name = "Elena Petrova"
+team = "platform"
+on_call = true
+
+[[engineers]]
+id = "sam-obrien"
+name = "Sam O'Brien"
+team = "platform"
+on_call = false
+
+# ── Services ────────────────────────────────────────────────────────────────────────────────────
+# kind: internal (our code), infrastructure (run by us, not our code), external (a supplier).
+# depends_on: services this one calls; a failure there can show up here.
+
+[[services]]
+name = "checkout-api"
+team = "commerce-platform"
+kind = "internal"
+tier = 1
+depends_on = ["payments-gateway", "orders-api", "session-service"]
+
+[[services]]
+name = "orders-api"
+team = "commerce-platform"
+kind = "internal"
+tier = 1
+depends_on = ["orders-db"]
+
+[[services]]
+name = "orders-db"
+team = "database-reliability"
+kind = "infrastructure"
+tier = 1
+depends_on = []
+
+[[services]]
+name = "payments-gateway"
+team = "payments"
+kind = "internal"
+tier = 1
+depends_on = ["card-acquirers"]
+
+[[services]]
+name = "card-acquirers"
+team = "payments"
+kind = "external"
+tier = 1
+depends_on = []
+
+[[services]]
+name = "billing-service"
+team = "billing"
+kind = "internal"
+tier = 1
+depends_on = ["payments-gateway", "notification-worker"]
+
+[[services]]
+name = "notification-worker"
+team = "messaging"
+kind = "internal"
+tier = 2
+depends_on = ["kafka"]
+
+[[services]]
+name = "kafka"
+team = "messaging"
+kind = "infrastructure"
+tier = 1
+depends_on = []
+
+[[services]]
+name = "search-indexer"
+team = "discovery"
+kind = "internal"
+tier = 2
+depends_on = ["kafka"]
+
+[[services]]
+name = "session-service"
+team = "identity"
+kind = "internal"
+tier = 1
+depends_on = ["redis-sessions"]
+
+[[services]]
+name = "redis-sessions"
+team = "identity"
+kind = "infrastructure"
+tier = 1
+depends_on = []
+
+[[services]]
+name = "web-dashboard"
+team = "web"
+kind = "internal"
+tier = 3
+depends_on = ["cdn", "session-service"]
+
+[[services]]
+name = "cdn"
+team = "web"
+kind = "external"
+tier = 3
+depends_on = []
+
+[[services]]
+name = "internal-auth-proxy"
+team = "platform"
+kind = "internal"
+tier = 2
+depends_on = ["cert-manager"]
+
+[[services]]
+name = "cert-manager"
+team = "platform"
+kind = "infrastructure"
+tier = 2
+depends_on = []
+
+# ── Incidents (one per postmortem; the id is the postmortem's document id) ─────────────────────────
+
+[[incidents]]
+id = "pm-2026-02-kafka"
+date = "2026-02-03"
+severity = "SEV2"
+duration_minutes = 130
+affected = ["notification-worker"]
+caused_by = ["kafka"]
+
+[[incidents]]
+id = "pm-2026-03-checkout"
+date = "2026-03-12"
+severity = "SEV2"
+duration_minutes = 38
+affected = ["checkout-api"]
+caused_by = ["checkout-api"]
+
+[[incidents]]
+id = "pm-2026-05-orders-pool"
+date = "2026-05-21"
+severity = "SEV1"
+duration_minutes = 107
+affected = ["orders-api", "orders-db"]
+caused_by = ["orders-api"]
+
+[[incidents]]
+id = "pm-2026-06-payments"
+date = "2026-06-04"
+severity = "SEV1"
+duration_minutes = 26
+affected = ["payments-gateway"]
+caused_by = ["card-acquirers"]
+
+[[incidents]]
+id = "pm-2026-07-search"
+date = "2026-07-09"
+severity = "SEV3"
+duration_minutes = 300
+affected = ["search-indexer"]
+caused_by = ["search-indexer"]
+
+[[incidents]]
+id = "pm-2026-08-session"
+date = "2026-08-18"
+severity = "SEV2"
+duration_minutes = 47
+affected = ["session-service"]
+caused_by = ["redis-sessions", "session-service"]
+
+[[incidents]]
+id = "pm-2026-09-billing"
+date = "2026-09-11"
+severity = "SEV1"
+duration_minutes = 380
+affected = ["billing-service"]
+caused_by = ["billing-service"]
+
+# ── Fixes: what was done (mitigation) or decided (prevention), from the postmortems ──────────────────
+# status: done or open, as the postmortem states it; an action item not marked done is open.
+
+[[fixes]]
+id = "fix-kafka-renew-cert"
+incident = "pm-2026-02-kafka"
+service = "kafka"
+kind = "mitigation"
+status = "done"
+description = "Renew the broker certificate and roll the brokers one at a time."
+
+[[fixes]]
+id = "fix-kafka-cert-manager"
+incident = "pm-2026-02-kafka"
+service = "kafka"
+kind = "prevention"
+status = "open"
+description = "Move the broker certificate to cert-manager and alert 21 days before any expiry."
+
+[[fixes]]
+id = "fix-kafka-runbook-cert-check"
+incident = "pm-2026-02-kafka"
+service = "notification-worker"
+kind = "prevention"
+status = "done"
+description = "Add the certificate end date check to the notification-worker runbook."
+
+[[fixes]]
+id = "fix-kafka-page-faster"
+incident = "pm-2026-02-kafka"
+service = "notification-worker"
+kind = "prevention"
+status = "open"
+description = "Page after 10 minutes of NoBrokersAvailable instead of 60."
+
+[[fixes]]
+id = "fix-checkout-rollback"
+incident = "pm-2026-03-checkout"
+service = "checkout-api"
+kind = "mitigation"
+status = "done"
+description = "Roll back to v2.30.4."
+
+[[fixes]]
+id = "fix-checkout-keepalive-check"
+incident = "pm-2026-03-checkout"
+service = "checkout-api"
+kind = "prevention"
+status = "done"
+description = "Fail at startup when the application keepalive is not longer than the sidecar's."
+
+[[fixes]]
+id = "fix-checkout-release-notes"
+incident = "pm-2026-03-checkout"
+service = "checkout-api"
+kind = "prevention"
+status = "open"
+description = "Put configuration changes in a dedicated section of the release notes template."
+
+[[fixes]]
+id = "fix-orders-rollback"
+incident = "pm-2026-05-orders-pool"
+service = "orders-api"
+kind = "mitigation"
+status = "done"
+description = "Roll back the release that leaked transactions."
+
+[[fixes]]
+id = "fix-orders-idle-timeout"
+incident = "pm-2026-05-orders-pool"
+service = "orders-db"
+kind = "prevention"
+status = "done"
+description = "Set idle_in_transaction_session_timeout to 120 seconds on the orders database."
+
+[[fixes]]
+id = "fix-orders-lint"
+incident = "pm-2026-05-orders-pool"
+service = "orders-api"
+kind = "prevention"
+status = "open"
+description = "Add a lint rule rejecting early returns inside open transactions."
+
+[[fixes]]
+id = "fix-orders-pgbouncer"
+incident = "pm-2026-05-orders-pool"
+service = "orders-db"
+kind = "prevention"
+status = "open"
+description = "Deploy PgBouncer in transaction mode in front of the primary."
+
+[[fixes]]
+id = "fix-payments-failover"
+incident = "pm-2026-06-payments"
+service = "payments-gateway"
+kind = "mitigation"
+status = "done"
+description = "Fail the region over to the secondary acquirer."
+
+[[fixes]]
+id = "fix-payments-circuit-breaker"
+incident = "pm-2026-06-payments"
+service = "payments-gateway"
+kind = "prevention"
+status = "open"
+description = "Add a per-acquirer circuit breaker that opens after 10 timeouts in 30 seconds."
+
+[[fixes]]
+id = "fix-payments-alert-labels"
+incident = "pm-2026-06-payments"
+service = "payments-gateway"
+kind = "prevention"
+status = "open"
+description = "Add region and acquirer to the alert text."
+
+[[fixes]]
+id = "fix-search-batch-size"
+incident = "pm-2026-07-search"
+service = "search-indexer"
+kind = "mitigation"
+status = "done"
+description = "Lower INDEXER_BATCH_SIZE to 500 until the streaming change shipped."
+
+[[fixes]]
+id = "fix-search-stream-metadata"
+incident = "pm-2026-07-search"
+service = "search-indexer"
+kind = "prevention"
+status = "done"
+description = "Stream image metadata instead of loading it."
+
+[[fixes]]
+id = "fix-search-oom-ticket"
+incident = "pm-2026-07-search"
+service = "search-indexer"
+kind = "prevention"
+status = "done"
+description = "Treat three OOMKilled restarts in an hour as a ticket, not noise."
+
+[[fixes]]
+id = "fix-session-chrony"
+incident = "pm-2026-08-session"
+service = "session-service"
+kind = "mitigation"
+status = "done"
+description = "Restart chrony on the affected nodes and cordon them."
+
+[[fixes]]
+id = "fix-session-offset-alert"
+incident = "pm-2026-08-session"
+service = "session-service"
+kind = "prevention"
+status = "done"
+description = "Alert on node_timex_offset_seconds above 30 seconds."
+
+[[fixes]]
+id = "fix-session-failover-test"
+incident = "pm-2026-08-session"
+service = "redis-sessions"
+kind = "prevention"
+status = "open"
+description = "Test Redis failover in staging every quarter, with a login check."
+
+[[fixes]]
+id = "fix-billing-pause-job"
+incident = "pm-2026-09-billing"
+service = "billing-service"
+kind = "mitigation"
+status = "done"
+description = "Pause the renewal job."
+
+[[fixes]]
+id = "fix-billing-hotfix"
+incident = "pm-2026-09-billing"
+service = "billing-service"
+kind = "mitigation"
+status = "done"
+description = "Hot fix the retry helper."
+
+[[fixes]]
+id = "fix-billing-key-test"
+incident = "pm-2026-09-billing"
+service = "billing-service"
+kind = "prevention"
+status = "open"
+description = "Derive the key from invoice id and period, with a test that retries reuse it."
+
+[[fixes]]
+id = "fix-billing-monitor"
+incident = "pm-2026-09-billing"
+service = "billing-service"
+kind = "prevention"
+status = "open"
+description = "Run the duplicate-charge monitor every 5 minutes."
+
+# ── Runbooks: which services each one covers (its front-matter service always included) ────────────
+
+[[runbooks]]
+id = "rb-billing-duplicates"
+covers = ["billing-service"]
+
+[[runbooks]]
+id = "rb-checkout-502"
+covers = ["checkout-api"]
+
+[[runbooks]]
+id = "rb-general-triage"
+covers = []
+general = true
+
+[[runbooks]]
+id = "rb-auth-proxy-cert"
+covers = ["internal-auth-proxy", "cert-manager"]
+
+[[runbooks]]
+id = "rb-notification-kafka"
+covers = ["notification-worker", "kafka"]
+
+[[runbooks]]
+id = "rb-orders-db-pool"
+covers = ["orders-api", "orders-db"]
+
+[[runbooks]]
+id = "rb-orders-db-failover"
+covers = ["orders-db"]
+
+[[runbooks]]
+id = "rb-payments-latency"
+covers = ["payments-gateway", "card-acquirers"]
+
+[[runbooks]]
+id = "rb-search-indexer-oom"
+covers = ["search-indexer"]
+
+[[runbooks]]
+id = "rb-session-invalid"
+covers = ["session-service", "redis-sessions"]
+
+[[runbooks]]
+id = "rb-dashboard-assets"
+covers = ["web-dashboard", "cdn"]
