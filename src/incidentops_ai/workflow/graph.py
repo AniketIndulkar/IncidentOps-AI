@@ -144,7 +144,7 @@ def _step(name: str, deps: WorkflowDeps, body: Node) -> Node:
     return node
 
 
-def _nodes(deps: WorkflowDeps) -> dict[str, Node]:
+def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def intake(state: WorkflowState) -> dict:
         async with deps.sessions() as session:
             incident = await IncidentRepository(session).get(uuid.UUID(state["incident_id"]))
@@ -337,7 +337,7 @@ def _nodes(deps: WorkflowDeps) -> dict[str, Node]:
 def build_workflow(deps: WorkflowDeps, *, checkpointer=None, parallel: bool = True):
     """`parallel=False` runs the same nodes one after another (the AIENG-47 comparison)."""
     builder = StateGraph(WorkflowState)
-    for name, node in _nodes(deps).items():
+    for name, node in nodes(deps).items():
         builder.add_node(name, node)
     builder.add_edge(START, "intake")
     if parallel:

@@ -94,6 +94,19 @@ expected document is cited.
 - **H28.** LangGraph's own overhead (the same steps as a plain async function, scripted models) is under
   50 ms per run.
 
+### How the hypotheses are judged (fixed before the real run, 17 Oct)
+
+- **H24** runs as a test (`tests/test_workflow_benchmark.py`): a scripted model that behaves as a
+  correct one would, BM25 over the corpus in memory, the graph from the catalogue. It checks
+  retrieval as well as routing, since the scripted model can only cite an expected document that was
+  retrieved.
+- **H25** is judged on the concurrent layout, the one the API runs; the sequential runs are reported
+  beside it.
+- **H26** compares the medians of the two layouts over the 12 cases, run in alternating order.
+- **H28** is judged on the graph *without* a checkpointer against the plain function: that is the
+  framework's own cost. In-memory and PostgreSQL checkpoints are timed too and reported separately,
+  because they buy resume, which the plain function does not have.
+
 ## Day by day
 
 - **AIENG-44** this document and the case set.
