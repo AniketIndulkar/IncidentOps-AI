@@ -30,8 +30,9 @@ _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
     prefix="/incidents/{incident_id}/triage",
     tags=["workflow"],
-    # Login, then the rate limit; each route then checks its own permission.
-    dependencies=[Depends(authenticate), Depends(enforce_llm_rate_limit)],
+    # Login first. Only the routes that call a model take the rate limit (after login, before
+    # their own permission check): reading a run or deciding must never wait on model budget.
+    dependencies=[Depends(authenticate)],
     responses={
         **ERROR_RESPONSES,
         401: _PROBLEM,
@@ -101,7 +102,7 @@ async def _owned(
     return run
 
 
-@router.post("", response_model=TriageResponse)
+@router.post("", response_model=TriageResponse, dependencies=[Depends(enforce_llm_rate_limit)])
 async def start_triage(incident_id: uuid.UUID, principal: CanRunTriage, runner: WorkflowRunnerDep):
     """Run the workflow: retrieve and look up the graph, extract and diagnose, then recommend or
     send to review, and stop at the approval gate (`awaiting_approval`) with a proposed ticket.
@@ -124,7 +125,11 @@ async def get_triage_run(
     return await _response(runner, await _owned(runner, principal, incident_id, run_id))
 
 
-@router.post("/{run_id}/resume", response_model=TriageResponse)
+@router.post(
+    "/{run_id}/resume",
+    response_model=TriageResponse,
+    dependencies=[Depends(enforce_llm_rate_limit)],
+)
 async def resume_triage_run(
     incident_id: uuid.UUID, run_id: uuid.UUID, principal: CanResume, runner: WorkflowRunnerDep
 ):

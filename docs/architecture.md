@@ -76,7 +76,9 @@ after each one.
 - Four roles (`viewer`, `responder`, `approver`, `admin`) map to ten permissions, checked per route
   before anything else runs. The tenant comes from the token, never from the request body.
 - Creating an incident accepts an `Idempotency-Key`; a replay returns the first result.
-- Model endpoints share one per-process rate limit.
+- The routes that call a model (start or resume a triage, upload an attachment, the analysis and
+  ops endpoints) share one per-process rate limit. Reading a run and recording a decision never
+  wait on it.
 
 | Failure | What the caller gets |
 |---|---|
