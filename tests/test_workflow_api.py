@@ -123,20 +123,18 @@ async def test_a_decision_through_the_api_completes_the_run_and_is_audited(setti
         run_id = started["run"]["id"]
         base = f"/incidents/{incident_id}/triage/{run_id}"
 
-        malformed = await c.post(f"{base}/decision", json={"decision": "maybe", "reviewer": "A"})
-        decided = await c.post(
-            f"{base}/decision", json={"decision": "approve", "reviewer": "Amara Okafor"}
-        )
-        again = await c.post(f"{base}/decision", json={"decision": "reject", "reviewer": "B"})
+        malformed = await c.post(f"{base}/decision", json={"decision": "maybe"})
+        decided = await c.post(f"{base}/decision", json={"decision": "approve"})
+        again = await c.post(f"{base}/decision", json={"decision": "reject"})
         events = (await c.get(f"{base}/events")).json()
 
     assert started["proposed_action"]["kind"] == "create_ticket"
     assert malformed.status_code == 422
     assert decided.status_code == 200 and decided.json()["run"]["status"] == "approved"
-    assert decided.json()["decision"]["reviewer"] == "Amara Okafor"
+    assert decided.json()["decision"]["reviewer"] == "api-token"  # the caller, from the token
     assert again.status_code == 409 and again.json()["code"] == "workflow_not_awaiting_decision"
     assert [e["kind"] for e in events] == ["started", "awaiting_approval", "decided", "completed"]
-    assert events[2]["actor"] == "Amara Okafor"
+    assert events[2]["actor"] == "api-token"
 
 
 async def test_with_a_ticket_system_an_approval_opens_the_ticket(settings, tmp_path):
@@ -154,7 +152,7 @@ async def test_with_a_ticket_system_an_approval_opens_the_ticket(settings, tmp_p
         run_id = (await c.post(f"/incidents/{incident_id}/triage")).json()["run"]["id"]
         decided = await c.post(
             f"/incidents/{incident_id}/triage/{run_id}/decision",
-            json={"decision": "approve", "reviewer": "Amara Okafor"},
+            json={"decision": "approve"},
         )
 
     body = decided.json()

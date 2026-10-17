@@ -63,7 +63,7 @@ async def test_llm_endpoints_refuse_callers_without_the_token_and_call_no_model(
 ):
     provider = FakeProvider([EXTRACTION], tool_turns=["answer"])
     async with serve(settings, provider) as client:
-        incident = (await client.post("/incidents", json=INCIDENT)).json()
+        incident = (await client.post("/incidents", json=INCIDENT, headers=bearer(settings))).json()
 
         resp = await client.post(f"/incidents/{incident['id']}/{path}", headers=headers)
 
@@ -79,7 +79,7 @@ async def test_llm_endpoints_refuse_callers_without_the_token_and_call_no_model(
 async def test_the_right_token_is_accepted(settings, path):
     provider = FakeProvider([EXTRACTION], tool_turns=["answer"])
     async with serve(settings, provider) as client:
-        incident = (await client.post("/incidents", json=INCIDENT)).json()
+        incident = (await client.post("/incidents", json=INCIDENT, headers=bearer(settings))).json()
 
         resp = await client.post(f"/incidents/{incident['id']}/{path}", headers=bearer(settings))
 
@@ -101,28 +101,31 @@ async def test_login_is_checked_before_configuration_is_revealed(settings):
 
 
 @pytest.mark.parametrize("path", PATHS)
-async def test_without_a_configured_token_the_llm_endpoints_stay_off_even_with_a_key(
-    settings, path
-):
-    """Fail closed: an OpenAI key on its own must never open the endpoints to everyone."""
+async def test_without_any_configured_credential_every_route_stays_off(settings, path):
+    """Fail closed: an OpenAI key on its own must never open the endpoints to everyone. With no
+    API token and no JWT key (W10), nobody can be authenticated, so nothing is served."""
     no_token = Settings(_env_file=None, database_url=settings.database_url, llm_model="fake-model")
     provider = FakeProvider([EXTRACTION], tool_turns=["answer"])
     async with serve(no_token, provider) as client:
-        incident = (await client.post("/incidents", json=INCIDENT)).json()
-
         for headers in ({}, bearer(settings), {"Authorization": "Bearer "}):
-            resp = await client.post(f"/incidents/{incident['id']}/{path}", headers=headers)
+            created = await client.post("/incidents", json=INCIDENT, headers=headers)
+            resp = await client.post(
+                f"/incidents/00000000-0000-0000-0000-000000000000/{path}", headers=headers
+            )
 
-            assert resp.status_code == 503 and resp.json()["code"] == "llm_not_configured"
+            assert created.status_code == 503 and created.json()["code"] == "auth_not_configured"
+            assert resp.status_code == 503 and resp.json()["code"] == "auth_not_configured"
     assert provider.calls == [] and provider.tool_calls == []
 
 
-async def test_the_rest_of_the_api_needs_no_token(settings):
+async def test_every_route_but_health_needs_a_caller(settings):
     async with serve(settings, FakeProvider()) as client:
-        incident = await client.post("/incidents", json=INCIDENT)
+        anonymous = await client.post("/incidents", json=INCIDENT)
+        incident = await client.post("/incidents", json=INCIDENT, headers=bearer(settings))
+        read_anonymously = await client.get(f"/incidents/{incident.json()['id']}")
 
+        assert anonymous.status_code == 401 and read_anonymously.status_code == 401
         assert incident.status_code == 201
-        assert (await client.get(f"/incidents/{incident.json()['id']}")).status_code == 200
         assert (await client.get("/health")).status_code == 200
 
 
@@ -146,7 +149,7 @@ async def test_both_endpoints_share_one_budget_and_the_extra_request_is_refused(
     limited = variant(settings, llm_rate_limit_per_minute=2)
     provider = FakeProvider([EXTRACTION, EXTRACTION], tool_turns=["answer"])
     async with serve(limited, provider) as client:
-        incident = (await client.post("/incidents", json=INCIDENT)).json()
+        incident = (await client.post("/incidents", json=INCIDENT, headers=bearer(settings))).json()
         url = f"/incidents/{incident['id']}"
         headers = bearer(settings)
 
@@ -166,7 +169,7 @@ async def test_requests_without_the_token_do_not_use_up_the_budget(settings):
     limited = variant(settings, llm_rate_limit_per_minute=1)
     provider = FakeProvider([EXTRACTION])
     async with serve(limited, provider) as client:
-        incident = (await client.post("/incidents", json=INCIDENT)).json()
+        incident = (await client.post("/incidents", json=INCIDENT, headers=bearer(settings))).json()
         url = f"/incidents/{incident['id']}/extraction"
 
         for _ in range(5):

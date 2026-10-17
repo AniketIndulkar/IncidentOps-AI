@@ -89,10 +89,21 @@ async def test_wrong_method_returns_problem(client: AsyncClient):
 
 async def test_database_unavailable_returns_503_without_internals():
     # Port 1 refuses connections: simulates Postgres being down.
-    app = create_app(Settings(database_url="postgresql+asyncpg://localhost:1/incidentops"))
+    token = "test-token-0123456789"
+    app = create_app(
+        Settings(
+            _env_file=None,
+            database_url="postgresql+asyncpg://localhost:1/incidentops",
+            api_token=token,
+        )
+    )
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c,
+        AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://t",
+            headers={"Authorization": f"Bearer {token}"},
+        ) as c,
     ):
         resp = await c.get(f"/incidents/{uuid.uuid4()}")
 

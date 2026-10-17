@@ -12,9 +12,11 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 
 from app.deps import (
     AttachmentProcessorDep,
+    CanReadIncidents,
+    CanWriteIncidents,
     SessionFactory,
+    authenticate,
     enforce_llm_rate_limit,
-    require_llm_access,
 )
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.errors import (
@@ -31,13 +33,12 @@ from incidentops_ai.multimodal.attachments import (
     AttachmentRepository,
 )
 from incidentops_ai.multimodal.extract import ExtractionError, detect_media_type
-from incidentops_ai.retrieval.documents import DEFAULT_TENANT
 
 _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
     prefix="/incidents/{incident_id}/attachments",
     tags=["attachments"],
-    dependencies=[Depends(require_llm_access), Depends(enforce_llm_rate_limit)],
+    dependencies=[Depends(authenticate), Depends(enforce_llm_rate_limit)],
     responses={
         **ERROR_RESPONSES,
         401: _PROBLEM,
@@ -73,6 +74,7 @@ def _label(filename: str | None) -> str:
 )
 async def upload_attachment(
     incident_id: uuid.UUID,
+    principal: CanWriteIncidents,
     sessions: SessionFactory,
     processor: AttachmentProcessorDep,
     response: Response,
@@ -81,7 +83,8 @@ async def upload_attachment(
     """Attach a screenshot, chart, diagram or PDF to the incident. Its text is extracted now (PDF
     text layer, OCR, or a vision-model transcript) so the diagnosis can cite it."""
     async with sessions() as session:
-        await IncidentRepository(session).get(incident_id)  # 404 before reading the file
+        # 404 before reading the file, also for another tenant's incident.
+        await IncidentRepository(session).get(incident_id, tenant_id=principal.tenant_id)
     data = await file.read(MAX_BYTES + 1)  # never hold more than one byte past the limit
     try:
         extraction = await processor.process(data)
@@ -94,7 +97,7 @@ async def upload_attachment(
 
     async with sessions() as session:
         stored, created = await AttachmentRepository(session).add(
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=principal.tenant_id,
             incident_id=incident_id,
             filename=_label(file.filename),
             media_type=detect_media_type(data),
@@ -108,8 +111,10 @@ async def upload_attachment(
 
 
 @router.get("", response_model=list[AttachmentRead])
-async def list_attachments(incident_id: uuid.UUID, sessions: SessionFactory):
+async def list_attachments(
+    incident_id: uuid.UUID, principal: CanReadIncidents, sessions: SessionFactory
+):
     """The files attached to the incident, oldest first (without their contents)."""
     async with sessions() as session:
-        await IncidentRepository(session).get(incident_id)
+        await IncidentRepository(session).get(incident_id, tenant_id=principal.tenant_id)
         return await AttachmentRepository(session).list_for_incident(incident_id)

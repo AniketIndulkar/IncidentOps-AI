@@ -160,17 +160,15 @@ async def test_a_resumed_run_keeps_the_notes_it_recalled(session_factory, saver)
 
 async def test_the_memory_api(client: AsyncClient, settings):
     headers = {"Authorization": f"Bearer {settings.api_token.get_secret_value()}"}
-    body = {"service": "orders-api", "text": NOTE, "author": "Amara Okafor"}
+    body = {"service": "orders-api", "text": NOTE}  # the author is the caller (W10)
 
-    unauthorised = await client.post("/memory", json=body)
+    unauthorised = await client.post("/memory", json=body, headers={"Authorization": "Bearer x"})
     created = await client.post("/memory", json=body, headers=headers)
     note_id = created.json()["id"]
     corrected = await client.post(
-        f"/memory/{note_id}/supersede", json={"text": "v2", "author": "B"}, headers=headers
+        f"/memory/{note_id}/supersede", json={"text": "v2"}, headers=headers
     )
-    fork = await client.post(
-        f"/memory/{note_id}/supersede", json={"text": "v3", "author": "C"}, headers=headers
-    )
+    fork = await client.post(f"/memory/{note_id}/supersede", json={"text": "v3"}, headers=headers)
     listed = await client.get("/memory", params={"service": "orders-api"}, headers=headers)
     history = await client.get(f"/memory/{corrected.json()['id']}/history", headers=headers)
     missing = await client.get(f"/memory/{uuid.uuid4()}/history", headers=headers)

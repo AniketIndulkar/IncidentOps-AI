@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # Who may use the LLM endpoints, which spend money on every call. Without a token they stay
     # off (503) even when an OpenAI key is set: a key alone must never open them to everyone.
     api_token: SecretStr | None = None
+    # W10: bearer JWTs from the identity provider. Exactly one key: an HS256 secret or an RS256
+    # public key (PEM). Tokens must name this issuer and the audience "incidentops".
+    jwt_secret: SecretStr | None = None
+    jwt_public_key: str | None = None
+    jwt_issuer: str = "incidentops-dev"
     # Calls per minute across all callers, per process (see app.rate_limit).
     llm_rate_limit_per_minute: int = Field(default=10, ge=1)
 
@@ -81,6 +86,8 @@ class Settings(BaseSettings):
         "ops_database_url",
         "cmdb_url",
         "cmdb_api_key",
+        "jwt_secret",
+        "jwt_public_key",
         mode="before",
     )
     @classmethod

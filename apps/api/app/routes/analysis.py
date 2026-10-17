@@ -12,13 +12,14 @@ from pydantic import BaseModel
 
 from app.deps import (
     LLM,
+    CanRunAnalysis,
     Graph,
     LLMConfig,
     LLMIdempotencyKey,
     Retrieval,
     SessionFactory,
     enforce_llm_rate_limit,
-    require_llm_access,
+    permit,
 )
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.diagnosis.models import Diagnosis
@@ -35,7 +36,6 @@ from incidentops_ai.llm.run_keys import claim_key, release_key
 from incidentops_ai.llm.runs import LLMRunRead, LLMRunRepository
 from incidentops_ai.multimodal.attachments import AttachmentRepository, attachment_evidence
 from incidentops_ai.related import find_related_incidents
-from incidentops_ai.retrieval.documents import DEFAULT_TENANT
 from incidentops_ai.retrieval.embeddings import EmbeddingError
 from incidentops_ai.retrieval.rerank import RerankerError
 from incidentops_ai.retrieval.retriever import QueryHints
@@ -53,7 +53,7 @@ router = APIRouter(
     prefix="/incidents/{incident_id}",
     tags=["analysis"],
     # Every route here spends model budget: login first, then the rate limit (order matters).
-    dependencies=[Depends(require_llm_access), Depends(enforce_llm_rate_limit)],
+    dependencies=[Depends(permit("analysis:run")), Depends(enforce_llm_rate_limit)],
     responses={
         **ERROR_RESPONSES,
         401: _PROBLEM,
@@ -103,21 +103,22 @@ class DiagnosisResponse(BaseModel):
 
 
 async def _service_context(
-    graph: GraphStore | None, service: str
+    graph: GraphStore | None, service: str, tenant_id: str
 ) -> tuple[ServiceContext | None, GraphStatus]:
     if graph is None:
         return None, "off"
     try:
-        return await graph.service_context(service, tenant=DEFAULT_TENANT), "ok"
+        return await graph.service_context(service, tenant=tenant_id), "ok"
     except GraphUnavailableError as error:
         logger.warning("Service context unavailable: %s", error)
         return None, "unavailable"
 
 
-async def _load(sessions: SessionFactory, incident_id: uuid.UUID) -> IncidentRead:
+async def _load(sessions: SessionFactory, incident_id: uuid.UUID, tenant_id: str) -> IncidentRead:
     # Short session, closed before the slow LLM call so no DB connection is held meanwhile.
+    # Another tenant's incident is not found (W10).
     async with sessions() as session:
-        return await IncidentRepository(session).get(incident_id)
+        return await IncidentRepository(session).get(incident_id, tenant_id=tenant_id)
 
 
 def _report_text(incident: IncidentRead) -> str:
@@ -158,6 +159,7 @@ async def _release_claim_on_error(
 @router.post("/extraction", response_model=ExtractionResponse)
 async def extract(
     incident_id: uuid.UUID,
+    principal: CanRunAnalysis,
     sessions: SessionFactory,
     llm: LLM,
     config: LLMConfig,
@@ -165,7 +167,7 @@ async def extract(
     idempotency_key: LLMIdempotencyKey = None,
 ):
     """Extract structured data from the incident's text. Takes several seconds."""
-    incident = await _load(sessions, incident_id)
+    incident = await _load(sessions, incident_id, principal.tenant_id)
     if replay := await _claim(sessions, EXTRACT_OPERATION, incident.id, idempotency_key):
         response.headers["Idempotent-Replayed"] = "true"
         return ExtractionResponse(
@@ -214,6 +216,7 @@ async def extract(
 @router.post("/related-incidents", response_model=RelatedIncidentsResponse)
 async def related_incidents(
     incident_id: uuid.UUID,
+    principal: CanRunAnalysis,
     sessions: SessionFactory,
     llm: LLM,
     config: LLMConfig,
@@ -222,7 +225,7 @@ async def related_incidents(
 ):
     """Ask the model which earlier incidents look related. It looks them up with a read-only
     tool; every tool call it requested, run or rejected, is returned and recorded."""
-    incident = await _load(sessions, incident_id)
+    incident = await _load(sessions, incident_id, principal.tenant_id)
     if replay := await _claim(sessions, RELATED_OPERATION, incident.id, idempotency_key):
         response.headers["Idempotent-Replayed"] = "true"
         return RelatedIncidentsResponse(
@@ -234,7 +237,10 @@ async def related_incidents(
         )
 
     async with _release_claim_on_error(sessions, RELATED_OPERATION, idempotency_key):
-        registry = ToolRegistry([make_recent_incidents_tool(sessions, exclude_id=incident.id)])
+        tool = make_recent_incidents_tool(
+            sessions, exclude_id=incident.id, tenant_id=principal.tenant_id
+        )
+        registry = ToolRegistry([tool])
         result = await find_related_incidents(llm, registry, _report_text(incident), config)
 
         async with sessions() as session:
@@ -264,6 +270,7 @@ async def related_incidents(
 @router.post("/diagnosis", response_model=DiagnosisResponse)
 async def diagnose_incident(
     incident_id: uuid.UUID,
+    principal: CanRunAnalysis,
     sessions: SessionFactory,
     llm: LLM,
     config: LLMConfig,
@@ -275,7 +282,7 @@ async def diagnose_incident(
     """Likely causes of the incident, each backed by a quote from a runbook or postmortem that
     the server has checked against the source. Causes whose citation does not check out are
     dropped; with no usable evidence the answer is an explicit `no_answer`, never a guess."""
-    incident = await _load(sessions, incident_id)
+    incident = await _load(sessions, incident_id, principal.tenant_id)
     if replay := await _claim(sessions, DIAGNOSE_OPERATION, incident.id, idempotency_key):
         response.headers["Idempotent-Replayed"] = "true"
         return DiagnosisResponse(
@@ -292,14 +299,14 @@ async def diagnose_incident(
         async with sessions() as session:
             sources = await AttachmentRepository(session).texts_for_incident(incident.id)
         attachments = await attachment_evidence(
-            _report_text(incident), sources, tenant_id=DEFAULT_TENANT
+            _report_text(incident), sources, tenant_id=principal.tenant_id
         )
         try:
             result = await diagnose(
                 llm,
                 retriever,
                 query=_report_text(incident),
-                tenant_id=DEFAULT_TENANT,
+                tenant_id=principal.tenant_id,
                 config=config,
                 hints=QueryHints(services=(incident.service,)),
                 attachments=attachments,
@@ -312,7 +319,7 @@ async def diagnose_incident(
             ) from error
 
         retrieval = RetrievalInfo(stack=result.stack, latency_ms=round(result.retrieval_ms, 1))
-        context, graph_status = await _service_context(graph, incident.service)
+        context, graph_status = await _service_context(graph, incident.service, principal.tenant_id)
         async with sessions() as session:
             run_id = await LLMRunRepository(session).record(
                 operation=DIAGNOSE_OPERATION,

@@ -71,6 +71,7 @@ class Decision(BaseModel):
     reviewer: str = Field(min_length=1, max_length=128)
     comment: str | None = Field(default=None, max_length=2000)
     memory: str | None = Field(default=None, max_length=2000)  # a note for the service (AIENG-50)
+    user_id: str | None = Field(default=None, max_length=256)  # the reviewer's id from the token
 
 
 class RecordedDecision(Decision):
@@ -186,7 +187,9 @@ def _step(name: str, deps: WorkflowDeps, body: Node) -> Node:
 def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def intake(state: WorkflowState) -> dict:
         async with deps.sessions() as session:
-            incident = await IncidentRepository(session).get(uuid.UUID(state["incident_id"]))
+            incident = await IncidentRepository(session).get(
+                uuid.UUID(state["incident_id"]), tenant_id=state["tenant_id"]
+            )
             sources = await AttachmentRepository(session).texts_for_incident(incident.id)
         return {
             "incident": incident.model_dump(

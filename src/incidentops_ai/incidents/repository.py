@@ -9,6 +9,7 @@ from incidentops_ai.errors import IdempotencyKeyReusedError, IncidentNotFoundErr
 from incidentops_ai.idempotency import IdempotencyKeyRow, find_key, request_fingerprint
 from incidentops_ai.incidents.models import IncidentCreate, IncidentRead
 from incidentops_ai.incidents.orm import IncidentRow
+from incidentops_ai.retrieval.documents import DEFAULT_TENANT
 
 CREATE_SCOPE = "incidents.create"
 
@@ -26,10 +27,14 @@ class IncidentRepository:
         self._session = session
 
     async def create(
-        self, data: IncidentCreate, idempotency_key: str | None = None
+        self,
+        data: IncidentCreate,
+        idempotency_key: str | None = None,
+        *,
+        tenant_id: str = DEFAULT_TENANT,
     ) -> CreateResult:
         if idempotency_key is None:
-            row = IncidentRow(**data.model_dump())
+            row = IncidentRow(tenant_id=tenant_id, **data.model_dump())
             self._session.add(row)
             await self._session.commit()
             return CreateResult(IncidentRead.model_validate(row), replayed=False)
@@ -37,10 +42,12 @@ class IncidentRepository:
         fingerprint = request_fingerprint(data)
 
         # Fast path: key already used. Avoids a doomed insert in the common retry case.
-        if existing := await find_key(self._session, CREATE_SCOPE, idempotency_key):
+        if existing := await find_key(
+            self._session, CREATE_SCOPE, idempotency_key, tenant_id=tenant_id
+        ):
             return await self._replay(existing, fingerprint)
 
-        row = IncidentRow(id=uuid.uuid4(), **data.model_dump())
+        row = IncidentRow(id=uuid.uuid4(), tenant_id=tenant_id, **data.model_dump())
         try:
             self._session.add(row)
             # Flush the incident first: the key row has an FK to it, and without an ORM
@@ -48,6 +55,7 @@ class IncidentRepository:
             await self._session.flush()
             self._session.add(
                 IdempotencyKeyRow(
+                    tenant_id=tenant_id,
                     scope=CREATE_SCOPE,
                     key=idempotency_key,
                     request_hash=fingerprint,
@@ -59,23 +67,33 @@ class IncidentRepository:
             # Lost a race: a concurrent request with the same key committed first. Our incident
             # insert is rolled back with the key, so no duplicate exists. Replay the winner.
             await self._session.rollback()
-            existing = await find_key(self._session, CREATE_SCOPE, idempotency_key)
+            existing = await find_key(
+                self._session, CREATE_SCOPE, idempotency_key, tenant_id=tenant_id
+            )
             if existing is None:  # IntegrityError was something else; don't mask it.
                 raise
             return await self._replay(existing, fingerprint)
 
         return CreateResult(IncidentRead.model_validate(row), replayed=False)
 
-    async def get(self, incident_id: uuid.UUID) -> IncidentRead:
+    async def get(self, incident_id: uuid.UUID, *, tenant_id: str | None = None) -> IncidentRead:
+        """With `tenant_id`, an incident of another tenant is not found (the id confirms nothing)."""
         row = await self._session.get(IncidentRow, incident_id)
-        if row is None:
+        if row is None or (tenant_id is not None and row.tenant_id != tenant_id):
             raise IncidentNotFoundError(f"Incident {incident_id} does not exist.")
         return IncidentRead.model_validate(row)
 
     async def list_recent_by_service(
-        self, service: str, limit: int, *, exclude_id: uuid.UUID | None = None
+        self,
+        service: str,
+        limit: int,
+        *,
+        exclude_id: uuid.UUID | None = None,
+        tenant_id: str | None = None,
     ) -> list[IncidentRead]:
         query = select(IncidentRow).where(IncidentRow.service == service)
+        if tenant_id is not None:
+            query = query.where(IncidentRow.tenant_id == tenant_id)
         if exclude_id is not None:
             query = query.where(IncidentRow.id != exclude_id)
         rows = await self._session.scalars(
@@ -89,4 +107,6 @@ class IncidentRepository:
                 "This Idempotency-Key was already used with a different request body. "
                 "Use a new key for a new incident."
             )
-        return CreateResult(await self.get(existing.resource_id), replayed=True)
+        return CreateResult(
+            await self.get(existing.resource_id, tenant_id=existing.tenant_id), replayed=True
+        )

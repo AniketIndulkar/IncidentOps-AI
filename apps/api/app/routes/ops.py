@@ -5,11 +5,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.deps import (
     LLM,
+    CanQueryOps,
     LLMConfig,
     OpsDatabaseDep,
     SessionFactory,
     enforce_llm_rate_limit,
-    require_llm_access,
+    permit,
 )
 from app.errors import ERROR_RESPONSES, PROBLEM_JSON, Problem
 from incidentops_ai.ops.text_to_sql import OpsAnswer, answer_question
@@ -18,8 +19,8 @@ _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
     prefix="/ops",
     tags=["ops"],
-    dependencies=[Depends(require_llm_access), Depends(enforce_llm_rate_limit)],
-    responses={**ERROR_RESPONSES, 401: _PROBLEM, 429: _PROBLEM, 503: _PROBLEM},
+    dependencies=[Depends(permit("ops:query")), Depends(enforce_llm_rate_limit)],
+    responses={**ERROR_RESPONSES, 401: _PROBLEM, 403: _PROBLEM, 429: _PROBLEM, 503: _PROBLEM},
 )
 
 
@@ -32,6 +33,7 @@ class OpsQuestion(BaseModel):
 @router.post("/query", response_model=OpsAnswer)
 async def query_ops(
     body: OpsQuestion,
+    principal: CanQueryOps,
     provider: LLM,
     config: LLMConfig,
     database: OpsDatabaseDep,

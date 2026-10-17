@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
 from app.routes import analysis, attachments, incidents, memory, ops, workflow
+from incidentops_ai.auth.tokens import TokenVerifier
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -157,6 +158,15 @@ def create_app(
                 resources.push_async_callback(ops_engine.dispose)
                 app.state.ops_database = OpsDatabase(ops_engine)
             app.state.api_token = settings.api_token
+            app.state.token_verifier = (
+                TokenVerifier(
+                    secret=settings.jwt_secret.get_secret_value() if settings.jwt_secret else None,
+                    public_key=settings.jwt_public_key,
+                    issuer=settings.jwt_issuer,
+                )
+                if settings.jwt_secret or settings.jwt_public_key
+                else None
+            )
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
         finally:

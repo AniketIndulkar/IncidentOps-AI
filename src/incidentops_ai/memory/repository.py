@@ -20,11 +20,12 @@ RECALL_LIMIT = 3  # notes per diagnosis: newest first
 
 
 class MemoryCreate(BaseModel):
+    """The author is the authenticated caller (W10), never a field of the request."""
+
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     service: str = Field(min_length=1, max_length=128)
     text: str = Field(min_length=1, max_length=2000)
-    author: str = Field(min_length=1, max_length=128)
 
 
 class MemorySupersede(BaseModel):
@@ -33,7 +34,6 @@ class MemorySupersede(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     text: str | None = Field(min_length=1, max_length=2000)
-    author: str = Field(min_length=1, max_length=128)
 
 
 class MemoryRead(BaseModel):
@@ -74,9 +74,12 @@ class MemoryRepository:
         await self._session.flush()
         return _read(row)
 
-    async def supersede(self, note_id: uuid.UUID, *, text: str | None, author: str) -> MemoryRead:
+    async def supersede(
+        self, note_id: uuid.UUID, *, text: str | None, author: str, tenant_id: str | None = None
+    ) -> MemoryRead:
+        """`tenant_id`, when given, must be the note's: another tenant's note is not found."""
         old = await self._session.get(MemoryRow, note_id)
-        if old is None:
+        if old is None or (tenant_id is not None and old.tenant_id != tenant_id):
             raise MemoryNotFoundError(f"No memory note {note_id}.")
         row = MemoryRow(
             tenant_id=old.tenant_id,
@@ -111,10 +114,12 @@ class MemoryRepository:
         )
         return [_read(r) for r in rows.scalars()]
 
-    async def history(self, note_id: uuid.UUID) -> list[MemoryRead]:
+    async def history(
+        self, note_id: uuid.UUID, *, tenant_id: str | None = None
+    ) -> list[MemoryRead]:
         """Every version in the note's line, oldest first."""
         row = await self._session.get(MemoryRow, note_id)
-        if row is None:
+        if row is None or (tenant_id is not None and row.tenant_id != tenant_id):
             raise MemoryNotFoundError(f"No memory note {note_id}.")
         line = [row]
         while line[0].supersedes is not None:

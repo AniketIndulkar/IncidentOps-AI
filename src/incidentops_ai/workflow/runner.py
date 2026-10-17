@@ -47,6 +47,7 @@ def checkpoint_url(database_url: str) -> str:
 
 class WorkflowRunRead(BaseModel):
     id: uuid.UUID
+    tenant_id: str
     incident_id: uuid.UUID
     status: str
     route: str | None
@@ -110,59 +111,76 @@ class WorkflowRunner:
                 .where(WorkflowEventRow.run_id == run_id, WorkflowEventRow.kind == "resumed")
             )
 
-    def _event(self, run_id: uuid.UUID, kind: str, data: dict | None = None, *, actor="system"):
+    @staticmethod
+    def _event(
+        tenant_id: str, run_id: uuid.UUID, kind: str, data: dict | None = None, *, actor="system"
+    ):
         return WorkflowEventRow(
-            tenant_id=self._deps.tenant_id, run_id=run_id, kind=kind, actor=actor, data=data or {}
+            tenant_id=tenant_id, run_id=run_id, kind=kind, actor=actor, data=data or {}
         )
 
-    async def start(self, incident_id: uuid.UUID) -> WorkflowRunRead:
+    async def _run_row(self, session, run_id: uuid.UUID, tenant_id: str | None, *, lock=False):
+        """The run, or not found: also when it belongs to another tenant."""
+        run = await session.get(WorkflowRunRow, run_id, with_for_update=lock)
+        if run is None or (tenant_id is not None and run.tenant_id != tenant_id):
+            raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
+        return run
+
+    async def start(
+        self, incident_id: uuid.UUID, *, tenant_id: str | None = None
+    ) -> WorkflowRunRead:
+        """Run in `tenant_id` (the caller's, from their token); the incident must be in it."""
+        tenant = tenant_id or self._deps.tenant_id
         await self._ready()
         async with self._deps.sessions() as session:
-            await IncidentRepository(session).get(incident_id)  # 404 before anything is recorded
+            # 404 before anything is recorded, also for another tenant's incident.
+            await IncidentRepository(session).get(incident_id, tenant_id=tenant)
             run = WorkflowRunRow(
                 id=uuid.uuid4(),
-                tenant_id=self._deps.tenant_id,
+                tenant_id=tenant,
                 incident_id=incident_id,
                 status="running",
                 reasons=[],
             )
             session.add(run)
             await session.flush()
-            session.add(self._event(run.id, "started", {"incident_id": str(incident_id)}))
+            session.add(self._event(tenant, run.id, "started", {"incident_id": str(incident_id)}))
             await session.commit()
-        state = initial_state(incident_id, str(run.id), self._deps.tenant_id)
+        state = initial_state(incident_id, str(run.id), tenant)
         return await self._drive(run.id, state)
 
-    async def resume(self, run_id: uuid.UUID) -> WorkflowRunRead:
+    async def resume(self, run_id: uuid.UUID, *, tenant_id: str | None = None) -> WorkflowRunRead:
         """Continue a failed run. A run paused at the gate is not failed: only `decide` moves it."""
         await self._ready()
         async with self._deps.sessions() as session:
-            run = await session.get(WorkflowRunRow, run_id, with_for_update=True)
-            if run is None:
-                raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
+            run = await self._run_row(session, run_id, tenant_id, lock=True)
             if run.status != "failed":
                 raise WorkflowNotResumableError(f"Run {run_id} is {run.status}, not failed.")
             run.status, run.error = "running", None
-            session.add(self._event(run_id, "resumed"))
+            session.add(self._event(run.tenant_id, run_id, "resumed"))
             await session.commit()
         return await self._drive(run_id, None)  # None: continue from the last checkpoint
 
-    async def decide(self, run_id: uuid.UUID, decision: Decision) -> WorkflowRunRead:
+    async def decide(
+        self, run_id: uuid.UUID, decision: Decision, *, tenant_id: str | None = None
+    ) -> WorkflowRunRead:
         """Apply a person's decision to a run waiting at the gate, exactly once."""
         await self._ready()
         async with self._deps.sessions() as session:
             # The row lock makes a concurrent second decision wait, then see the run is not waiting.
-            run = await session.get(WorkflowRunRow, run_id, with_for_update=True)
-            if run is None:
-                raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
+            run = await self._run_row(session, run_id, tenant_id, lock=True)
             if run.status != "awaiting_approval":
                 raise WorkflowNotAwaitingDecisionError(
                     f"Run {run_id} is {run.status}; only a run awaiting approval takes a decision."
                 )
             run.status = "running"
             data = {"decision": decision.decision, "comment": decision.comment}
+            if decision.user_id:
+                data["user_id"] = decision.user_id
             if decision.memory:  # the reviewer's note for the service, in the same transaction
-                incident = await IncidentRepository(session).get(run.incident_id)
+                incident = await IncidentRepository(session).get(
+                    run.incident_id, tenant_id=run.tenant_id
+                )
                 note = await MemoryRepository(session).add(
                     tenant_id=run.tenant_id,
                     service=incident.service,
@@ -171,26 +189,25 @@ class WorkflowRunner:
                     source_run_id=run_id,
                 )
                 data["memory_id"] = str(note.id)
-            event = self._event(run_id, "decided", data, actor=decision.reviewer)
+            event = self._event(run.tenant_id, run_id, "decided", data, actor=decision.reviewer)
             session.add(event)
             await session.commit()
         resume = {**decision.model_dump(), "decision_id": str(event.id)}
         return await self._drive(run_id, Command(resume=resume))
 
-    async def get(self, run_id: uuid.UUID) -> WorkflowRunRead:
+    async def get(self, run_id: uuid.UUID, *, tenant_id: str | None = None) -> WorkflowRunRead:
         async with self._deps.sessions() as session:
-            run = await session.get(WorkflowRunRow, run_id)
-            if run is None:
-                raise WorkflowRunNotFoundError(f"No workflow run {run_id}.")
+            run = await self._run_row(session, run_id, tenant_id)
             return WorkflowRunRead.model_validate(run, from_attributes=True)
 
-    async def list_for_incident(self, incident_id: uuid.UUID) -> list[WorkflowRunRead]:
+    async def list_for_incident(
+        self, incident_id: uuid.UUID, *, tenant_id: str | None = None
+    ) -> list[WorkflowRunRead]:
         async with self._deps.sessions() as session:
-            rows = await session.execute(
-                select(WorkflowRunRow)
-                .where(WorkflowRunRow.incident_id == incident_id)
-                .order_by(WorkflowRunRow.created_at)
-            )
+            query = select(WorkflowRunRow).where(WorkflowRunRow.incident_id == incident_id)
+            if tenant_id is not None:
+                query = query.where(WorkflowRunRow.tenant_id == tenant_id)
+            rows = await session.execute(query.order_by(WorkflowRunRow.created_at))
             return [WorkflowRunRead.model_validate(r, from_attributes=True) for r in rows.scalars()]
 
     async def events(self, run_id: uuid.UUID) -> list[WorkflowEventRead]:
@@ -258,6 +275,6 @@ class WorkflowRunner:
                 route, reasons = run.route, run.reasons
             run.status, run.route, run.reasons, run.error = status, route, reasons or [], error
             for kind, data in events:
-                session.add(self._event(run_id, kind, data))
+                session.add(self._event(run.tenant_id, run_id, kind, data))
             await session.commit()
             return WorkflowRunRead.model_validate(run, from_attributes=True)

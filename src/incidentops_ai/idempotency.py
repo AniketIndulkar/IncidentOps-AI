@@ -22,8 +22,11 @@ from incidentops_ai.db import Base
 class IdempotencyKeyRow(Base):
     __tablename__ = "idempotency_keys"
 
-    # scope namespaces keys per operation, e.g. "incidents.create", so the same client key
-    # used on two different endpoints does not collide.
+    # Keys are per tenant (W10) and per operation: scope namespaces them, e.g.
+    # "incidents.create", so the same client key on two endpoints, or in two tenants, never collides.
+    tenant_id: Mapped[str] = mapped_column(
+        String(63), primary_key=True, default="default", server_default="default"
+    )
     scope: Mapped[str] = mapped_column(String(64), primary_key=True)
     key: Mapped[str] = mapped_column(String(255), primary_key=True)
     request_hash: Mapped[str] = mapped_column(String(64))
@@ -36,9 +39,13 @@ def request_fingerprint(payload: BaseModel) -> str:
     return hashlib.sha256(payload.model_dump_json().encode()).hexdigest()
 
 
-async def find_key(session: AsyncSession, scope: str, key: str) -> IdempotencyKeyRow | None:
+async def find_key(
+    session: AsyncSession, scope: str, key: str, *, tenant_id: str = "default"
+) -> IdempotencyKeyRow | None:
     return await session.scalar(
         select(IdempotencyKeyRow).where(
-            IdempotencyKeyRow.scope == scope, IdempotencyKeyRow.key == key
+            IdempotencyKeyRow.tenant_id == tenant_id,
+            IdempotencyKeyRow.scope == scope,
+            IdempotencyKeyRow.key == key,
         )
     )

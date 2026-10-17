@@ -6,7 +6,11 @@ from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from incidentops_ai.auth.principal import Principal, can
+from incidentops_ai.auth.tokens import InvalidToken
 from incidentops_ai.errors import (
+    AuthNotConfiguredError,
+    ForbiddenError,
     LLMNotConfiguredError,
     OpsNotConfiguredError,
     RateLimitExceededError,
@@ -117,22 +121,62 @@ LLMIdempotencyKey = _idempotency_header(
 
 # auto_error=False: a missing or malformed header reaches us as None, so the refusal is our
 # problem+json 401 like every other error, not FastAPI's default body.
-_bearer = HTTPBearer(auto_error=False, description="INCIDENTOPS_API_TOKEN of the server.")
+_bearer = HTTPBearer(
+    auto_error=False, description="A JWT from the identity provider, or INCIDENTOPS_API_TOKEN."
+)
+
+# The static API token is a machine credential (development, automation): admin in the default
+# tenant, no expiry. People and services in production present JWTs (W10).
+SERVICE_PRINCIPAL = Principal("api-token", "api-token", "default", frozenset({"admin"}))
 
 
-async def require_llm_access(
+async def authenticate(
     request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
-) -> None:
-    """Gate for every endpoint that spends model budget. Runs before anything else on the route,
-    so a refused caller costs nothing and learns nothing (not even whether an incident exists)."""
-    token = request.app.state.api_token
-    if token is None:
-        raise LLMNotConfiguredError("LLM features are off: INCIDENTOPS_API_TOKEN is not set.")
+) -> Principal:
+    """Who is calling. Runs before anything else on every route, so a refused caller costs
+    nothing and learns nothing (not even whether an incident exists)."""
+    token, verifier = request.app.state.api_token, request.app.state.token_verifier
+    if token is None and verifier is None:
+        raise AuthNotConfiguredError(
+            "No caller can be authenticated: set INCIDENTOPS_API_TOKEN or a JWT key."
+        )
     supplied = credentials.credentials if credentials else ""
     # compare_digest: the check takes the same time wherever the first wrong character is.
-    if not secrets.compare_digest(supplied.encode(), token.get_secret_value().encode()):
-        raise UnauthorizedError("A valid bearer token is required.")
+    if token is not None and secrets.compare_digest(
+        supplied.encode(), token.get_secret_value().encode()
+    ):
+        return SERVICE_PRINCIPAL
+    if verifier is not None and supplied:
+        try:
+            return verifier.verify(supplied)
+        except InvalidToken:
+            pass
+    raise UnauthorizedError("A valid bearer token is required.")
+
+
+def permit(permission: str):
+    """A dependency that admits only callers whose roles grant `permission` (403 otherwise)."""
+
+    async def check(principal: Annotated[Principal, Depends(authenticate)]) -> Principal:
+        if not can(principal, permission):
+            raise ForbiddenError(f"This needs the {permission} permission.")
+        return principal
+
+    check.__name__ = f"permit_{permission.replace(':', '_')}"
+    return check
+
+
+CanReadIncidents = Annotated[Principal, Depends(permit("incidents:read"))]
+CanWriteIncidents = Annotated[Principal, Depends(permit("incidents:write"))]
+CanRunAnalysis = Annotated[Principal, Depends(permit("analysis:run"))]
+CanReadTriage = Annotated[Principal, Depends(permit("triage:read"))]
+CanRunTriage = Annotated[Principal, Depends(permit("triage:run"))]
+CanDecide = Annotated[Principal, Depends(permit("triage:decide"))]
+CanResume = Annotated[Principal, Depends(permit("triage:resume"))]
+CanReadMemory = Annotated[Principal, Depends(permit("memory:read"))]
+CanWriteMemory = Annotated[Principal, Depends(permit("memory:write"))]
+CanQueryOps = Annotated[Principal, Depends(permit("ops:query"))]
 
 
 async def enforce_llm_rate_limit(request: Request) -> None:

@@ -22,9 +22,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from incidentops_ai.errors import (
     AttachmentTooLargeError,
+    AuthNotConfiguredError,
     ConflictError,
     DomainError,
     ExtractionUnavailableError,
+    ForbiddenError,
     InvalidAttachmentError,
     LLMCallFailedError,
     LLMNotConfiguredError,
@@ -109,6 +111,8 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     WorkflowAbandonedError: 500,  # out of resume budget: start a new run
     WorkflowFailedError: 500,  # progress is saved; the message names the run to resume
     UnauthorizedError: 401,
+    ForbiddenError: 403,
+    AuthNotConfiguredError: 503,
     RateLimitExceededError: 429,
     RequestInProgressError: 409,  # the "retry later" conflict the 422 comment above leaves free
 }
