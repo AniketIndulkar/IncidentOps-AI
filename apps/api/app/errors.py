@@ -20,8 +20,11 @@ from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from incidentops_ai.errors import (
+    AttachmentTooLargeError,
     ConflictError,
     DomainError,
+    ExtractionUnavailableError,
+    InvalidAttachmentError,
     LLMCallFailedError,
     LLMNotConfiguredError,
     NotFoundError,
@@ -30,6 +33,7 @@ from incidentops_ai.errors import (
     RetrievalFailedError,
     RetryLaterError,
     UnauthorizedError,
+    UnsupportedMediaError,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,6 +91,10 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     ConflictError: 422,
     LLMNotConfiguredError: 503,
     RetrievalFailedError: 502,  # a dependency (embedding API, reranker) failed, not the caller
+    UnsupportedMediaError: 415,
+    AttachmentTooLargeError: 413,
+    InvalidAttachmentError: 422,
+    ExtractionUnavailableError: 503,
     UnauthorizedError: 401,
     RateLimitExceededError: 429,
     RequestInProgressError: 409,  # the "retry later" conflict the 422 comment above leaves free

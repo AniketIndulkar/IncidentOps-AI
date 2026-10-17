@@ -33,6 +33,7 @@ from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMStatus, RunMetadata
 from incidentops_ai.llm.run_keys import claim_key, release_key
 from incidentops_ai.llm.runs import LLMRunRead, LLMRunRepository
+from incidentops_ai.multimodal.attachments import AttachmentRepository, attachment_evidence
 from incidentops_ai.related import find_related_incidents
 from incidentops_ai.retrieval.documents import DEFAULT_TENANT
 from incidentops_ai.retrieval.embeddings import EmbeddingError
@@ -288,6 +289,11 @@ async def diagnose_incident(
         )
 
     async with _release_claim_on_error(sessions, DIAGNOSE_OPERATION, idempotency_key):
+        async with sessions() as session:
+            sources = await AttachmentRepository(session).texts_for_incident(incident.id)
+        attachments = await attachment_evidence(
+            _report_text(incident), sources, tenant_id=DEFAULT_TENANT
+        )
         try:
             result = await diagnose(
                 llm,
@@ -296,6 +302,7 @@ async def diagnose_incident(
                 tenant_id=DEFAULT_TENANT,
                 config=config,
                 hints=QueryHints(services=(incident.service,)),
+                attachments=attachments,
             )
         except (EmbeddingError, RerankerError) as error:
             # The detail may name providers or limits; it goes to the log, not to the client.

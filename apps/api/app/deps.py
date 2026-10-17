@@ -14,6 +14,7 @@ from incidentops_ai.errors import (
 from incidentops_ai.graph.store import GraphStore
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
+from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.retrieval.retriever import Retriever
 
 
@@ -57,6 +58,10 @@ def get_retriever(request: Request) -> Retriever:
     if retriever is None:
         raise LLMNotConfiguredError("Evidence retrieval is off: OPENAI_API_KEY is not configured.")
     return retriever
+
+
+def get_attachment_processor(request: Request) -> AttachmentProcessor:
+    return request.app.state.attachment_processor
 
 
 def get_graph_store(request: Request) -> GraphStore | None:
@@ -121,3 +126,4 @@ LLM = Annotated[LLMProvider, Depends(get_llm_provider)]
 LLMConfig = Annotated[ModelConfig, Depends(get_llm_config)]
 Retrieval = Annotated[Retriever, Depends(get_retriever)]
 Graph = Annotated[GraphStore | None, Depends(get_graph_store)]
+AttachmentProcessorDep = Annotated[AttachmentProcessor, Depends(get_attachment_processor)]

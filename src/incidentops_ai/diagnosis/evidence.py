@@ -69,8 +69,9 @@ def render_evidence(evidence: Sequence[Evidence], *, nonce: str | None = None) -
     for item in evidence:
         chunk = item.chunk
         section = f" > {chunk.section}" if chunk.section else ""
+        kind = chunk.doc_type.value + (f", {item.extraction}" if item.extraction else "")
         blocks.append(
-            f"[{item.id}] {chunk.title}{section} (page {chunk.page}, {chunk.doc_type.value})\n"
+            f"[{item.id}] {chunk.title}{section} (page {chunk.page}, {kind})\n"
             f"-----BEGIN EXCERPT {nonce}-----\n{chunk.text}\n-----END EXCERPT {nonce}-----"
         )
     return "\n\n".join(blocks)
