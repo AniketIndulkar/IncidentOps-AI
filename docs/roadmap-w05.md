@@ -3,9 +3,15 @@
 Source: Jira epic **AIENG-6** and tasks **AIENG-34 to AIENG-38**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W04 (branch `feat/w05-knowledge-graph`).
 
-> **Status:** design written before any graph code. Unlike W03 and W04 there was no approval round:
-> the user asked for W05 to W13 to be built back to back and reviewed PR by PR. Every decision below
-> is mine unless marked otherwise.
+> **Status, 17 Oct 2026: built and measured.** Design written before any graph code; unlike W03 and
+> W04 there was no approval round (the user asked for W05 to W13 back to back, reviewed PR by PR), so
+> every decision below is mine unless marked otherwise.
+>
+> **Result:** by the rule below, retrieval stays **hybrid**: the soft anchor lost 0.196 MRR on the
+> graph set and the graph gained 0.000. The graph goes into the diagnosis as structured **service
+> context** instead. H13 and H16 confirmed, H14 partly, H15 refuted, H17 confirmed with two exceptions.
+> Findings: [graph-findings](../evals/graph/runs/2026-10-17-graph-findings.md); decision:
+> [ADR-002](adr/002-knowledge-graph.md).
 
 ## Goal of the week
 
