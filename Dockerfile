@@ -27,8 +27,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ---- Stage 2: small runtime image -------------------------------------------------------------
 FROM python:3.13-slim
 
-# Run as an unprivileged user, never root.
-RUN useradd --create-home --uid 10001 app
+# Run as an unprivileged user, never root. /var/lib/incidentops holds the files the API writes;
+# a named volume mounted there starts with this ownership.
+RUN useradd --create-home --uid 10001 app \
+    && mkdir -p /var/lib/incidentops && chown app /var/lib/incidentops
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv

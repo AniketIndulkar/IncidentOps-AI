@@ -11,9 +11,14 @@ class Settings(BaseSettings):
     """Runtime configuration, read from environment variables (prefix INCIDENTOPS_) or .env."""
 
     # hide_input_in_errors: a rejected value (a too-short token, a database URL with its password)
-    # must not be printed back in the startup error.
+    # must not be printed back in the startup error. env_ignore_empty: docker compose passes VAR=""
+    # for every setting .env leaves out, which must mean the default, not a value that fails to parse.
     model_config = SettingsConfigDict(
-        env_prefix="INCIDENTOPS_", env_file=".env", extra="ignore", hide_input_in_errors=True
+        env_prefix="INCIDENTOPS_",
+        env_file=".env",
+        extra="ignore",
+        hide_input_in_errors=True,
+        env_ignore_empty=True,
     )
 
     database_url: str = "postgresql+asyncpg://localhost:5432/incidentops"
@@ -112,6 +117,10 @@ class Settings(BaseSettings):
         "cmdb_api_key",
         "jwt_secret",
         "jwt_public_key",
+        "trace_file",
+        "langfuse_host",
+        "langfuse_public_key",
+        "langfuse_secret_key",
         mode="before",
     )
     @classmethod
