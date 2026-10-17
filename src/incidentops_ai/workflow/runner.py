@@ -16,7 +16,7 @@ run that fails again after `max_resumes` resumes is `abandoned` instead of `fail
 import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from langgraph.types import Command
 from pydantic import BaseModel
@@ -196,6 +196,32 @@ class WorkflowRunner:
             await session.commit()
         resume = {**decision.model_dump(), "decision_id": str(event.id)}
         return await self._drive(run_id, Command(resume=resume), phase="decide")
+
+    async def recover_stale(self, older_than_s: float) -> list[uuid.UUID]:
+        """Runs left `running` by a process that died (W12): marked failed, so they can resume.
+
+        A run that is only slow is left alone: the age must exceed any run's model timeouts.
+        """
+        cutoff = datetime.now(UTC) - timedelta(seconds=older_than_s)
+        async with self._deps.sessions() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(WorkflowRunRow)
+                        .where(
+                            WorkflowRunRow.status == "running", WorkflowRunRow.updated_at < cutoff
+                        )
+                        .with_for_update(skip_locked=True)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for run in rows:
+                run.status, run.error = "failed", "StaleRun"
+                session.add(self._event(run.tenant_id, run.id, "failed", {"error": "StaleRun"}))
+            await session.commit()
+            return [run.id for run in rows]
 
     async def get(self, run_id: uuid.UUID, *, tenant_id: str | None = None) -> WorkflowRunRead:
         async with self._deps.sessions() as session:

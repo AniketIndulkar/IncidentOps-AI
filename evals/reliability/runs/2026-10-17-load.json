@@ -1,0 +1,3719 @@
+{
+  "date": "2026-10-17",
+  "conditions": {
+    "levels": [
+      1,
+      5,
+      10,
+      20
+    ],
+    "iterations_per_user": 3,
+    "model": "simulated (W07 latencies)",
+    "retrieval": "bm25",
+    "server": "uvicorn, 1 process",
+    "host": "one laptop: load, API, PostgreSQL",
+    "tokens_per_call": [
+      2010,
+      449
+    ]
+  },
+  "endpoints": [
+    {
+      "level": 1,
+      "endpoint": "create",
+      "n": 3,
+      "p50_ms": 9.5,
+      "p95_ms": 32.8,
+      "p99_ms": 32.8,
+      "errors": 0
+    },
+    {
+      "level": 1,
+      "endpoint": "triage",
+      "n": 3,
+      "p50_ms": 6183.9,
+      "p95_ms": 9332.9,
+      "p99_ms": 9332.9,
+      "errors": 0
+    },
+    {
+      "level": 1,
+      "endpoint": "read",
+      "n": 3,
+      "p50_ms": 7.9,
+      "p95_ms": 8.6,
+      "p99_ms": 8.6,
+      "errors": 0
+    },
+    {
+      "level": 1,
+      "endpoint": "decide",
+      "n": 3,
+      "p50_ms": 46.9,
+      "p95_ms": 52.8,
+      "p99_ms": 52.8,
+      "errors": 0
+    },
+    {
+      "level": 1,
+      "endpoint": "throughput",
+      "n": 3,
+      "per_s": 0.15
+    },
+    {
+      "level": 5,
+      "endpoint": "create",
+      "n": 15,
+      "p50_ms": 9.9,
+      "p95_ms": 26.6,
+      "p99_ms": 27.6,
+      "errors": 0
+    },
+    {
+      "level": 5,
+      "endpoint": "triage",
+      "n": 15,
+      "p50_ms": 6317.6,
+      "p95_ms": 7917.3,
+      "p99_ms": 8542.8,
+      "errors": 0
+    },
+    {
+      "level": 5,
+      "endpoint": "read",
+      "n": 15,
+      "p50_ms": 8.0,
+      "p95_ms": 9.0,
+      "p99_ms": 9.7,
+      "errors": 0
+    },
+    {
+      "level": 5,
+      "endpoint": "decide",
+      "n": 15,
+      "p50_ms": 46.3,
+      "p95_ms": 53.4,
+      "p99_ms": 57.6,
+      "errors": 0
+    },
+    {
+      "level": 5,
+      "endpoint": "throughput",
+      "n": 15,
+      "per_s": 0.7
+    },
+    {
+      "level": 10,
+      "endpoint": "create",
+      "n": 30,
+      "p50_ms": 8.8,
+      "p95_ms": 38.9,
+      "p99_ms": 44.1,
+      "errors": 0
+    },
+    {
+      "level": 10,
+      "endpoint": "triage",
+      "n": 30,
+      "p50_ms": 6315.6,
+      "p95_ms": 8800.0,
+      "p99_ms": 9334.4,
+      "errors": 0
+    },
+    {
+      "level": 10,
+      "endpoint": "read",
+      "n": 30,
+      "p50_ms": 9.5,
+      "p95_ms": 19.9,
+      "p99_ms": 27.6,
+      "errors": 0
+    },
+    {
+      "level": 10,
+      "endpoint": "decide",
+      "n": 30,
+      "p50_ms": 44.9,
+      "p95_ms": 59.5,
+      "p99_ms": 74.2,
+      "errors": 0
+    },
+    {
+      "level": 10,
+      "endpoint": "throughput",
+      "n": 30,
+      "per_s": 1.25
+    },
+    {
+      "level": 20,
+      "endpoint": "create",
+      "n": 60,
+      "p50_ms": 8.2,
+      "p95_ms": 51.8,
+      "p99_ms": 52.8,
+      "errors": 0
+    },
+    {
+      "level": 20,
+      "endpoint": "triage",
+      "n": 60,
+      "p50_ms": 6972.7,
+      "p95_ms": 8733.6,
+      "p99_ms": 8767.7,
+      "errors": 0
+    },
+    {
+      "level": 20,
+      "endpoint": "read",
+      "n": 60,
+      "p50_ms": 9.5,
+      "p95_ms": 27.5,
+      "p99_ms": 28.7,
+      "errors": 0
+    },
+    {
+      "level": 20,
+      "endpoint": "decide",
+      "n": 60,
+      "p50_ms": 57.3,
+      "p95_ms": 86.8,
+      "p99_ms": 109.3,
+      "errors": 0
+    },
+    {
+      "level": 20,
+      "endpoint": "throughput",
+      "n": 60,
+      "per_s": 2.38
+    }
+  ],
+  "bottleneck": [
+    {
+      "level": 1,
+      "runs": 3,
+      "steps_ms": {
+        "intake": 5.3,
+        "retrieve": 6.2,
+        "graph": 0.0,
+        "recall": 5.5,
+        "cmdb": 0.0,
+        "extract": 6465.8,
+        "diagnose": 3087.8,
+        "assess": 1.9,
+        "review": 0.0
+      },
+      "outside_steps_ms": 34.3,
+      "run_ms": 6690.8
+    },
+    {
+      "level": 5,
+      "runs": 15,
+      "steps_ms": {
+        "intake": 5.3,
+        "retrieve": 5.9,
+        "graph": 0.0,
+        "recall": 5.4,
+        "cmdb": 0.0,
+        "extract": 6487.2,
+        "diagnose": 3047.8,
+        "assess": 1.8,
+        "review": 0.0
+      },
+      "outside_steps_ms": 38.7,
+      "run_ms": 6524.1
+    },
+    {
+      "level": 10,
+      "runs": 30,
+      "steps_ms": {
+        "intake": 5.2,
+        "retrieve": 5.9,
+        "graph": 0.0,
+        "recall": 5.4,
+        "cmdb": 0.0,
+        "extract": 6492.1,
+        "diagnose": 3062.5,
+        "assess": 1.8,
+        "review": 0.0
+      },
+      "outside_steps_ms": 49.3,
+      "run_ms": 6604.3
+    },
+    {
+      "level": 20,
+      "runs": 60,
+      "steps_ms": {
+        "intake": 5.5,
+        "retrieve": 5.9,
+        "graph": 0.0,
+        "recall": 5.3,
+        "cmdb": 0.0,
+        "extract": 6510.4,
+        "diagnose": 3182.5,
+        "assess": 1.7,
+        "review": 0.0
+      },
+      "outside_steps_ms": 63.1,
+      "run_ms": 6801.3
+    }
+  ],
+  "cost_per_triage_usd": 0.019,
+  "samples": [
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 32.78449998470023,
+      "start": 1792246030.890402
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6183.857582975179,
+      "start": 1792246037.074282
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.86075001815334,
+      "start": 1792246037.0822232
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 46.92683304892853,
+      "start": 1792246037.129154
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.13162500364706,
+      "start": 1792246037.1382961
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4705.913415993564,
+      "start": 1792246041.844239
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.635792008135468,
+      "start": 1792246041.8529541
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 52.78695799643174,
+      "start": 1792246041.905746
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.537166974041611,
+      "start": 1792246041.915295
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 9332.879374967888,
+      "start": 1792246051.2481952
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.792582968249917,
+      "start": 1792246051.25607
+    },
+    {
+      "level": 1,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 40.2203329722397,
+      "start": 1792246051.296295
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 14.157375029753894,
+      "start": 1792246051.3109498
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 17.40816596429795,
+      "start": 1792246051.31473
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 26.035374961793423,
+      "start": 1792246051.3237062
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 26.59591694828123,
+      "start": 1792246051.3248582
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 27.640624961350113,
+      "start": 1792246051.325614
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4979.051249974873,
+      "start": 1792246056.302767
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.774916011840105,
+      "start": 1792246056.3106308
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 46.322082984261215,
+      "start": 1792246056.356958
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 10.829208011273295,
+      "start": 1792246056.3678
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5359.651042032056,
+      "start": 1792246056.67062
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.060584019403905,
+      "start": 1792246056.678765
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 49.12820900790393,
+      "start": 1792246056.7278972
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.861042024567723,
+      "start": 1792246056.737777
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6258.102583000436,
+      "start": 1792246057.5728462
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.776708040386438,
+      "start": 1792246057.581755
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 57.58858402259648,
+      "start": 1792246057.63935
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 11.182916990946978,
+      "start": 1792246057.650545
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7778.771166980732,
+      "start": 1792246059.103638
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.738124965224415,
+      "start": 1792246059.113464
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 43.98716700961813,
+      "start": 1792246059.157456
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.730832974426448,
+      "start": 1792246059.1641972
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8542.84741700394,
+      "start": 1792246059.868472
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.007499971427023,
+      "start": 1792246059.87655
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 50.13791599776596,
+      "start": 1792246059.926692
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.082333999685943,
+      "start": 1792246059.935785
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4706.8697909708135,
+      "start": 1792246061.4447439
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.820832998026162,
+      "start": 1792246061.453654
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 45.13474996201694,
+      "start": 1792246061.498794
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.477167051751167,
+      "start": 1792246061.507282
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6317.632999969646,
+      "start": 1792246063.9682019
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.025333994533867,
+      "start": 1792246063.975304
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 44.62791600963101,
+      "start": 1792246064.019937
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.642292010132223,
+      "start": 1792246064.0275898
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7891.844917030539,
+      "start": 1792246064.2596722
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.449541997630149,
+      "start": 1792246064.267195
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 35.509291978087276,
+      "start": 1792246064.302707
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.011208974290639,
+      "start": 1792246064.309723
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5185.126999975182,
+      "start": 1792246064.349344
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 5.671749997418374,
+      "start": 1792246064.355052
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 26.909834006801248,
+      "start": 1792246064.381964
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.683833034709096,
+      "start": 1792246064.387653
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4719.920834002551,
+      "start": 1792246064.6557288
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.782874978147447,
+      "start": 1792246064.663604
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 48.39937499491498,
+      "start": 1792246064.712009
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.818666006438434,
+      "start": 1792246064.718838
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7763.596791017335,
+      "start": 1792246069.270901
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.806540980003774,
+      "start": 1792246069.279812
+    },
+    {
+      "level": 5,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 47.72370803402737,
+      "start": 1792246069.3275409
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5970.752125023864,
+      "start": 1792246070.280488
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.758583979215473,
+      "start": 1792246070.2893598
+    },
+    {
+      "level": 5,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 47.992083011195064,
+      "start": 1792246070.337356
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6931.568374973722,
+      "start": 1792246071.319228
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 4.8812500317581,
+      "start": 1792246071.324147
+    },
+    {
+      "level": 5,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 34.503875009249896,
+      "start": 1792246071.3586571
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7917.266083008144,
+      "start": 1792246071.9448771
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.021250007208437,
+      "start": 1792246071.953985
+    },
+    {
+      "level": 5,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 53.36600000737235,
+      "start": 1792246072.007356
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7894.21683299588,
+      "start": 1792246072.613067
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.128582976292819,
+      "start": 1792246072.620289
+    },
+    {
+      "level": 5,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 41.50429199216887,
+      "start": 1792246072.661798
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 17.604166991077363,
+      "start": 1792246072.679876
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 17.957291973289102,
+      "start": 1792246072.681988
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 23.244709009304643,
+      "start": 1792246072.686099
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 21.555792016442865,
+      "start": 1792246072.686671
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 23.618249979335815,
+      "start": 1792246072.687258
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 34.892458003014326,
+      "start": 1792246072.7009768
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 36.03879100410268,
+      "start": 1792246072.702656
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 38.85775001253933,
+      "start": 1792246072.703258
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 42.93845797656104,
+      "start": 1792246072.7061918
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 44.11537497071549,
+      "start": 1792246072.708871
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4755.58383401949,
+      "start": 1792246077.456576
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.048374988604337,
+      "start": 1792246077.467726
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 54.837915988173336,
+      "start": 1792246077.522569
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.925458008889109,
+      "start": 1792246077.5315142
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5372.0201249816455,
+      "start": 1792246078.080899
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.1575419860892,
+      "start": 1792246078.088147
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 43.77837502397597,
+      "start": 1792246078.13193
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.844584004487842,
+      "start": 1792246078.139785
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6112.642457999755,
+      "start": 1792246078.7999082
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 27.552957995794713,
+      "start": 1792246078.827565
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6160.677416948602,
+      "start": 1792246078.842676
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 17.460750008467585,
+      "start": 1792246078.860221
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 44.46554102469236,
+      "start": 1792246078.872036
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.130834030453116,
+      "start": 1792246078.880175
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 58.472208969760686,
+      "start": 1792246078.9186969
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.2192910010926425,
+      "start": 1792246078.925925
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6299.8939589597285,
+      "start": 1792246078.9859998
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 19.889166054781526,
+      "start": 1792246079.005953
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6332.338000007439,
+      "start": 1792246079.01902
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 15.307541994843632,
+      "start": 1792246079.034401
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 42.35141695244238,
+      "start": 1792246079.048308
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.67808296950534,
+      "start": 1792246079.055995
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 47.785708971787244,
+      "start": 1792246079.082191
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.64141699578613,
+      "start": 1792246079.08784
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7306.946165976115,
+      "start": 1792246080.01021
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.908582993783057,
+      "start": 1792246080.0221949
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 35.56995798135176,
+      "start": 1792246080.05777
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.347375001292676,
+      "start": 1792246080.0631309
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7582.344916998409,
+      "start": 1792246080.262235
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.006584015674889,
+      "start": 1792246080.270328
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 45.97241600276902,
+      "start": 1792246080.316305
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.028750006109476,
+      "start": 1792246080.325344
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7952.959624992218,
+      "start": 1792246080.659156
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.091124997008592,
+      "start": 1792246080.6673338
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 47.67033300595358,
+      "start": 1792246080.7150111
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.397082972805947,
+      "start": 1792246080.723418
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8800.003833021037,
+      "start": 1792246081.502676
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.55733297066763,
+      "start": 1792246081.511321
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 48.09087503235787,
+      "start": 1792246081.559417
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 11.504166992381215,
+      "start": 1792246081.570931
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5354.442499985453,
+      "start": 1792246083.4942589
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.699917012359947,
+      "start": 1792246083.502052
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 43.4791250154376,
+      "start": 1792246083.545536
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.69179202709347,
+      "start": 1792246083.554239
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4678.876791964285,
+      "start": 1792246083.7348878
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 4.4517500209622085,
+      "start": 1792246083.7393868
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 34.23112502787262,
+      "start": 1792246083.773621
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.764333007391542,
+      "start": 1792246083.779393
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6479.437042027712,
+      "start": 1792246085.40538
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 14.142999949399382,
+      "start": 1792246085.4196138
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7901.081209012773,
+      "start": 1792246085.4326138
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 18.47174996510148,
+      "start": 1792246085.451155
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 44.88512501120567,
+      "start": 1792246085.464504
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.60654201824218,
+      "start": 1792246085.47313
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 68.2509170146659,
+      "start": 1792246085.5194108
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.752457972150296,
+      "start": 1792246085.528172
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6469.642166979611,
+      "start": 1792246085.557497
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 20.237874996382743,
+      "start": 1792246085.577787
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 29.88175000064075,
+      "start": 1792246085.6076732
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.716082989238203,
+      "start": 1792246085.613397
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5968.920458981302,
+      "start": 1792246086.0320692
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.996167024131864,
+      "start": 1792246086.0431612
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 59.49849996250123,
+      "start": 1792246086.102667
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.806625021155924,
+      "start": 1792246086.11249
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4707.257708010729,
+      "start": 1792246086.278216
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.225541980005801,
+      "start": 1792246086.2855418
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 52.212375041563064,
+      "start": 1792246086.33776
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.800917014013976,
+      "start": 1792246086.346573
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6081.350749998819,
+      "start": 1792246086.4067168
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.733292015269399,
+      "start": 1792246086.413523
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 28.91645795898512,
+      "start": 1792246086.442443
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.840916990768164,
+      "start": 1792246086.449294
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6315.573500003666,
+      "start": 1792246087.0390139
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.329125026240945,
+      "start": 1792246087.045417
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 39.36429199529812,
+      "start": 1792246087.084786
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.990000012796372,
+      "start": 1792246087.0927858
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 9334.36266699573,
+      "start": 1792246088.2145548
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.554500040598214,
+      "start": 1792246088.2251992
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 48.00499998964369,
+      "start": 1792246088.27321
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.874125011265278,
+      "start": 1792246088.283096
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5810.655542009044,
+      "start": 1792246089.590061
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.582250008359551,
+      "start": 1792246089.6017401
+    },
+    {
+      "level": 10,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 56.96929100668058,
+      "start": 1792246089.658717
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5213.081499969121,
+      "start": 1792246090.741272
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.547041961923242,
+      "start": 1792246090.750915
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7256.429374974687,
+      "start": 1792246090.810691
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4708.470000012312,
+      "start": 1792246090.820996
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.647999985143542,
+      "start": 1792246090.822412
+    },
+    {
+      "level": 10,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 74.22762498026714,
+      "start": 1792246090.825147
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.507290982175618,
+      "start": 1792246090.828615
+    },
+    {
+      "level": 10,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 39.24650000408292,
+      "start": 1792246090.861662
+    },
+    {
+      "level": 10,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 36.94537497358397,
+      "start": 1792246090.865563
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5365.9115839982405,
+      "start": 1792246091.712508
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.033125021029264,
+      "start": 1792246091.720642
+    },
+    {
+      "level": 10,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 49.682750017382205,
+      "start": 1792246091.770331
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6470.662791049108,
+      "start": 1792246091.943809
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.442375030834228,
+      "start": 1792246091.954357
+    },
+    {
+      "level": 10,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 50.033000006806105,
+      "start": 1792246092.004395
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7751.057250017766,
+      "start": 1792246094.200369
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.315415957942605,
+      "start": 1792246094.20677
+    },
+    {
+      "level": 10,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 39.307500002905726,
+      "start": 1792246094.246081
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 9333.554708049633,
+      "start": 1792246094.946964
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 5.826874985359609,
+      "start": 1792246094.952847
+    },
+    {
+      "level": 10,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 21.83166705071926,
+      "start": 1792246094.974682
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8775.965916982386,
+      "start": 1792246095.868772
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.894875042140484,
+      "start": 1792246095.879766
+    },
+    {
+      "level": 10,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 50.749082991387695,
+      "start": 1792246095.930521
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8283.235917042475,
+      "start": 1792246096.566355
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.266624983865768,
+      "start": 1792246096.575715
+    },
+    {
+      "level": 10,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 39.71216699574143,
+      "start": 1792246096.615432
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 20.217874960508198,
+      "start": 1792246096.636244
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 19.848708005156368,
+      "start": 1792246096.636524
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 18.57129199197516,
+      "start": 1792246096.6374998
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 19.682541955262423,
+      "start": 1792246096.640346
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 27.364499983377755,
+      "start": 1792246096.64495
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 22.022790974006057,
+      "start": 1792246096.64628
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 27.92933298042044,
+      "start": 1792246096.650767
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 28.60120899276808,
+      "start": 1792246096.6532018
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 39.973333943635225,
+      "start": 1792246096.660179
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 35.69816704839468,
+      "start": 1792246096.6606479
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 40.464207995682955,
+      "start": 1792246096.662592
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 43.49016601918265,
+      "start": 1792246096.6666749
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 44.748582993634045,
+      "start": 1792246096.6672351
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 44.923707959242165,
+      "start": 1792246096.668467
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 48.83466596947983,
+      "start": 1792246096.670614
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 50.63316703308374,
+      "start": 1792246096.671674
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 55.08029198972508,
+      "start": 1792246096.6722171
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 52.84583300817758,
+      "start": 1792246096.672423
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 51.79383303038776,
+      "start": 1792246096.6732118
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 52.03204200370237,
+      "start": 1792246096.675928
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4790.644916007295,
+      "start": 1792246101.4281542
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.913708035834134,
+      "start": 1792246101.43716
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 56.419166969135404,
+      "start": 1792246101.4935849
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.305457992013544,
+      "start": 1792246101.502902
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5018.259292002767,
+      "start": 1792246101.658617
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 27.48770802281797,
+      "start": 1792246101.686172
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5054.428624978755,
+      "start": 1792246101.707639
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 18.08587502455339,
+      "start": 1792246101.725791
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5057.225333002862,
+      "start": 1792246101.7289028
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5062.7155840047635,
+      "start": 1792246101.733338
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.407707977108657,
+      "start": 1792246101.736365
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 53.49874997045845,
+      "start": 1792246101.739674
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.318040996324271,
+      "start": 1792246101.740698
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.576500007417053,
+      "start": 1792246101.747256
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 60.58341701282188,
+      "start": 1792246101.786378
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.785583005286753,
+      "start": 1792246101.7911732
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 70.65816700924188,
+      "start": 1792246101.807026
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.9583750339224935,
+      "start": 1792246101.814992
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 76.86562498565763,
+      "start": 1792246101.817566
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.827332973945886,
+      "start": 1792246101.8224
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5452.533499978017,
+      "start": 1792246102.1249611
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.383916050661355,
+      "start": 1792246102.1334221
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 47.00241598766297,
+      "start": 1792246102.1804302
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.153125003445894,
+      "start": 1792246102.188596
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6020.1030829921365,
+      "start": 1792246102.6650612
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.920875028707087,
+      "start": 1792246102.6740842
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 77.57187500828877,
+      "start": 1792246102.751662
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6088.512999995146,
+      "start": 1792246102.755199
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 11.624082981143147,
+      "start": 1792246102.763297
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 25.126374966930598,
+      "start": 1792246102.780401
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6157.976624963339,
+      "start": 1792246102.8181682
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 16.62816695170477,
+      "start": 1792246102.8348548
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 86.45041700219736,
+      "start": 1792246102.8668559
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.18970799446106,
+      "start": 1792246102.8750541
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6223.478875006549,
+      "start": 1792246102.899412
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 76.39483304228634,
+      "start": 1792246102.911253
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 19.236582971643656,
+      "start": 1792246102.918703
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.9855420044623315,
+      "start": 1792246102.9192462
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 63.33154201274738,
+      "start": 1792246102.982038
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.829541991464794,
+      "start": 1792246102.988877
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6343.007666990161,
+      "start": 1792246102.993789
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.442332994192839,
+      "start": 1792246103.005289
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 36.81874996982515,
+      "start": 1792246103.042112
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.87824999820441,
+      "start": 1792246103.047999
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7769.733541994356,
+      "start": 1792246104.4303832
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 19.09758400870487,
+      "start": 1792246104.4495602
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7817.446917004418,
+      "start": 1792246104.463729
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 37.14529098942876,
+      "start": 1792246104.500944
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7865.776874998119,
+      "start": 1792246104.502304
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 22.215709032025188,
+      "start": 1792246104.524569
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7882.1487500099465,
+      "start": 1792246104.5506198
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 104.3642500299029,
+      "start": 1792246104.5539289
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7883.864250034094,
+      "start": 1792246104.556084
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.30166699597612,
+      "start": 1792246104.562238
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 25.226249999832362,
+      "start": 1792246104.575903
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 20.632458035834134,
+      "start": 1792246104.576763
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 77.09570898441598,
+      "start": 1792246104.578043
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.744790996890515,
+      "start": 1792246104.584795
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 84.79579200502485,
+      "start": 1792246104.609368
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.666916036512703,
+      "start": 1792246104.614043
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 109.28091697860509,
+      "start": 1792246104.685188
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 111.64750001626089,
+      "start": 1792246104.688413
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.693999981507659,
+      "start": 1792246104.69189
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.344208028167486,
+      "start": 1792246104.6947641
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8147.3364169942215,
+      "start": 1792246104.8205519
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 4.7562080435454845,
+      "start": 1792246104.825365
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 26.94333397084847,
+      "start": 1792246104.8523111
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.598417017608881,
+      "start": 1792246104.857919
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8306.684499955736,
+      "start": 1792246104.9429388
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 19.97691602446139,
+      "start": 1792246104.9629738
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8317.771625006571,
+      "start": 1792246104.9803689
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.696624987758696,
+      "start": 1792246104.9911199
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 34.477333014365286,
+      "start": 1792246104.9974568
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.695916992612183,
+      "start": 1792246105.004162
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 44.90379197522998,
+      "start": 1792246105.0360289
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.4092500251717865,
+      "start": 1792246105.042445
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8850.601458980236,
+      "start": 1792246105.5178392
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.957959002349526,
+      "start": 1792246105.5278778
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 39.9135000188835,
+      "start": 1792246105.567797
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.872290967497975,
+      "start": 1792246105.575681
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4933.951791957952,
+      "start": 1792246107.9819698
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.147666045464575,
+      "start": 1792246107.991202
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 64.43837500410154,
+      "start": 1792246108.055646
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.424166997428983,
+      "start": 1792246108.0640829
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5193.8947919989005,
+      "start": 1792246108.0689652
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.738416966982186,
+      "start": 1792246108.075779
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 66.05583295458928,
+      "start": 1792246108.141839
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.422124977689236,
+      "start": 1792246108.148272
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6135.542042029556,
+      "start": 1792246108.324159
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.366249956656247,
+      "start": 1792246108.333677
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 45.69583403645083,
+      "start": 1792246108.3793778
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.345958962105215,
+      "start": 1792246108.3867362
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6963.800708006602,
+      "start": 1792246108.786216
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.499542007688433,
+      "start": 1792246108.795821
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 41.74991603940725,
+      "start": 1792246108.837576
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.50841699866578,
+      "start": 1792246108.846095
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7919.364458008204,
+      "start": 1792246109.4222898
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.138875000644475,
+      "start": 1792246109.43152
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 48.46416600048542,
+      "start": 1792246109.4799879
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.063291956204921,
+      "start": 1792246109.488062
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7786.914707976393,
+      "start": 1792246109.601921
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 13.332750007975847,
+      "start": 1792246109.615333
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4935.518249985762,
+      "start": 1792246109.6274219
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 20.19383298465982,
+      "start": 1792246109.647697
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 46.21087497798726,
+      "start": 1792246109.661549
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.843666990287602,
+      "start": 1792246109.670401
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 55.38779101334512,
+      "start": 1792246109.70309
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 7.607917010318488,
+      "start": 1792246109.710708
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5210.2177499909885,
+      "start": 1792246109.824278
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8078.054375015199,
+      "start": 1792246109.82532
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 5.869459011591971,
+      "start": 1792246109.830215
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.854875013232231,
+      "start": 1792246109.832214
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5205.365416011773,
+      "start": 1792246109.900141
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 84.28641699720174,
+      "start": 1792246109.914504
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 17.484000010881573,
+      "start": 1792246109.917684
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 86.4944169879891,
+      "start": 1792246109.918711
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.07804098399356,
+      "start": 1792246109.920591
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.603499954100698,
+      "start": 1792246109.923323
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5361.912416992709,
+      "start": 1792246109.94672
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 28.70316698681563,
+      "start": 1792246109.975465
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 77.05333299236372,
+      "start": 1792246109.994741
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.889959003776312,
+      "start": 1792246109.99964
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7257.187167007942,
+      "start": 1792246110.020496
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 15.466374985408038,
+      "start": 1792246110.036005
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 65.13916695257649,
+      "start": 1792246110.040608
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8251.507875043899,
+      "start": 1792246110.042691
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.036416998133063,
+      "start": 1792246110.044652
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 4.67766699148342,
+      "start": 1792246110.0474172
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 32.74812496965751,
+      "start": 1792246110.068757
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 3.0490000499412417,
+      "start": 1792246110.0718138
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 40.65400001127273,
+      "start": 1792246110.088074
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 3.04733298253268,
+      "start": 1792246110.09113
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7582.581499998923,
+      "start": 1792246110.501837
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 15.882166975643486,
+      "start": 1792246110.517795
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4956.822915992234,
+      "start": 1792246110.532532
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 19.459208007901907,
+      "start": 1792246110.552064
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 49.75066601764411,
+      "start": 1792246110.567552
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 9.13008296629414,
+      "start": 1792246110.576693
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 51.66908400133252,
+      "start": 1792246110.603738
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.171500019263476,
+      "start": 1792246110.609917
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6080.303249997087,
+      "start": 1792246110.938238
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.8540839604102075,
+      "start": 1792246110.946167
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 34.12337496411055,
+      "start": 1792246110.9802969
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 5.888624989893287,
+      "start": 1792246110.986197
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8280.332874972373,
+      "start": 1792246111.269223
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.813665994443,
+      "start": 1792246111.279119
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 57.26558400783688,
+      "start": 1792246111.336389
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.664082968607545,
+      "start": 1792246111.345063
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7801.181333023123,
+      "start": 1792246112.8436391
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8286.492958955932,
+      "start": 1792246112.848738
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.380291983485222,
+      "start": 1792246112.8520918
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.649375020060688,
+      "start": 1792246112.8554618
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7904.226416023448,
+      "start": 1792246112.908409
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.040708024054766,
+      "start": 1792246112.916512
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 67.95925000915304,
+      "start": 1792246112.920058
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 68.34474997594953,
+      "start": 1792246112.923809
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 8.637707971502095,
+      "start": 1792246112.928703
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 6.754166970495135,
+      "start": 1792246112.930571
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 62.28804204147309,
+      "start": 1792246112.978803
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "create",
+      "status": 201,
+      "ms": 4.605041991453618,
+      "start": 1792246112.9834151
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5812.747917021625,
+      "start": 1792246113.961057
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.925167007371783,
+      "start": 1792246113.972071
+    },
+    {
+      "level": 20,
+      "user": 14,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 58.903333032503724,
+      "start": 1792246114.030978
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 4696.365959011018,
+      "start": 1792246114.7875352
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.346457991749048,
+      "start": 1792246114.7989938
+    },
+    {
+      "level": 20,
+      "user": 18,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 57.942209008615464,
+      "start": 1792246114.856941
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6974.4664580211975,
+      "start": 1792246115.038573
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.358416009694338,
+      "start": 1792246115.0490198
+    },
+    {
+      "level": 20,
+      "user": 13,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 48.80762501852587,
+      "start": 1792246115.097833
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5315.043458016589,
+      "start": 1792246115.235651
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 5.058124952483922,
+      "start": 1792246115.240782
+    },
+    {
+      "level": 20,
+      "user": 1,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 29.86287500243634,
+      "start": 1792246115.2706492
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6255.9712920337915,
+      "start": 1792246115.926392
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.618042036890984,
+      "start": 1792246115.93611
+    },
+    {
+      "level": 20,
+      "user": 8,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 51.709874998778105,
+      "start": 1792246115.9878259
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 5202.948333986569,
+      "start": 1792246116.189176
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 9.02825000230223,
+      "start": 1792246116.198295
+    },
+    {
+      "level": 20,
+      "user": 9,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 49.77091698674485,
+      "start": 1792246116.248071
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6972.7228750125505,
+      "start": 1792246116.460806
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 27.66904199961573,
+      "start": 1792246116.488575
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6439.246958005242,
+      "start": 1792246116.511073
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 14.758917037397623,
+      "start": 1792246116.5259142
+    },
+    {
+      "level": 20,
+      "user": 4,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 46.829166007228196,
+      "start": 1792246116.535409
+    },
+    {
+      "level": 20,
+      "user": 3,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 41.10541701084003,
+      "start": 1792246116.5670242
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8236.105290998239,
+      "start": 1792246117.0822139
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 3.543958009686321,
+      "start": 1792246117.0858
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8733.581000007689,
+      "start": 1792246117.120338
+    },
+    {
+      "level": 20,
+      "user": 10,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 36.20529203908518,
+      "start": 1792246117.1220071
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 3.721625020261854,
+      "start": 1792246117.1241019
+    },
+    {
+      "level": 20,
+      "user": 5,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 20.530959009192884,
+      "start": 1792246117.144636
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7882.269290974364,
+      "start": 1792246117.881921
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7838.804875034839,
+      "start": 1792246117.883462
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7310.631875006948,
+      "start": 1792246117.887338
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.789707975462079,
+      "start": 1792246117.889781
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 7.746749965008348,
+      "start": 1792246117.891258
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.204625009559095,
+      "start": 1792246117.8935838
+    },
+    {
+      "level": 20,
+      "user": 2,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 83.91412498895079,
+      "start": 1792246117.9736981
+    },
+    {
+      "level": 20,
+      "user": 17,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 86.78437501657754,
+      "start": 1792246117.978046
+    },
+    {
+      "level": 20,
+      "user": 6,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 86.5876249736175,
+      "start": 1792246117.980174
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7783.262374985497,
+      "start": 1792246118.39319
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 10.028666001744568,
+      "start": 1792246118.403316
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8547.711541992612,
+      "start": 1792246118.471044
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8767.160916991998,
+      "start": 1792246118.4778829
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.390582981519401,
+      "start": 1792246118.479502
+    },
+    {
+      "level": 20,
+      "user": 12,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 78.81533296313137,
+      "start": 1792246118.482136
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.720582954585552,
+      "start": 1792246118.4846668
+    },
+    {
+      "level": 20,
+      "user": 7,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 49.47554098907858,
+      "start": 1792246118.528982
+    },
+    {
+      "level": 20,
+      "user": 15,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 51.85670801438391,
+      "start": 1792246118.5365279
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 7221.800042025279,
+      "start": 1792246118.566881
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 6.272665981668979,
+      "start": 1792246118.573225
+    },
+    {
+      "level": 20,
+      "user": 16,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 36.70174995204434,
+      "start": 1792246118.609931
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6484.123791975435,
+      "start": 1792246119.412842
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 6484.367125027347,
+      "start": 1792246119.4149451
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.325707982294261,
+      "start": 1792246119.421261
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 8.240166993346065,
+      "start": 1792246119.423249
+    },
+    {
+      "level": 20,
+      "user": 11,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 62.27879202924669,
+      "start": 1792246119.483545
+    },
+    {
+      "level": 20,
+      "user": 19,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 64.44929202552885,
+      "start": 1792246119.4877021
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "triage",
+      "status": 200,
+      "ms": 8767.665167048108,
+      "start": 1792246121.751091
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "read",
+      "status": 200,
+      "ms": 11.531875003129244,
+      "start": 1792246121.762721
+    },
+    {
+      "level": 20,
+      "user": 0,
+      "endpoint": "decide",
+      "status": 200,
+      "ms": 62.75970896240324,
+      "start": 1792246121.8254862
+    }
+  ]
+}
