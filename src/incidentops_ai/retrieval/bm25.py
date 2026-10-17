@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from incidentops_ai.retrieval.chunking import Chunk
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk
+from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, RetrievedChunk
 
 K1 = 1.2
 B = 0.75
@@ -95,7 +95,12 @@ class Bm25Retriever:
         }
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         if k <= 0:
             raise ValueError("k must be positive")

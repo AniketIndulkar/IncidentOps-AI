@@ -10,7 +10,7 @@ import numpy as np
 
 from incidentops_ai.retrieval.chunking import Chunk
 from incidentops_ai.retrieval.embeddings import Embedder
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk
+from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, RetrievedChunk
 
 
 class InMemoryDenseRetriever:
@@ -33,7 +33,12 @@ class InMemoryDenseRetriever:
         return cls(chunks, matrix, embedder)
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         if k <= 0:
             raise ValueError("k must be positive")

@@ -49,7 +49,7 @@ class StaticRetriever:
         self.results = results
         self.asked: list[tuple[str, int, RetrievalFilter]] = []
 
-    async def retrieve(self, query: str, *, k: int, filters: RetrievalFilter):
+    async def retrieve(self, query: str, *, k: int, filters: RetrievalFilter, hints=None):
         self.asked.append((query, k, filters))
         return self.results[:k]
 

@@ -193,7 +193,7 @@ async def test_a_failing_retrieval_is_a_502_problem_with_no_model_call_and_a_fre
     settings, session_factory
 ):
     class Broken(StaticRetriever):
-        async def retrieve(self, query, *, k, filters):
+        async def retrieve(self, query, *, k, filters, hints=None):
             raise EmbeddingError("embedding request timed out")
 
     provider = FakeProvider([model_says(cause("Leak.", GOOD))])

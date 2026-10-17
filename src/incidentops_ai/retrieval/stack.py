@@ -17,7 +17,12 @@ from incidentops_ai.retrieval.embeddings import Embedder
 from incidentops_ai.retrieval.hybrid import HybridRetriever
 from incidentops_ai.retrieval.orm import ChunkRow, DocumentRow
 from incidentops_ai.retrieval.rerank import Reranker, RerankingRetriever
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk, Retriever
+from incidentops_ai.retrieval.retriever import (
+    QueryHints,
+    RetrievalFilter,
+    RetrievedChunk,
+    Retriever,
+)
 from incidentops_ai.retrieval.store import PgVectorRetriever, load_chunks
 
 STACKS: Sequence[str] = ("dense", "hybrid", "hybrid-rerank")
@@ -65,10 +70,15 @@ class DbBm25Retriever:
         self._rebuild = asyncio.Lock()
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         index = await self._index_for(filters.tenant_id)
-        return await index.retrieve(query, k=k, filters=filters)
+        return await index.retrieve(query, k=k, filters=filters, hints=hints)
 
     async def _index_for(self, tenant_id: str) -> Bm25Retriever:
         async with self._session_factory() as session:

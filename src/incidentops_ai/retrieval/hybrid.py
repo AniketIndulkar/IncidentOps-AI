@@ -10,7 +10,12 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import replace
 
-from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk, Retriever
+from incidentops_ai.retrieval.retriever import (
+    QueryHints,
+    RetrievalFilter,
+    RetrievedChunk,
+    Retriever,
+)
 
 RRF_K = 60
 CANDIDATE_DEPTH = 50  # each source contributes its top 50
@@ -51,13 +56,18 @@ class HybridRetriever:
         self._depth = depth
 
     async def retrieve(
-        self, query: str, *, k: int, filters: RetrievalFilter
+        self,
+        query: str,
+        *,
+        k: int,
+        filters: RetrievalFilter,
+        hints: QueryHints | None = None,
     ) -> list[RetrievedChunk]:
         if k <= 0:
             raise ValueError("k must be positive")
         fetch = max(self._depth, k)  # asking for more than the depth must still work
         dense, sparse = await asyncio.gather(
-            self._dense.retrieve(query, k=fetch, filters=filters),
-            self._sparse.retrieve(query, k=fetch, filters=filters),
+            self._dense.retrieve(query, k=fetch, filters=filters, hints=hints),
+            self._sparse.retrieve(query, k=fetch, filters=filters, hints=hints),
         )
         return reciprocal_rank_fusion([dense, sparse])[:k]
