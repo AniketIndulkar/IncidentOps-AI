@@ -30,6 +30,7 @@ from incidentops_ai.errors import (
     LLMNotConfiguredError,
     MemoryAlreadySupersededError,
     NotFoundError,
+    OpsNotConfiguredError,
     RateLimitExceededError,
     RequestInProgressError,
     RetrievalFailedError,
@@ -96,6 +97,7 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     # (matches the IETF Idempotency-Key draft). 409 is reserved for "retry later" conflicts.
     ConflictError: 422,
     LLMNotConfiguredError: 503,
+    OpsNotConfiguredError: 503,
     RetrievalFailedError: 502,  # a dependency (embedding API, reranker) failed, not the caller
     UnsupportedMediaError: 415,
     AttachmentTooLargeError: 413,

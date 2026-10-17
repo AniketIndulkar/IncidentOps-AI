@@ -159,3 +159,9 @@ class WorkflowAbandonedError(WorkflowFailedError):
             "abandoned. Start a new run.",
         )
         self.run_id = run_id
+
+
+class OpsNotConfiguredError(DomainError):
+    """The ops database (W09) is not configured: INCIDENTOPS_OPS_DATABASE_URL is not set."""
+
+    code = "ops_not_configured"

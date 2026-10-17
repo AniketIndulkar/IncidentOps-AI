@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     jira_url: str | None = None
     jira_token: SecretStr | None = None
     jira_project: str = "OPS"
+    # The ops database for text-to-SQL (W09): a login granted only incidentops_ops_reader.
+    ops_database_url: str | None = None
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -73,6 +75,7 @@ class Settings(BaseSettings):
         "approval_secret",
         "jira_url",
         "jira_token",
+        "ops_database_url",
         mode="before",
     )
     @classmethod

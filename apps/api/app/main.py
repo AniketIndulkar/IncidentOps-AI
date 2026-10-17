@@ -6,10 +6,11 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from neo4j import AsyncGraphDatabase
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, memory, workflow
+from app.routes import analysis, attachments, incidents, memory, ops, workflow
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -20,6 +21,7 @@ from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMProvider
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
+from incidentops_ai.ops.database import OpsDatabase
 from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
@@ -143,6 +145,12 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
+            # The ops database (W09) is read through its own engine, as the read-only role.
+            app.state.ops_database = None
+            if settings.ops_database_url:
+                ops_engine = create_async_engine(settings.ops_database_url, pool_pre_ping=True)
+                resources.push_async_callback(ops_engine.dispose)
+                app.state.ops_database = OpsDatabase(ops_engine)
             app.state.api_token = settings.api_token
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
@@ -170,6 +178,7 @@ def create_app(
     app.include_router(attachments.router)
     app.include_router(workflow.router)
     app.include_router(memory.router)
+    app.include_router(ops.router)
     return app
 
 

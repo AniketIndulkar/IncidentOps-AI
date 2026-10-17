@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from incidentops_ai.errors import (
     LLMNotConfiguredError,
+    OpsNotConfiguredError,
     RateLimitExceededError,
     UnauthorizedError,
 )
@@ -15,6 +16,7 @@ from incidentops_ai.graph.store import GraphStore
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
+from incidentops_ai.ops.database import OpsDatabase
 from incidentops_ai.retrieval.retriever import Retriever
 from incidentops_ai.workflow.runner import WorkflowRunner
 
@@ -45,6 +47,15 @@ def get_llm_provider(request: Request) -> LLMProvider:
     if provider is None:
         raise LLMNotConfiguredError("LLM features are off: OPENAI_API_KEY is not configured.")
     return provider
+
+
+def get_ops_database(request: Request) -> OpsDatabase:
+    database = request.app.state.ops_database
+    if database is None:
+        raise OpsNotConfiguredError(
+            "The ops database is off: INCIDENTOPS_OPS_DATABASE_URL is not set."
+        )
+    return database
 
 
 def get_llm_config(request: Request) -> ModelConfig:
@@ -138,3 +149,4 @@ Retrieval = Annotated[Retriever, Depends(get_retriever)]
 Graph = Annotated[GraphStore | None, Depends(get_graph_store)]
 AttachmentProcessorDep = Annotated[AttachmentProcessor, Depends(get_attachment_processor)]
 WorkflowRunnerDep = Annotated[WorkflowRunner, Depends(get_workflow_runner)]
+OpsDatabaseDep = Annotated[OpsDatabase, Depends(get_ops_database)]
