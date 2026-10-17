@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # workflow run opens its ticket there. The secret signs approvals; the model never sees it.
     tickets_db: Path | None = None
     approval_secret: SecretStr | None = None
+    # Jira-style ticket API (W09). When set, it is the ticket system (it wins over the MCP server).
+    jira_url: str | None = None
+    jira_token: SecretStr | None = None
+    jira_project: str = "OPS"
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -67,6 +71,8 @@ class Settings(BaseSettings):
         "neo4j_password",
         "tickets_db",
         "approval_secret",
+        "jira_url",
+        "jira_token",
         mode="before",
     )
     @classmethod

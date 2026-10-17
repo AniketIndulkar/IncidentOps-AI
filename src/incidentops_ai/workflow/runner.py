@@ -85,6 +85,10 @@ class WorkflowRunner:
         self._prepared = asyncio.Lock()
 
     @property
+    def deps(self) -> WorkflowDeps:
+        return self._deps
+
+    @property
     def graph(self):
         """The compiled graph (tests use it to try to get past the gate without the runner)."""
         return self._graph
