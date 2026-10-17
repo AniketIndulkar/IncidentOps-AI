@@ -20,6 +20,7 @@ from incidentops_ai.graph.store import GraphStore
 from incidentops_ai.integrations.cmdb import CmdbClient
 from incidentops_ai.integrations.jira import JiraClient, JiraTicketSink
 from incidentops_ai.llm.factory import build_model_config, build_provider
+from incidentops_ai.llm.gateway import Gateway
 from incidentops_ai.llm.provider import LLMProvider
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
@@ -77,8 +78,20 @@ def create_app(
                 owned_provider = build_provider(settings)
             # W10: every model call goes through the guard (canary, output PII), whoever made the
             # provider; closing it stays with whoever made it.
+            # W11: through the gateway (routes, fallback, breaker), inside the guard, so the
+            # canary is checked whichever model answered.
             inner = llm_provider or owned_provider
-            app.state.llm_provider = GuardedProvider(inner) if inner is not None else None
+            app.state.llm_provider = (
+                GuardedProvider(
+                    Gateway(
+                        inner,
+                        settings.llm_routes,
+                        per_model_per_minute=settings.llm_per_model_per_minute,
+                    )
+                )
+                if inner is not None
+                else None
+            )
             # The retrieval stack embeds questions with OpenAI, so it needs the key too.
             if retriever is None and settings.openai_api_key:
                 owned_embedder = build_embedder(settings)
