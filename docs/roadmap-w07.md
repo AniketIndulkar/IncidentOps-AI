@@ -3,8 +3,15 @@
 Source: Jira epic **AIENG-8** and tasks **AIENG-44 to AIENG-48**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W06 (branch `feat/w07-langgraph-workflow`).
 
-> **Status:** design written before any workflow code. Decisions are mine (W05 to W13 built back to
-> back at the user's request).
+> **Status, 17 Oct 2026: built and measured.** Design written before any workflow code; decisions
+> are mine (W05 to W13 built back to back at the user's request).
+>
+> **Result:** H24 to H28 hold, H26 only in part. Task success 11/12 with real models; the concurrent
+> layout is 34% faster at the median; a crashed run resumed without a model call (a test does it in a separate process);
+> LangGraph adds 6 ms (38 ms with PostgreSQL checkpoints). Two real runs of the same case disagreed on
+> 4 of 12, three of them because the extraction listed three open questions once and four once, at the
+> W02 review threshold. Findings: [workflow-findings](../evals/workflow/runs/2026-10-17-workflow-findings.md);
+> decision: [ADR-004](adr/004-agentic-vs-deterministic-steps.md).
 
 ## Goal of the week
 

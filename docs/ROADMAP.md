@@ -132,6 +132,11 @@ Plan and hypotheses: [roadmap-w06.md](roadmap-w06.md). Built 17 Oct, stacked on 
 - AIENG-47 Parallelize graph lookup ‖ doc retrieval; measure latency, prove correctness unchanged.
 - AIENG-48 E2E task success + **ADR: agentic vs deterministic steps**.
 
+✅ Built 17 Oct, stacked on W06: [roadmap-w07](roadmap-w07.md). Task success 11/12 with real models; the two
+model calls share a step (−34% median); checkpoints in PostgreSQL, resume without repeating model calls;
+LangGraph +6 ms (+38 ms with checkpoints). Findings:
+[workflow-findings](../evals/workflow/runs/2026-10-17-workflow-findings.md); decision: [ADR-004](adr/004-agentic-vs-deterministic-steps.md).
+
 **W08 · HITL, memory, MCP** (AIENG-9)
 - AIENG-49 Interrupt + approve/reject/resume, audited.
 - AIENG-50 Scoped long-term memory; cannot mutate audit history.
@@ -214,11 +219,15 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W06 complete; `v0.1` not tagged yet)
+## Current state (17 Oct 2026, W07 complete; `v0.1` not tagged yet)
 
-- **W01 to W06 complete** (AIENG-2, 15–43). W03 and W04 were built on 16 Oct, W05 and W06 on 17 Oct,
-  as stacked pull requests (#3 W03, #4 W04, #5 W05, W06 on top). Next: W07 (LangGraph), AIENG-44.
-  Waiting on you: the `v0.1` tag, merging the stack, and the Jira updates.
+- **W01 to W07 complete** (AIENG-2, 15–48). W03 and W04 were built on 16 Oct, W05 to W07 on 17 Oct,
+  as stacked pull requests (#3 W03, #4 W04, #5 W05, #6 W06, W07 on top). Next: W08 (human in the loop,
+  memory, MCP), AIENG-49. Waiting on you: the `v0.1` tag, merging the stack, and the Jira updates.
+- Workflow (W07, `src/incidentops_ai/workflow/`): a LangGraph state machine over the existing steps,
+  routing by reason codes in code, checkpoints in PostgreSQL (`AsyncPostgresSaver`, tables created by
+  the saver), `workflow_runs` records, and the triage API: `POST /incidents/{id}/triage`, `GET` a run
+  with its state and step log, `POST .../resume` for a failed run. Benchmark in `workflow.benchmark`.
 - Multimodal evidence (W06, `src/incidentops_ai/multimodal/`): attachments (PNG, JPEG, PDF) checked,
   routed and stored per incident; PDF text layer, OCR with line boxes, vision transcripts; evidence
   `A1..An` in the diagnosis (prompt `diagnose_incident/v2`); a generated benchmark and its runner.
@@ -344,6 +353,9 @@ Hard dependencies to protect:
 28. **Vision transcripts can misread and still be cited faithfully** (`mbznw` for `mbzrw` in the W06 run). A citation of an attachment proves what the transcript says. Candidate mitigation: OCR the image too and flag identifiers the two disagree on.
 29. **OCR can drop whole lines silently**, with high confidence on the lines it keeps. Do not treat OCR text as complete.
 30. **The routing rule was read off 14 synthetic assets.** Real, noisy screenshots and scans are needed to trust it (W11 golden set).
+31. **The workflow route is deterministic about noisy inputs.** Three of 12 cases changed route between two real runs because the extraction listed 3 open questions once and 4 once (`many_open_questions` fires at 4). Decide in W08/W09 whether a count a model chooses belongs in the route.
+32. **A model call cancelled by a failing sibling step is not recorded** in `llm_runs` (found in W07 testing). Spend and audit can under-count; W08 budgets (AIENG-51) depend on that record. Fix with W08 fault injection (AIENG-53).
+33. **Checkpoints hold incident data** in the incident database, with no retention yet (W12/W13).
 
 ## Weekly cadence
 
