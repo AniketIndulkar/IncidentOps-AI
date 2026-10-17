@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.main import create_app
 from incidentops_ai.config import Settings
+from incidentops_ai.db import create_engine, create_session_factory
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -59,8 +60,9 @@ async def client(settings: Settings) -> AsyncIterator[AsyncClient]:
 
 @pytest.fixture
 async def session_factory(settings: Settings) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
-    engine = create_async_engine(settings.database_url)
-    yield async_sessionmaker(engine, expire_on_commit=False)
+    # The app's engine and sessions (pool_pre_ping included), so tests see the production pool.
+    engine = create_engine(settings)
+    yield create_session_factory(engine)
     await engine.dispose()
 
 
