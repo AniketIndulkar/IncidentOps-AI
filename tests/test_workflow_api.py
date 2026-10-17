@@ -46,7 +46,7 @@ async def test_triage_runs_the_workflow_and_shows_its_steps(settings):
     assert started.status_code == 200
     body = started.json()
     assert body["run"]["status"] == "awaiting_approval" and body["route"] == "recommend"
-    assert body["steps"][0]["node"] == "intake" and len(body["steps"]) == 7
+    assert body["steps"][0]["node"] == "intake" and len(body["steps"]) == 8
     assert body["recommendation"]["runbooks"][0]["doc_id"] == "rb-orders-db-pool"
     assert shown.json()["diagnosis"]["status"] == "answered"
     assert [r["id"] for r in listed.json()] == [run_id]

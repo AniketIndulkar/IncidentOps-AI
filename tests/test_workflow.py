@@ -119,6 +119,7 @@ async def test_a_clear_incident_is_recommended_with_its_cited_runbook(session_fa
         "extract",
         "retrieve",
         "graph",
+        "recall",
         "diagnose",
         "assess",
         "recommend",

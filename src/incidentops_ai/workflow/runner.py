@@ -26,6 +26,7 @@ from incidentops_ai.errors import (
     WorkflowRunNotFoundError,
 )
 from incidentops_ai.incidents.repository import IncidentRepository
+from incidentops_ai.memory.repository import MemoryRepository
 from incidentops_ai.workflow.graph import Decision, WorkflowDeps, build_workflow, initial_state
 from incidentops_ai.workflow.orm import WorkflowEventRow, WorkflowRunRow
 
@@ -137,12 +138,18 @@ class WorkflowRunner:
                     f"Run {run_id} is {run.status}; only a run awaiting approval takes a decision."
                 )
             run.status = "running"
-            event = self._event(
-                run_id,
-                "decided",
-                {"decision": decision.decision, "comment": decision.comment},
-                actor=decision.reviewer,
-            )
+            data = {"decision": decision.decision, "comment": decision.comment}
+            if decision.memory:  # the reviewer's note for the service, in the same transaction
+                incident = await IncidentRepository(session).get(run.incident_id)
+                note = await MemoryRepository(session).add(
+                    tenant_id=run.tenant_id,
+                    service=incident.service,
+                    text=decision.memory,
+                    author=decision.reviewer,
+                    source_run_id=run_id,
+                )
+                data["memory_id"] = str(note.id)
+            event = self._event(run_id, "decided", data, actor=decision.reviewer)
             session.add(event)
             await session.commit()
         resume = {**decision.model_dump(), "decision_id": str(event.id)}

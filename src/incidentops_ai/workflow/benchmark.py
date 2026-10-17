@@ -177,7 +177,9 @@ async def run_plain(deps: WorkflowDeps, incident_id: uuid.UUID) -> dict:
             state.update(update)
 
     merge(await step["intake"](state))
-    merge(*await asyncio.gather(step["retrieve"](state), step["graph"](state)))
+    merge(
+        *await asyncio.gather(step["retrieve"](state), step["graph"](state), step["recall"](state))
+    )
     merge(*await asyncio.gather(step["extract"](state), step["diagnose"](state)))
     merge(await step["assess"](state))
     merge(await step[state["route"]](state))

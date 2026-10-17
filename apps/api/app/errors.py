@@ -28,6 +28,7 @@ from incidentops_ai.errors import (
     InvalidAttachmentError,
     LLMCallFailedError,
     LLMNotConfiguredError,
+    MemoryAlreadySupersededError,
     NotFoundError,
     RateLimitExceededError,
     RequestInProgressError,
@@ -101,6 +102,7 @@ _DOMAIN_STATUS: dict[type[DomainError], int] = {
     ExtractionUnavailableError: 503,
     WorkflowNotResumableError: 409,
     WorkflowNotAwaitingDecisionError: 409,
+    MemoryAlreadySupersededError: 409,
     WorkflowFailedError: 500,  # progress is saved; the message names the run to resume
     UnauthorizedError: 401,
     RateLimitExceededError: 429,

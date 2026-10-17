@@ -36,6 +36,7 @@ from incidentops_ai.graph.store import GraphStore, GraphUnavailableError
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig
 from incidentops_ai.llm.runs import LLMRunRepository
+from incidentops_ai.memory.repository import RECALL_LIMIT, MemoryRepository, memory_evidence
 from incidentops_ai.multimodal.attachments import (
     AttachmentRepository,
     AttachmentText,
@@ -67,6 +68,7 @@ class Decision(BaseModel):
     decision: Literal["approve", "reject"]
     reviewer: str = Field(min_length=1, max_length=128)
     comment: str | None = Field(default=None, max_length=2000)
+    memory: str | None = Field(default=None, max_length=2000)  # a note for the service (AIENG-50)
 
 
 class RecordedDecision(Decision):
@@ -87,6 +89,7 @@ class WorkflowState(TypedDict, total=False):
     evidence: list[dict]
     retrieval_error: str | None
     service_context: dict | None
+    memories: list[dict]  # the notes recalled for this run (W08), as they were when recalled
     graph_status: str
     diagnosis: dict | None
     diagnosis_status: str
@@ -271,6 +274,25 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
             "_outcome": "ok" if context else "unknown service",
         }
 
+    async def recall(state: WorkflowState) -> dict:
+        async with deps.sessions() as session:
+            notes = await MemoryRepository(session).current(
+                tenant_id=state["tenant_id"],
+                service=state["incident"]["service"],
+                limit=RECALL_LIMIT,
+            )
+        memories = [
+            {
+                "id": str(n.id),
+                "service": n.service,
+                "text": n.text,
+                "author": n.author,
+                "created_at": n.created_at.isoformat(),
+            }
+            for n in notes
+        ]
+        return {"memories": memories, "_outcome": f"{len(memories)} notes"}
+
     async def diagnose(state: WorkflowState) -> dict:
         retrieved = [
             RetrievedChunk(chunk=_chunk(e["chunk"]), score=e["score"], rank=e["rank"])
@@ -284,7 +306,11 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         result = await diagnose_from_evidence(
             deps.provider,
             query=_query(state),
-            evidence=[*number_evidence(retrieved), *attachments],
+            evidence=[
+                *number_evidence(retrieved),
+                *attachments,
+                *memory_evidence(state.get("memories", []), tenant_id=state["tenant_id"]),
+            ],
             config=deps.config,
             stack=deps.retriever.name,
         )
@@ -375,6 +401,7 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         "extract": extract,
         "retrieve": retrieve,
         "graph": graph,
+        "recall": recall,
         "diagnose": diagnose,
         "assess": assess,
         "recommend": recommend,
@@ -395,15 +422,17 @@ def build_workflow(deps: WorkflowDeps, *, checkpointer=None, parallel: bool = Tr
     if parallel:
         builder.add_edge("intake", "retrieve")
         builder.add_edge("intake", "graph")
-        builder.add_edge(["retrieve", "graph"], "extract")
-        builder.add_edge(["retrieve", "graph"], "diagnose")
+        builder.add_edge("intake", "recall")
+        builder.add_edge(["retrieve", "graph", "recall"], "extract")
+        builder.add_edge(["retrieve", "graph", "recall"], "diagnose")
         builder.add_edge(["extract", "diagnose"], "assess")
     else:
         for source, target in [
             ("intake", "extract"),
             ("extract", "retrieve"),
             ("retrieve", "graph"),
-            ("graph", "diagnose"),
+            ("graph", "recall"),
+            ("recall", "diagnose"),
             ("diagnose", "assess"),
         ]:
             builder.add_edge(source, target)

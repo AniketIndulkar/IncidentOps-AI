@@ -100,6 +100,16 @@ class WorkflowNotAwaitingDecisionError(DomainError):
     code = "workflow_not_awaiting_decision"
 
 
+class MemoryNotFoundError(NotFoundError):
+    code = "memory_not_found"
+
+
+class MemoryAlreadySupersededError(DomainError):
+    """A note has one successor: correct the current note, not an old one (AIENG-50)."""
+
+    code = "memory_already_superseded"
+
+
 class WorkflowFailedError(DomainError):
     """A workflow run stopped part way. Its checkpoints are kept; it can be resumed by id."""
 

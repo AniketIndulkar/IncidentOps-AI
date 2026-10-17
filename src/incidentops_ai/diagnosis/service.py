@@ -17,7 +17,7 @@ from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig, Run
 from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, Retriever
 
 DIAGNOSE_PROMPT = "diagnose_incident"
-DIAGNOSE_PROMPT_VERSION = "v2"  # v2 (W06): attachment evidence A1..An beside E1..En
+DIAGNOSE_PROMPT_VERSION = "v3"  # v2 (W06): attachments A1..An; v3 (W08): memory notes M1..Mn
 EVIDENCE_COUNT = 5  # the top five: the same K the retrieval benchmark calls a hit
 
 

@@ -9,7 +9,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, workflow
+from app.routes import analysis, attachments, incidents, memory, workflow
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -152,6 +152,7 @@ def create_app(
     app.include_router(analysis.router)
     app.include_router(attachments.router)
     app.include_router(workflow.router)
+    app.include_router(memory.router)
     return app
 
 
