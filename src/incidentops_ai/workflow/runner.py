@@ -6,7 +6,9 @@ continues from the last completed step, in this process or another, without repe
 that finished (and so without paying for their model calls again).
 """
 
+import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -39,15 +41,33 @@ class WorkflowRunRead(BaseModel):
 
 
 class WorkflowRunner:
-    def __init__(self, deps: WorkflowDeps, checkpointer, *, parallel: bool = True) -> None:
+    def __init__(
+        self,
+        deps: WorkflowDeps,
+        checkpointer,
+        *,
+        parallel: bool = True,
+        prepare: Callable[[], Awaitable[None]] | None = None,
+    ) -> None:
+        """`prepare` runs once, before the first use: the app passes the saver's `setup`, so a
+        database that is down at boot fails the first request (503), not the server."""
         self._deps = deps
         self._graph = build_workflow(deps, checkpointer=checkpointer, parallel=parallel)
+        self._prepare = prepare
+        self._prepared = asyncio.Lock()
+
+    async def _ready(self) -> None:
+        async with self._prepared:
+            if self._prepare is not None:
+                await self._prepare()
+                self._prepare = None
 
     @staticmethod
     def _config(run_id: uuid.UUID) -> dict:
         return {"configurable": {"thread_id": str(run_id)}}
 
     async def start(self, incident_id: uuid.UUID) -> WorkflowRunRead:
+        await self._ready()
         async with self._deps.sessions() as session:
             await IncidentRepository(session).get(incident_id)  # 404 before anything is recorded
             run = WorkflowRunRow(
@@ -63,6 +83,7 @@ class WorkflowRunner:
         return await self._drive(run.id, state)
 
     async def resume(self, run_id: uuid.UUID) -> WorkflowRunRead:
+        await self._ready()
         async with self._deps.sessions() as session:
             run = await session.get(WorkflowRunRow, run_id)
             if run is None:
@@ -90,6 +111,7 @@ class WorkflowRunner:
             return [WorkflowRunRead.model_validate(r, from_attributes=True) for r in rows.scalars()]
 
     async def state(self, run_id: uuid.UUID) -> dict:
+        await self._ready()
         snapshot = await self._graph.aget_state(self._config(run_id))
         return dict(snapshot.values)
 

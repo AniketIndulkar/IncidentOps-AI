@@ -4,6 +4,8 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from neo4j import AsyncGraphDatabase
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
@@ -62,9 +64,7 @@ def create_app(
         owned_provider = None
         owned_embedder = None
         owned_graph_driver = None
-        resources = (
-            AsyncExitStack()
-        )  # things opened here and closed at shutdown (W07: checkpointer)
+        resources = AsyncExitStack()  # opened here, closed at shutdown (W07: the checkpointer)
         try:
             if llm_provider is None and settings.openai_api_key:
                 owned_provider = build_provider(settings)
@@ -104,10 +104,19 @@ def create_app(
             # The workflow (W07) needs a model and retrieval; its checkpoints live in PostgreSQL.
             app.state.workflow_runner = None
             if vlm is not None and app.state.retriever is not None:
-                saver = await resources.enter_async_context(
-                    AsyncPostgresSaver.from_conn_string(checkpoint_url(settings.database_url))
+                # The pool connects in the background (open without waiting), so like the
+                # SQLAlchemy engine it does not stop the server when the database is down.
+                pool = AsyncConnectionPool(
+                    checkpoint_url(settings.database_url),
+                    min_size=1,
+                    max_size=5,
+                    timeout=5,
+                    open=False,
+                    kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
                 )
-                await saver.setup()  # creates or migrates LangGraph's own checkpoint tables
+                await pool.open(wait=False)
+                resources.push_async_callback(pool.close)
+                saver = AsyncPostgresSaver(pool)
                 deps = WorkflowDeps(
                     sessions=app.state.session_factory,
                     provider=app.state.llm_provider,
@@ -115,7 +124,8 @@ def create_app(
                     retriever=app.state.retriever,
                     graph=app.state.graph_store,
                 )
-                app.state.workflow_runner = WorkflowRunner(deps, saver)
+                # setup() creates or migrates LangGraph's own checkpoint tables, on first use.
+                app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
             app.state.api_token = settings.api_token
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield

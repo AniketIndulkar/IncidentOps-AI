@@ -12,6 +12,7 @@ import math
 from http import HTTPStatus
 from typing import Any
 
+import psycopg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -157,7 +158,9 @@ async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResp
     return problem_response(request, exc.status_code, code, headers=exc.headers)
 
 
-async def _database_error(request: Request, exc: DBAPIError | OSError) -> JSONResponse:
+async def _database_error(
+    request: Request, exc: DBAPIError | OSError | psycopg.OperationalError
+) -> JSONResponse:
     logger.exception("Database error on %s %s", request.method, request.url.path)
     return problem_response(
         request,
@@ -183,6 +186,8 @@ def register_error_handlers(app: FastAPI) -> None:
     # the driver could wrap it (e.g. Postgres down when the pool opens a connection).
     app.add_exception_handler(DBAPIError, _database_error)
     app.add_exception_handler(OSError, _database_error)
+    # psycopg: the workflow checkpointer's driver (W07), unwrapped by SQLAlchemy.
+    app.add_exception_handler(psycopg.OperationalError, _database_error)
     app.add_exception_handler(Exception, _unhandled_error)
 
 

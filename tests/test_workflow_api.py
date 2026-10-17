@@ -102,3 +102,14 @@ async def test_without_a_model_triage_is_off(settings):
         resp = await c.post(f"/incidents/{incident_id}/triage")
 
     assert resp.status_code == 503 and resp.json()["code"] == "llm_not_configured"
+
+
+async def test_the_api_starts_and_answers_503_when_the_database_is_down(settings):
+    # Port 1 refuses connections. The checkpointer must not stop the server at boot.
+    down = settings.model_copy(update={"database_url": "postgresql+asyncpg://localhost:1/x"})
+    provider = ByType(EXTRACTION, model_says(cause("A leak exhausts the pool.", GOOD)))
+    async with client(down, provider) as c:
+        resp = await c.post(f"/incidents/{uuid.uuid4()}/triage")
+
+    assert resp.status_code == 503 and resp.json()["code"] == "database_unavailable"
+    assert provider.calls == []
