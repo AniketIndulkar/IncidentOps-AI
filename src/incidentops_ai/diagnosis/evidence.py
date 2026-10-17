@@ -27,9 +27,34 @@ MIN_QUOTE_CHARS = 12
 
 
 @dataclass(frozen=True, slots=True)
+class LineRegion:
+    """Where a line of an attachment's text sits: offsets in the chunk text, page, pixel box."""
+
+    start: int
+    end: int
+    page: int
+    box: tuple[int, int, int, int] | None
+
+
+@dataclass(frozen=True, slots=True)
 class Evidence:
     id: str
     chunk: Chunk
+    regions: tuple[LineRegion, ...] = ()  # attachments: one per extracted line (W06)
+    extraction: str | None = None  # attachments: pdf-text | ocr | vlm-transcript
+
+
+def _region(item: Evidence, start: int, end: int) -> tuple[int, int, int, int] | None:
+    """The pixel box around the lines a quote spans, when the extractor recorded boxes."""
+    boxes = [r.box for r in item.regions if r.box and r.start < end and r.end > start]
+    if not boxes:
+        return None
+    return (
+        min(b[0] for b in boxes),
+        min(b[1] for b in boxes),
+        max(b[2] for b in boxes),
+        max(b[3] for b in boxes),
+    )
 
 
 def number_evidence(results: Sequence[RetrievedChunk]) -> list[Evidence]:
@@ -63,6 +88,7 @@ def evidence_item(item: Evidence) -> EvidenceItem:
         page_end=chunk.page_end,
         char_start=chunk.start,
         char_end=chunk.end,
+        extraction=item.extraction,
     )
 
 
@@ -87,6 +113,8 @@ def _check(citation: ModelCitation, by_id: dict[str, Evidence]) -> Citation | No
         quote=found.group(),
         quote_start=chunk.start + found.start(),
         quote_end=chunk.start + found.end(),
+        region=_region(item, found.start(), found.end()),
+        extraction=item.extraction,
     )
 
 
