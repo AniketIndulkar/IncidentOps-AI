@@ -122,6 +122,21 @@ uv run python -m incidentops_ai.workflow.benchmark --overhead   # LangGraph vs a
 uv run python -m incidentops_ai.workflow.benchmark              # 12 incidents, real models (scratch DB, costs)
 ```
 
+## Approval, memory and the ticket tool (W08)
+
+Every triage run stops at `awaiting_approval` with a proposed ticket. `POST
+/incidents/{id}/triage/{run_id}/decision` with `{"decision": "approve" | "reject", "reviewer": "...",
+"memory": "..."}` decides it (once); `GET .../events` is the audit trail, append-only in the database.
+Reviewer notes (`/memory`) are recalled per service and cited as evidence `M1..M3`. With
+`INCIDENTOPS_TICKETS_DB` and `INCIDENTOPS_APPROVAL_SECRET` set, the API starts the ticket MCP server
+and an approval opens the ticket there ([trust boundary](docs/notes/mcp-trust-boundary.md),
+[ADR-005](docs/adr/005-approval-gate-and-tool-trust-boundary.md)).
+
+```bash
+uv run python -m incidentops_ai.workflow.faults      # five injected faults (scratch DB, free)
+uv run python -m incidentops_ai.memory.benchmark     # reviewer notes with real models (scratch DB, costs)
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -131,7 +146,9 @@ uv run python -m incidentops_ai.workflow.benchmark              # 12 incidents, 
   - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
   - `graph/` — service catalogue, Neo4j store and Cypher, graph-anchored retrieval (W05)
   - `multimodal/` — attachments, PDF text, OCR, vision transcripts, the multimodal benchmark (W06)
-  - `workflow/` — the LangGraph triage workflow, routing rule, runs and checkpoints, benchmark (W07)
+  - `workflow/` — the LangGraph triage workflow, routing rule, runs and checkpoints, benchmark (W07); approval gate, budgets, fault injection (W08)
+  - `memory/` — reviewer notes: append-only, scoped, recalled as evidence (W08)
+  - `tickets/` — the ticket system as an MCP server, its client and signed approvals (W08)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)

@@ -3,8 +3,16 @@
 Source: Jira epic **AIENG-9** and tasks **AIENG-49 to AIENG-53**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W07 (branch `feat/w08-hitl-memory-mcp`).
 
-> **Status:** design written before any W08 code. Decisions are mine (W05 to W13 built back to back
-> at the user's request). The `v0.2` tag (AIENG-53) is the user's call, not mine.
+> **Status, 17 Oct 2026: built and measured.** Design written before any W08 code; decisions are
+> mine (W05 to W13 built back to back at the user's request). The `v0.2` tag (AIENG-53) is the
+> user's call, not mine, and is not made.
+>
+> **Result:** H29 to H34 hold. The gate held against every attempt; a reviewer's note turned 3 of 3
+> unanswerable incidents into cited answers and was never recalled outside its scope; five faults
+> ended safely, after fixing two the scenarios found (a malformed gate answer replayed forever, and
+> cancelled model calls going unrecorded). Findings:
+> [w08-findings](../evals/workflow/runs/2026-10-17-w08-findings.md); decision:
+> [ADR-005](adr/005-approval-gate-and-tool-trust-boundary.md).
 
 ## Goal of the week
 

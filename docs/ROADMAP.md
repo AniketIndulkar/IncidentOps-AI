@@ -144,6 +144,12 @@ LangGraph +6 ms (+38 ms with checkpoints). Findings:
 - AIENG-52 One MCP ticket/search tool; writes require approval.
 - AIENG-53 Fault-inject (tool timeout, dup call, invalid state, model failure, rejection); **tag v0.2**.
 
+✅ Built 17 Oct, stacked on W07: [roadmap-w08](roadmap-w08.md). Every run stops at an approval gate; audit and
+memory are append-only in the database; notes are cited as `M1..M3` (3 of 3 with real models, never out of
+scope); the ticket write goes over MCP with a signed approval; tool loops and resumes have budgets; five
+faults end safely. Findings: [w08-findings](../evals/workflow/runs/2026-10-17-w08-findings.md); decision:
+[ADR-005](adr/005-approval-gate-and-tool-trust-boundary.md). `v0.2` not tagged (your call).
+
 ### Phase 5 — Enterprise hardening (W09–W11, 30 Nov–18 Dec)
 
 **W09 · Integration & Text-to-SQL** (AIENG-10)
@@ -219,11 +225,16 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W07 complete; `v0.1` not tagged yet)
+## Current state (17 Oct 2026, W08 complete; `v0.1` and `v0.2` not tagged yet)
 
-- **W01 to W07 complete** (AIENG-2, 15–48). W03 and W04 were built on 16 Oct, W05 to W07 on 17 Oct,
-  as stacked pull requests (#3 W03, #4 W04, #5 W05, #6 W06, W07 on top). Next: W08 (human in the loop,
-  memory, MCP), AIENG-49. Waiting on you: the `v0.1` tag, merging the stack, and the Jira updates.
+- **W01 to W08 complete** (AIENG-2, 15–53). W03 and W04 were built on 16 Oct, W05 to W08 on 17 Oct,
+  as stacked pull requests (#3 W03, #4 W04, #5 W05, #6 W06, #7 W07, W08 on top). Next: W09. Waiting
+  on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- Human in the loop (W08): every triage run stops at `awaiting_approval` with a proposed ticket;
+  `POST .../decision` (once, row-locked); `workflow_events` and `memories` append-only by trigger;
+  reviewer notes per tenant and service, recalled as evidence `M1..M3` (prompt `diagnose_incident/v3`);
+  the ticket MCP server (`incidentops_ai.tickets`, stdio) whose write needs a signed approval; tool-loop
+  duplicate detection and budgets; resume budget and step limit; `workflow.faults` scenarios.
 - Workflow (W07, `src/incidentops_ai/workflow/`): a LangGraph state machine over the existing steps,
   routing by reason codes in code, checkpoints in PostgreSQL (`AsyncPostgresSaver`, tables created by
   the saver), `workflow_runs` records, and the triage API: `POST /incidents/{id}/triage`, `GET` a run
@@ -354,8 +365,12 @@ Hard dependencies to protect:
 29. **OCR can drop whole lines silently**, with high confidence on the lines it keeps. Do not treat OCR text as complete.
 30. **The routing rule was read off 14 synthetic assets.** Real, noisy screenshots and scans are needed to trust it (W11 golden set).
 31. **The workflow route is deterministic about noisy inputs.** Three of 12 cases changed route between two real runs because the extraction listed 3 open questions once and 4 once (`many_open_questions` fires at 4). Decide in W08/W09 whether a count a model chooses belongs in the route.
-32. **A model call cancelled by a failing sibling step is not recorded** in `llm_runs` (found in W07 testing). Spend and audit can under-count; W08 budgets (AIENG-51) depend on that record. Fix with W08 fault injection (AIENG-53).
+32. ~~**A model call cancelled by a failing sibling step is not recorded**~~ Fixed in W08: the record is a shielded task the runner waits for.
 33. **Checkpoints hold incident data** in the incident database, with no retention yet (W12/W13).
+34. **Reviewer identity is self-declared** at the approval gate until W10 adds per-user access.
+35. **A recommendation can rest on a single reviewer's note** (2 of 3 in the W08 memory check). The gate still requires a person; nothing flags it yet (W09/W10).
+36. **The approval secret mints approvals**: whoever holds `INCIDENTOPS_APPROVAL_SECRET` can sign a ticket write.
+37. **Runs can wait at the gate indefinitely**: no expiry or reminder yet.
 
 ## Weekly cadence
 
