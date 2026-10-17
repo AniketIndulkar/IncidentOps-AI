@@ -28,6 +28,7 @@ from langgraph.errors import GraphInterrupt
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from incidentops_ai.diagnosis.evidence import number_evidence
@@ -450,10 +451,17 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def act(state: WorkflowState) -> dict:
         if deps.tickets is None:
             return {"action_result": None, "status": "approved", "_outcome": "no ticket system"}
-        # Keyed on the run id: a retry after a timeout returns the ticket already created.
-        ticket = await deps.tickets.create(
-            state["proposed_action"], run_id=state["run_id"], decision=state["decision"]
-        )
+        # Keyed on the run id: a retry after a timeout returns the ticket already created. A
+        # PostgreSQL advisory lock on the run serialises concurrent attempts, in any process
+        # (W12): the second one then finds the first's ticket instead of racing it.
+        async with deps.sessions() as session, session.begin():
+            await session.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                {"key": f"act:{state['run_id']}"},
+            )
+            ticket = await deps.tickets.create(
+                state["proposed_action"], run_id=state["run_id"], decision=state["decision"]
+            )
         outcome = ticket["id"] if ticket["created"] else f"{ticket['id']} (already created)"
         return {"action_result": ticket, "status": "actioned", "_outcome": outcome}
 
