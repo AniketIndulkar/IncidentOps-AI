@@ -55,7 +55,10 @@ class Settings(BaseSettings):
     jira_token: SecretStr | None = None
     jira_project: str = "OPS"
     # The ops database for text-to-SQL (W09): a login granted only incidentops_ops_reader.
+    # ops_database_url is the default tenant's; ops_database_urls (JSON) maps every tenant to its
+    # own reader login (W10), whose rows row-level security admits.
     ops_database_url: str | None = None
+    ops_database_urls: dict[str, str] = {}
     # The legacy CMDB (W09, SOAP): the system of record for who owns a service.
     cmdb_url: str | None = None
     cmdb_api_key: SecretStr | None = None

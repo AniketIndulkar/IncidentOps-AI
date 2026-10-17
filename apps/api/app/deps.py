@@ -53,15 +53,6 @@ def get_llm_provider(request: Request) -> LLMProvider:
     return provider
 
 
-def get_ops_database(request: Request) -> OpsDatabase:
-    database = request.app.state.ops_database
-    if database is None:
-        raise OpsNotConfiguredError(
-            "The ops database is off: INCIDENTOPS_OPS_DATABASE_URL is not set."
-        )
-    return database
-
-
 def get_llm_config(request: Request) -> ModelConfig:
     config = request.app.state.llm_config
     if config is None:
@@ -177,6 +168,16 @@ CanResume = Annotated[Principal, Depends(permit("triage:resume"))]
 CanReadMemory = Annotated[Principal, Depends(permit("memory:read"))]
 CanWriteMemory = Annotated[Principal, Depends(permit("memory:write"))]
 CanQueryOps = Annotated[Principal, Depends(permit("ops:query"))]
+
+
+def get_ops_database(
+    request: Request, principal: Annotated[Principal, Depends(authenticate)]
+) -> OpsDatabase:
+    """The reader for the caller's tenant: its login is the only thing row-level security trusts."""
+    database = request.app.state.ops_databases.get(principal.tenant_id)
+    if database is None:
+        raise OpsNotConfiguredError("No ops database is configured for your tenant.")
+    return database
 
 
 async def enforce_llm_rate_limit(request: Request) -> None:

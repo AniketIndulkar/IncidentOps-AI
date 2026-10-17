@@ -151,12 +151,16 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
-            # The ops database (W09) is read through its own engine, as the read-only role.
-            app.state.ops_database = None
+            # The ops database (W09) is read through its own engines, one reader login per tenant
+            # (W10): row-level security admits each login's tenant only.
+            ops_urls = dict(settings.ops_database_urls)
             if settings.ops_database_url:
-                ops_engine = create_async_engine(settings.ops_database_url, pool_pre_ping=True)
+                ops_urls.setdefault("default", settings.ops_database_url)
+            app.state.ops_databases = {}
+            for tenant, url in ops_urls.items():
+                ops_engine = create_async_engine(url, pool_pre_ping=True)
                 resources.push_async_callback(ops_engine.dispose)
-                app.state.ops_database = OpsDatabase(ops_engine)
+                app.state.ops_databases[tenant] = OpsDatabase(ops_engine)
             app.state.api_token = settings.api_token
             app.state.token_verifier = (
                 TokenVerifier(

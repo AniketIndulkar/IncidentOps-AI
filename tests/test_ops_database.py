@@ -7,7 +7,7 @@ from ops_support import reader_url
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from incidentops_ai.ops.catalogue import ALLOWED
+from incidentops_ai.ops.catalogue import ALLOWED, HIDDEN_COLUMNS
 from incidentops_ai.ops.database import OpsDatabase, OpsQueryError
 
 WRITES = [
@@ -93,7 +93,8 @@ async def test_the_allow_list_matches_the_database(settings):
         )
         actual: dict[str, set[str]] = {}
         for table, column in rows:
-            actual.setdefault(f"ops.{table}", set()).add(column)
+            if table != "tenant_readers" and column not in HIDDEN_COLUMNS:
+                actual.setdefault(f"ops.{table}", set()).add(column)
     await engine.dispose()
 
     assert {t: set(c) for t, c in ALLOWED.items()} == actual
