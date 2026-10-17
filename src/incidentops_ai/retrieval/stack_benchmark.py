@@ -71,6 +71,16 @@ CHARS_PER_TOKEN = 4
 
 
 @dataclass(frozen=True)
+class ReportStyle:
+    """What differs between reports built from stage runs (W04 stacks, W05 graph stages)."""
+
+    title: str = "Retrieval stack comparison"
+    reproduce: str = "uv run python -m incidentops_ai.retrieval.stack_benchmark"
+    compared_to: Mapping[str, tuple[str, ...]] = field(default_factory=lambda: dict(COMPARED_TO))
+    decision_configs: tuple[str, ...] = DECISION_CONFIGS
+
+
+@dataclass(frozen=True)
 class StageRun:
     stage: str
     config: str
@@ -85,7 +95,7 @@ def parse_config(name: str) -> ExperimentConfig:
     return ExperimentConfig(chunker_from_name(name.removesuffix("+ctx")), name.endswith("+ctx"))
 
 
-class _SplitEmbedder:
+class SplitEmbedder:
     """Chunk texts go to `chunks` (usually a cache), question texts to `queries` (a live call).
 
     Corpus vectors can then be cached while the query path is timed for real; otherwise the cache
@@ -150,7 +160,7 @@ def rerank_verdict(p95_ms: float, added_mb: float) -> tuple[bool, str]:
     )
 
 
-def _query_cost_per_1000(stage: str, questions: Sequence[Question]) -> float:
+def query_cost_per_1000(stage: str, questions: Sequence[Question]) -> float:
     if stage not in EMBEDS_QUERY:
         return 0.0
     tokens = sum(len(q.text) for q in questions) / len(questions) / CHARS_PER_TOKEN
@@ -184,7 +194,7 @@ async def run_stages(
         if any(stage in EMBEDS_QUERY for stage in stages):
             await embedder.embed(question_texts)  # one batch, so a cache warms in one request
     else:
-        dense_embedder = _SplitEmbedder(embedder, query_embedder, set(question_texts))
+        dense_embedder = SplitEmbedder(embedder, query_embedder, set(question_texts))
 
     retrievers: dict[str, Retriever] = {}
 
@@ -210,7 +220,7 @@ async def run_stages(
     runs: list[StageRun] = []
     for stage in stages:
         retriever = await retriever_for(stage)
-        extras = {"usd_per_1000_queries": _query_cost_per_1000(stage, questions)}
+        extras = {"usd_per_1000_queries": query_cost_per_1000(stage, questions)}
         reranking = stage == "hybrid-rerank"
         if reranking:
             assert timed is not None  # checked above
@@ -287,10 +297,15 @@ def _stage_row(run: StageRun) -> str:
 
 
 def render_stack_report(
-    runs_by_config: Mapping[str, Sequence[StageRun]], *, embedding_model: str, run_date: str
+    runs_by_config: Mapping[str, Sequence[StageRun]],
+    *,
+    embedding_model: str,
+    run_date: str,
+    style: ReportStyle | None = None,
 ) -> str:
+    style = style or ReportStyle()
     sample = next(iter(next(iter(runs_by_config.values())))).result
-    lines = [f"# Retrieval stack comparison, {run_date}", ""]
+    lines = [f"# {style.title}, {run_date}", ""]
     if embedding_model.startswith("fake"):
         lines += [
             (
@@ -305,7 +320,7 @@ def render_stack_report(
             f"- Questions: {sample.summary.n}; top {sample.k}; a chunk is relevant when it holds "
             "at least half of an evidence span"
         ),
-        "- Reproduce: `uv run python -m incidentops_ai.retrieval.stack_benchmark`",
+        f"- Reproduce: `{style.reproduce}`",
         (
             "- Latency is end to end per question. Dense stages include one query-embedding call "
             "(live when the run used the API, so it reflects the network)."
@@ -318,7 +333,7 @@ def render_stack_report(
         "",
     ]
     for config, runs in runs_by_config.items():
-        label = "decision config" if config in DECISION_CONFIGS else "exploratory"
+        label = "decision config" if config in style.decision_configs else "exploratory"
         by_stage = {run.stage: run for run in runs}
         header = [
             "Stage",
@@ -344,7 +359,7 @@ def render_stack_report(
         moved = [
             (run.stage, base)
             for run in runs
-            for base in COMPARED_TO.get(run.stage, ())
+            for base in style.compared_to.get(run.stage, ())
             if base in by_stage
         ]
         if moved:
@@ -411,7 +426,7 @@ def _reranker_section(run: StageRun, rerank_depth: int) -> list[str]:
     ]
 
 
-def _stage_data(run: StageRun) -> dict:
+def stage_data(run: StageRun) -> dict:
     result = run.result
     return {
         "retriever": result.retriever,
@@ -449,18 +464,20 @@ def write_stack_report(
     embedding_model: str,
     run_date: str,
     name: str = "stack-comparison",
+    style: ReportStyle | None = None,
+    extra_markdown: str = "",
 ) -> BenchmarkFiles:
     out_dir.mkdir(parents=True, exist_ok=True)
     files = BenchmarkFiles(out_dir / f"{run_date}-{name}.md", out_dir / f"{run_date}-{name}.json")
-    files.report_path.write_text(
-        render_stack_report(runs_by_config, embedding_model=embedding_model, run_date=run_date),
-        encoding="utf-8",
+    report = render_stack_report(
+        runs_by_config, embedding_model=embedding_model, run_date=run_date, style=style
     )
+    files.report_path.write_text(report + extra_markdown, encoding="utf-8")
     data = {
         "date": run_date,
         "embedding_model": embedding_model,
         "configs": {
-            config: {run.stage: _stage_data(run) for run in runs}
+            config: {run.stage: stage_data(run) for run in runs}
             for config, runs in runs_by_config.items()
         },
     }
