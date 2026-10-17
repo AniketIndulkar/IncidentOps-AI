@@ -199,6 +199,12 @@ decision: [ADR-008](adr/008-evaluation-gateway-and-tracing.md).
 - AIENG-72 FULL → REDUCED → MANUAL degradation tiers + operator runbook (90 min).
 - AIENG-73 Optional 60-min reliability retro (Christmas).
 
+✅ Built 17 Oct, stacked on W11: [roadmap-w12](roadmap-w12.md). No errors up to 100 concurrent responders (simulated
+model from real recordings); the model is the bottleneck; retrieval timeout, stale-run recovery and an advisory lock
+on ticket writes fixed three faults found by forcing failures; `GET /status` and FULL/REDUCED/MANUAL tiers; a
+runbook. Findings: [w12-findings](../evals/reliability/runs/2026-10-17-w12-findings.md); decision:
+[ADR-009](adr/009-reliability-and-degradation.md); [retro](notes/reliability-retro.md).
+
 **W13 · v1.0 release** (AIENG-14)
 - AIENG-74 Scope freeze + release checklist (must-fix / defer / known limitation).
 - AIENG-75 Final architecture diagram + ADR index.
@@ -242,11 +248,14 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W11 complete; `v0.1` and `v0.2` not tagged yet)
+## Current state (17 Oct 2026, W12 complete; `v0.1` and `v0.2` not tagged yet)
 
-- **W01 to W11 complete** (AIENG-2, 15–68). W03 and W04 were built on 16 Oct, W05 to W11 on 17 Oct,
-  as stacked pull requests (#3 W03 … #10 W10, W11 on top). Next: W12 (reliability, load, failure
-  testing). Waiting on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- **W01 to W12 complete** (AIENG-2, 15–73). W03 and W04 were built on 16 Oct, W05 to W12 on 17 Oct,
+  as stacked pull requests (#3 W03 … #11 W11, W12 on top). Next: W13 (v1.0 release). Waiting on
+  you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- Reliability (W12): `GET /status` (FULL/REDUCED/MANUAL), [runbook](runbook.md), retrieval timeout,
+  stale-run recovery at startup, advisory lock around ticket writes, configurable pool sizes, the
+  simulated provider and `bm25` stack for load tests, `reliability.load` and `reliability.burst`.
 - Quality and operations (W11): `evals` (four layers, the generation layer and judge, the CI gate,
   `evals/dashboard.md`), `llm.gateway` (routes, fallback, breaker), `observability` (spans, JSONL and
   Langfuse exporters, the trace report). **A prompt change now needs a real-model generation run and
@@ -410,6 +419,9 @@ Hard dependencies to protect:
 45. **The LLM judge is not calibrated enough to gate** (77% agreement with 13 labels written by the assistant). The user's labels are the next step.
 46. **The Langfuse adapter has only met a fake** ingestion server.
 47. **Prompt changes cost a real-model run** before CI passes (about $0.15 for generation).
+48. **Stale runs are recovered only at startup**: after a database blip, interrupted runs stay `running` until a restart (v1.0 must-fix: a periodic sweep).
+49. **Real provider limits are unmeasured**: the load test simulated the model; a real account's tokens-per-minute limit is likely the first wall at ~9 triages/s.
+50. **Ticket deduplication leans on the ticket system's search**: the advisory lock serialises our writers, but a lagging search index could still miss a just-created issue.
 
 ## Weekly cadence
 

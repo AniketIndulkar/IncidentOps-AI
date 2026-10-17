@@ -3,8 +3,15 @@
 Source: Jira epic **AIENG-13** and tasks **AIENG-69 to AIENG-73**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W11 (branch `feat/w12-reliability-load`).
 
-> **Status:** design written before any W12 code. Decisions are mine (W05 to W13 built back to back
-> at the user's request). Everything runs locally: no AWS without the user's say-so.
+> **Status, 17 Oct 2026: built and measured.** Design written before any W12 code; decisions are
+> mine (W05 to W13 built back to back at the user's request). Everything ran locally.
+>
+> **Result:** H50 to H53 hold. No errors up to 100 concurrent responders; the model is the
+> bottleneck. The first bottleneck finding (the connection pools) was the load generator's and was
+> retracted. Forcing failures found three faults, now fixed: unbounded retrieval, runs left
+> `running` by a dead process, and duplicate tickets from concurrent writes. Findings:
+> [w12-findings](../evals/reliability/runs/2026-10-17-w12-findings.md); decision:
+> [ADR-009](adr/009-reliability-and-degradation.md); [runbook](runbook.md).
 
 ## Goal of the week
 
