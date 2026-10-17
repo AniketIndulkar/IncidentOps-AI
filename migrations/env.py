@@ -13,6 +13,7 @@ from incidentops_ai.incidents import orm  # noqa: F401
 from incidentops_ai.llm import runs  # noqa: F401  (registers tables on Base.metadata)
 from incidentops_ai.multimodal import orm as multimodal_orm  # noqa: F401
 from incidentops_ai.retrieval import orm as retrieval_orm  # noqa: F401
+from incidentops_ai.workflow import orm as workflow_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

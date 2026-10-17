@@ -84,6 +84,29 @@ class ExtractionUnavailableError(DomainError):
     code = "extraction_unavailable"
 
 
+class WorkflowRunNotFoundError(NotFoundError):
+    code = "workflow_run_not_found"
+
+
+class WorkflowNotResumableError(DomainError):
+    """Only a run that failed part way can be resumed."""
+
+    code = "workflow_not_resumable"
+
+
+class WorkflowFailedError(DomainError):
+    """A workflow run stopped part way. Its checkpoints are kept; it can be resumed by id."""
+
+    code = "workflow_failed"
+
+    def __init__(self, run_id: object) -> None:
+        super().__init__(
+            f"The workflow run {run_id} stopped part way. Its progress was saved; resume it with "
+            f"POST .../triage/{run_id}/resume."
+        )
+        self.run_id = run_id
+
+
 class UnauthorizedError(DomainError):
     """The caller did not present the token this endpoint requires."""
 

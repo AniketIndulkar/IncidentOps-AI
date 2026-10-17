@@ -16,6 +16,7 @@ from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.llm.provider import LLMProvider, ModelConfig
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.retrieval.retriever import Retriever
+from incidentops_ai.workflow.runner import WorkflowRunner
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -62,6 +63,15 @@ def get_retriever(request: Request) -> Retriever:
 
 def get_attachment_processor(request: Request) -> AttachmentProcessor:
     return request.app.state.attachment_processor
+
+
+def get_workflow_runner(request: Request) -> WorkflowRunner:
+    runner = request.app.state.workflow_runner
+    if runner is None:
+        raise LLMNotConfiguredError(
+            "The workflow is off: it needs OPENAI_API_KEY and INCIDENTOPS_LLM_MODEL."
+        )
+    return runner
 
 
 def get_graph_store(request: Request) -> GraphStore | None:
@@ -127,3 +137,4 @@ LLMConfig = Annotated[ModelConfig, Depends(get_llm_config)]
 Retrieval = Annotated[Retriever, Depends(get_retriever)]
 Graph = Annotated[GraphStore | None, Depends(get_graph_store)]
 AttachmentProcessorDep = Annotated[AttachmentProcessor, Depends(get_attachment_processor)]
+WorkflowRunnerDep = Annotated[WorkflowRunner, Depends(get_workflow_runner)]
