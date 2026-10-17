@@ -6,7 +6,7 @@ from neo4j import AsyncGraphDatabase
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, incidents
+from app.routes import analysis, attachments, incidents
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
@@ -14,6 +14,8 @@ from incidentops_ai.graph.retriever import AnchoredRetriever, GraphNeighbourhood
 from incidentops_ai.graph.store import GraphStore
 from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMProvider
+from incidentops_ai.multimodal.attachments import AttachmentProcessor
+from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
 from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
@@ -42,6 +44,7 @@ def create_app(
     llm_provider: LLMProvider | None = None,
     retriever: Retriever | None = None,
     graph_store: GraphStore | None = None,
+    attachment_processor: AttachmentProcessor | None = None,
 ) -> FastAPI:
     """`llm_provider` and `retriever` let tests inject fakes; otherwise the real ones are built
     from settings, or left off (the endpoints that need them answer 503) when no key is set."""
@@ -83,6 +86,15 @@ def create_app(
             app.state.graph_store = store
             app.state.retriever = _with_graph_scope(app.state.retriever, settings, store)
             app.state.llm_config = build_model_config(settings) if settings.llm_model else None
+            # Attachments (W06): images get a vision transcript when a model is configured.
+            vlm = (
+                VlmTranscriber(app.state.llm_provider, app.state.llm_config)
+                if app.state.llm_provider is not None and app.state.llm_config is not None
+                else None
+            )
+            app.state.attachment_processor = attachment_processor or AttachmentProcessor(
+                pdf=PdfTextExtractor(), ocr=OcrExtractor(), vlm=vlm
+            )
             app.state.api_token = settings.api_token
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
@@ -106,6 +118,7 @@ def create_app(
     register_error_handlers(app)
     app.include_router(incidents.router)
     app.include_router(analysis.router)
+    app.include_router(attachments.router)
     return app
 
 

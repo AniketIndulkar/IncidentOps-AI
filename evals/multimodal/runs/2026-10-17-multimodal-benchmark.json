@@ -1,0 +1,1632 @@
+{
+  "date": "2026-10-17",
+  "decision": {
+    "chart": "vlm-transcript",
+    "diagram": "vlm-transcript",
+    "pdf-scanned": "ocr",
+    "pdf-text": "pdf-text",
+    "screenshot": "vlm-transcript"
+  },
+  "extractions": {
+    "c01": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0393
+        ],
+        "latency_ms": 200.4,
+        "lines": 14,
+        "text": "p99 latencyof/v1/charges byregion\nseconds\n10\nus-east-1\n8\neu-west-1\nap-south-1\n6\n0\n16:30\n16:45\n17:00\n17:15\n17:30"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 5004.7,
+        "lines": 18,
+        "text": "p99 latency of /v1/charges by region\nseconds\n10\n8\n6\n4\n2\n0\nus-east-1\neu-west-1\nap-south-1\n16:30\n16:45\n17:00\n17:15\n17:30\nVisual: eu-west-1 rises sharply near 16:45 to about 9 seconds, stays near that level until about 17:08, then falls to about 0.4 seconds.\nVisual: eu-west-1 is highest during the spike and lowest after the drop; ap-south-1 is generally highest outside the spike, fluctuating around 0.6 seconds."
+      }
+    },
+    "c02": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0336
+        ],
+        "latency_ms": 177.8,
+        "lines": 8,
+        "text": "5xxerrorratebyservice(lasthour)\npercent\n10\n8\norders-api\ncheckout-api\npayments-gateway\nsession-service"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2583.6,
+        "lines": 13,
+        "text": "5xx error rate by service (last hour)\npercent\n10\n8\n6\n4\n2\n0\norders-api\ncheckout-api\npayments-gateway\nsession-service\nVisual: checkout-api is highest at about 8.7%; session-service is lowest at about 0.6%."
+      }
+    },
+    "c03": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0389
+        ],
+        "latency_ms": 214.6,
+        "lines": 11,
+        "text": "orders-db-primaryconnectionsbystate\nconnections\n250\nmax_connections200\n200\n150\n100\n50\nactive\nidle\nidleintransaction"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2806.9,
+        "lines": 14,
+        "text": "orders-db-primary connections by state\nconnections\n250\n200\n150\n100\n50\n0\nmax_connections 200\nactive\nidle\nidle in transaction\nVisual: idle in transaction is highest at about 135 connections; idle is lowest at about 25; active is about 40.\nVisual: red dashed horizontal line at 200, labeled max_connections 200."
+      }
+    },
+    "d01": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0404
+        ],
+        "latency_ms": 169.2,
+        "lines": 8,
+        "text": "Commercerequestflow(Q42026)\npayments-gateway\ncheckout-api\nledger-writer\npromo-engine\norders-api\nbiling-service\norders-db"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 3176.1,
+        "lines": 13,
+        "text": "Commerce request flow (Q4 2026)\npayments-gateway\ncheckout-api\nledger-writer\npromo-engine\norders-api\nbilling-service\norders-db\nVisual: checkout-api -> payments-gateway\nVisual: checkout-api -> promo-engine\nVisual: payments-gateway -> ledger-writer\nVisual: billing-service -> ledger-writer\nVisual: orders-api -> orders-db"
+      }
+    },
+    "d02": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0319
+        ],
+        "latency_ms": 167.4,
+        "lines": 4,
+        "text": "ordersdatabase,21May09:58\norders-db-primary\norders-db-standby\norders-api"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2001.6,
+        "lines": 7,
+        "text": "orders database, 21 May 09:58\norders-db-primary\norders-db-standby\norders-api\nVisual: orders-api -> orders-db-standby\nVisual: Red X next to orders-db-primary\nVisual: Green check next to orders-db-standby"
+      }
+    },
+    "d03": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0362
+        ],
+        "latency_ms": 192.0,
+        "lines": 6,
+        "text": "web-dashboardrequestpath\nbrowser\nCDN\nobjectstorage\ninternal-auth-proxy\nadmin-tools"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 1858.7,
+        "lines": 10,
+        "text": "web-dashboard request path\nbrowser\nCDN\nobject storage\ninternal-auth-proxy\nadmin-tools\nVisual: browser -> CDN\nVisual: CDN -> object storage\nVisual: browser -> internal-auth-proxy\nVisual: internal-auth-proxy -> admin-tools"
+      }
+    },
+    "p01": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0494
+        ],
+        "latency_ms": 469.9,
+        "lines": 18,
+        "text": "Commerce Platform on-call rota, Q4 2026\nHand-over happens on Monday at 10:oo UTC. The secondary covers the primary during leave and joins\nevery SEV1.\nWeek\nPrimary\nSecondary\n43\nAmaraOkafor\nLukasBecker\n44\nLukas Becker\nPriya Nair\n45\nTom Hughes\nAmaraOkafor\n46\nAmaraOkafor\nTom Hughes"
+      },
+      "pdf-text": {
+        "chars_per_page": [
+          275
+        ],
+        "coverage": [],
+        "latency_ms": 70.9,
+        "lines": 8,
+        "text": "Commerce Platform on-call rota, Q4 2026\nHand-over happens on Monday at 10:00 UTC. The secondary covers the primary during leave and joins\nevery SEV1.\nWeek Primary Secondary\n43 Amara Okafor Lukas Becker\n44 Lukas Becker Priya Nair\n45 Tom Hughes Amara Okafor\n46 Amara Okafor Tom Hughes"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 3485.9,
+        "lines": 8,
+        "text": "Commerce Platform on-call rota, Q4 2026\nHand-over happens on Monday at 10:00 UTC. The secondary covers the primary during leave and joins\nevery SEV1.\nWeek    Primary    Secondary\n43    Amara Okafor    Lukas Becker\n44    Lukas Becker    Priya Nair\n45    Tom Hughes    Amara Okafor\n46    Amara Okafor    Tom Hughes"
+      }
+    },
+    "p02": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0565
+        ],
+        "latency_ms": 358.3,
+        "lines": 19,
+        "text": "Incident response targets\nThese targets apply to customer-facing services. The clock starts at the first alert or customer report,\nwhicheveris earlier.\nSeverity\nFirst response\nUpdates\nPostmortemdue\nSEV1\n15 minutes\nevery15minutes\n5 working days\nSEV2\n30 minutes\nevery 30 minutes\n10 working days\nSEV3\nnext business day\ndaily\nnot required"
+      },
+      "pdf-text": {
+        "chars_per_page": [
+          332
+        ],
+        "coverage": [],
+        "latency_ms": 2.4,
+        "lines": 7,
+        "text": "Incident response targets\nThese targets apply to customer-facing services. The clock starts at the first alert or customer report,\nwhichever is earlier.\nSeverity First response Updates Postmortem due\nSEV1 15 minutes every 15 minutes 5 working days\nSEV2 30 minutes every 30 minutes 10 working days\nSEV3 next business day daily not required"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2614.0,
+        "lines": 19,
+        "text": "Incident response targets\nThese targets apply to customer-facing services. The clock starts at the first alert or customer report,\nwhichever is earlier.\nSeverity\nFirst response\nUpdates\nPostmortem due\nSEV1\n15 minutes\nevery 15 minutes\n5 working days\nSEV2\n30 minutes\nevery 30 minutes\n10 working days\nSEV3\nnext business day\ndaily\nnot required"
+      }
+    },
+    "p03": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0271
+        ],
+        "latency_ms": 283.0,
+        "lines": 13,
+        "text": "orders-api capacity plan (scanned)\nPeak orders/s.\nPods:\nMonth\n85\n12\nOctober\n120\n16\nNovember\n160\n22\nDecember"
+      },
+      "pdf-text": {
+        "chars_per_page": [
+          0
+        ],
+        "coverage": [],
+        "latency_ms": 0.7,
+        "lines": 0,
+        "text": ""
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2683.3,
+        "lines": 5,
+        "text": "orders-api capacity plan (scanned)\nMonth    Peak orders/s    Pods\nOctober    85    12\nNovember    120    16\nDecember    160    22"
+      }
+    },
+    "p04": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.039
+        ],
+        "latency_ms": 307.7,
+        "lines": 14,
+        "text": "Maintenance windows (scanned)\nWindow (UTC)\nOwner\nService\nDatabase Reliability\norders-db\nSun\n02:00-04:00\nSat 01:00-02:00\nMessaging\nkafka\nidentity\nredis-sessions\nTue 03:00-03:30"
+      },
+      "pdf-text": {
+        "chars_per_page": [
+          0
+        ],
+        "coverage": [],
+        "latency_ms": 0.8,
+        "lines": 0,
+        "text": ""
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 2060.1,
+        "lines": 5,
+        "text": "Maintenance windows (scanned)\nService    Window (UTC)    Owner\norders-db    Sun 02:00-04:00    Database Reliability\nkafka    Sat 01:00-02:00    Messaging\nredis-sessions    Tue 03:00-03:30    Identity"
+      }
+    },
+    "s01": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.2584
+        ],
+        "latency_ms": 867.2,
+        "lines": 7,
+        "text": "chen@bastion:~$kubectl logsdeploy/notification-worker-nmessaging--since=1h\n2026-02-0303:20:58INFOconsumerheartbeatokgroup=notification-workers\n2026-02-0303:21:04ERRORkafka.errors.NoBrokersAvailable:NoBrokersAvailable\n2026-02-0303:21:09WARNbootstrapkafka-bootstrap:9093unreachable(attempt2)\n2026-02-0303:21:19ERRORkafka.errors.NoBrokersAvailable:NoBrokersAvailable\n2026-02-0303:21:39WARNbootstrapkafka-bootstrap:9093unreachable(attempt3)\n2026-02-0303:22:19ERRORdeliverypaused:0brokersreachable"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 5697.6,
+        "lines": 8,
+        "text": "chen@bastion:~ $ kubectl logs deploy/notification-worker -n messaging --since=1h\n2026-02-03 03:20:58 INFO consumer heartbeat ok group=notification-workers\n2026-02-03 03:21:04 ERRORkafka.errors.NoBrokersAvailable: NoBrokersAvailable\n2026-02-03 03:21:09 WARN bootstrap kafka-bootstrap:9093 unreachable (attempt 2)\n2026-02-03 03:21:19 ERRORkafka.errors.NoBrokersAvailable: NoBrokersAvailable\n2026-02-03 03:21:39 WARN bootstrap kafka-bootstrap:9093 unreachable (attempt 3)\n2026-02-03 03:22:19 ERROR delivery paused: 0 brokers reachable\nVisual: The two NoBrokersAvailable error lines and the delivery paused error line are red."
+      }
+    },
+    "s02": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.1455
+        ],
+        "latency_ms": 395.4,
+        "lines": 20,
+        "text": "$kubectlgetpods-ndiscovery-lapp=search-indexer\nNAME\nREADY\nSTATUS\nRESTARTS\nAGE\nsearch-indexer-qhxtv\n1/1\nRunning\n2d\nsearch-indexer-mbzrw\n0/1\nOOMKilled\n11\n14m\nsearch-indexer-pfjnd\n0/1\nCrashLoopBackOff\n6\n14m"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 1823.2,
+        "lines": 5,
+        "text": "$ kubectl get pods -n discovery -l app=search-indexer\nNAME                 READY   STATUS             RESTARTS   AGE\nsearch-indexer-qhxtv  1/1     Running            0          2d\nsearch-indexer-mbzrw  0/1     OOMKilled          11         14m\nsearch-indexer-pfjnd  0/1     CrashLoopBackOff   6          14m"
+      }
+    },
+    "s03": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.0594
+        ],
+        "latency_ms": 168.0,
+        "lines": 3,
+        "text": "https://shop.example.com/checkout/payment\n502Bad Gateway\nnginx/1.25.3"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 1665.5,
+        "lines": 3,
+        "text": "https://shop.example.com/checkout/payment\n502 Bad Gateway\nnginx/1.25.3"
+      }
+    },
+    "s04": {
+      "ocr": {
+        "chars_per_page": [],
+        "coverage": [
+          0.1173
+        ],
+        "latency_ms": 269.7,
+        "lines": 4,
+        "text": "AlertmanagerAPP16:44\n[FIRING:1]PaymentsChargeLatencyHigh\np99/v1/charges=9.1s(threshold3s)\nStarted16:44UTCRunbook:rb-payments-latency"
+      },
+      "vlm-transcript": {
+        "chars_per_page": [],
+        "coverage": [],
+        "latency_ms": 1537.6,
+        "lines": 6,
+        "text": "Alertmanager APP 16:44\n[FIRING:1] PaymentsChargeLatencyHigh\nservice=payments-gateway region=eu-west-1 acquirer=primary\np99 /v1/charges = 9.1 s (threshold 3 s)\nStarted 16:44 UTC  Runbook: rb-payments-latency\nVisual: Red vertical bar along the left edge"
+      }
+    }
+  },
+  "model": "gpt-6-luna",
+  "questions": [
+    {
+      "answer": "NoBrokersAvailable",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 294,
+      "kind": "screenshot",
+      "latency_ms": 1612.4734170152806,
+      "output_tokens": 19,
+      "path": "ocr",
+      "question_id": "s01-q1"
+    },
+    {
+      "answer": "NoBrokersAvailable",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 318,
+      "kind": "screenshot",
+      "latency_ms": 1358.436459035147,
+      "output_tokens": 44,
+      "path": "vlm-transcript",
+      "question_id": "s01-q1"
+    },
+    {
+      "answer": "kafka.errors.NoBrokersAvailable",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 579,
+      "kind": "screenshot",
+      "latency_ms": 1868.6027909861878,
+      "output_tokens": 40,
+      "path": "vlm-direct",
+      "question_id": "s01-q1"
+    },
+    {
+      "answer": "03:21:04",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 297,
+      "kind": "screenshot",
+      "latency_ms": 1760.2915830211714,
+      "output_tokens": 20,
+      "path": "ocr",
+      "question_id": "s01-q2"
+    },
+    {
+      "answer": "03:21:04",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 321,
+      "kind": "screenshot",
+      "latency_ms": 1423.7009579665028,
+      "output_tokens": 16,
+      "path": "vlm-transcript",
+      "question_id": "s01-q2"
+    },
+    {
+      "answer": "03:21:04",
+      "case_id": "s01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 582,
+      "kind": "screenshot",
+      "latency_ms": 1881.614374986384,
+      "output_tokens": 39,
+      "path": "vlm-direct",
+      "question_id": "s01-q2"
+    },
+    {
+      "answer": "11",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 217,
+      "kind": "screenshot",
+      "latency_ms": 1260.8148329891264,
+      "output_tokens": 54,
+      "path": "ocr",
+      "question_id": "s02-q1"
+    },
+    {
+      "answer": "11",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 229,
+      "kind": "screenshot",
+      "latency_ms": 1114.398000005167,
+      "output_tokens": 27,
+      "path": "vlm-transcript",
+      "question_id": "s02-q1"
+    },
+    {
+      "answer": "11",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 468,
+      "kind": "screenshot",
+      "latency_ms": 1146.0791249992326,
+      "output_tokens": 12,
+      "path": "vlm-direct",
+      "question_id": "s02-q1"
+    },
+    {
+      "answer": "search-indexer-pfjnd",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 216,
+      "kind": "screenshot",
+      "latency_ms": 1313.820667041,
+      "output_tokens": 38,
+      "path": "ocr",
+      "question_id": "s02-q2"
+    },
+    {
+      "answer": "search-indexer-pfjnd",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 228,
+      "kind": "screenshot",
+      "latency_ms": 885.4334159987047,
+      "output_tokens": 17,
+      "path": "vlm-transcript",
+      "question_id": "s02-q2"
+    },
+    {
+      "answer": "search-indexer-pfjnd",
+      "case_id": "s02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 467,
+      "kind": "screenshot",
+      "latency_ms": 1441.2966669769958,
+      "output_tokens": 30,
+      "path": "vlm-direct",
+      "question_id": "s02-q2"
+    },
+    {
+      "answer": "502",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 149,
+      "kind": "screenshot",
+      "latency_ms": 960.2017080178484,
+      "output_tokens": 12,
+      "path": "ocr",
+      "question_id": "s03-q1"
+    },
+    {
+      "answer": "502",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 149,
+      "kind": "screenshot",
+      "latency_ms": 946.972083998844,
+      "output_tokens": 12,
+      "path": "vlm-transcript",
+      "question_id": "s03-q1"
+    },
+    {
+      "answer": "502 Bad Gateway",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 770,
+      "kind": "screenshot",
+      "latency_ms": 1001.2893329840153,
+      "output_tokens": 14,
+      "path": "vlm-direct",
+      "question_id": "s03-q1"
+    },
+    {
+      "answer": "nginx/1.25.3",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 150,
+      "kind": "screenshot",
+      "latency_ms": 1172.6388329989277,
+      "output_tokens": 43,
+      "path": "ocr",
+      "question_id": "s03-q2"
+    },
+    {
+      "answer": "nginx/1.25.3",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 150,
+      "kind": "screenshot",
+      "latency_ms": 1149.3009999976493,
+      "output_tokens": 40,
+      "path": "vlm-transcript",
+      "question_id": "s03-q2"
+    },
+    {
+      "answer": "nginx/1.25.3",
+      "case_id": "s03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 771,
+      "kind": "screenshot",
+      "latency_ms": 990.24766596267,
+      "output_tokens": 19,
+      "path": "vlm-direct",
+      "question_id": "s03-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "s04",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 176,
+      "kind": "screenshot",
+      "latency_ms": 1061.8951669894159,
+      "output_tokens": 34,
+      "path": "ocr",
+      "question_id": "s04-q1"
+    },
+    {
+      "answer": "eu-west-1",
+      "case_id": "s04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 207,
+      "kind": "screenshot",
+      "latency_ms": 1013.2655419874936,
+      "output_tokens": 15,
+      "path": "vlm-transcript",
+      "question_id": "s04-q1"
+    },
+    {
+      "answer": "eu-west-1",
+      "case_id": "s04",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 499,
+      "kind": "screenshot",
+      "latency_ms": 1117.0235840254463,
+      "output_tokens": 32,
+      "path": "vlm-direct",
+      "question_id": "s04-q1"
+    },
+    {
+      "answer": "9.1s",
+      "case_id": "s04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 178,
+      "kind": "screenshot",
+      "latency_ms": 1279.5360420132056,
+      "output_tokens": 34,
+      "path": "ocr",
+      "question_id": "s04-q2"
+    },
+    {
+      "answer": "9.1 s",
+      "case_id": "s04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 209,
+      "kind": "screenshot",
+      "latency_ms": 1125.383333011996,
+      "output_tokens": 15,
+      "path": "vlm-transcript",
+      "question_id": "s04-q2"
+    },
+    {
+      "answer": "9.1 s",
+      "case_id": "s04",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 501,
+      "kind": "screenshot",
+      "latency_ms": 1107.666625001002,
+      "output_tokens": 36,
+      "path": "vlm-direct",
+      "question_id": "s04-q2"
+    },
+    {
+      "answer": "us-east-1",
+      "case_id": "c01",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 185,
+      "kind": "chart",
+      "latency_ms": 5005.951208004262,
+      "output_tokens": 386,
+      "path": "ocr",
+      "question_id": "c01-q1"
+    },
+    {
+      "answer": "eu-west-1",
+      "case_id": "c01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 268,
+      "kind": "chart",
+      "latency_ms": 865.2662909589708,
+      "output_tokens": 15,
+      "path": "vlm-transcript",
+      "question_id": "c01-q1"
+    },
+    {
+      "answer": "eu-west-1",
+      "case_id": "c01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 810,
+      "kind": "chart",
+      "latency_ms": 1542.9272080073133,
+      "output_tokens": 33,
+      "path": "vlm-direct",
+      "question_id": "c01-q1"
+    },
+    {
+      "answer": "10 seconds",
+      "case_id": "c01",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 191,
+      "kind": "chart",
+      "latency_ms": 2749.7383750160225,
+      "output_tokens": 191,
+      "path": "ocr",
+      "question_id": "c01-q2"
+    },
+    {
+      "answer": "9 seconds",
+      "case_id": "c01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 274,
+      "kind": "chart",
+      "latency_ms": 931.1985829845071,
+      "output_tokens": 13,
+      "path": "vlm-transcript",
+      "question_id": "c01-q2"
+    },
+    {
+      "answer": "About 9 seconds",
+      "case_id": "c01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 816,
+      "kind": "chart",
+      "latency_ms": 1605.6350420112722,
+      "output_tokens": 35,
+      "path": "vlm-direct",
+      "question_id": "c01-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "c02",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 157,
+      "kind": "chart",
+      "latency_ms": 2434.5423750346527,
+      "output_tokens": 150,
+      "path": "ocr",
+      "question_id": "c02-q1"
+    },
+    {
+      "answer": "checkout-api",
+      "case_id": "c02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 188,
+      "kind": "chart",
+      "latency_ms": 1312.0312499813735,
+      "output_tokens": 13,
+      "path": "vlm-transcript",
+      "question_id": "c02-q1"
+    },
+    {
+      "answer": "checkout-api",
+      "case_id": "c02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 809,
+      "kind": "chart",
+      "latency_ms": 1270.853416994214,
+      "output_tokens": 28,
+      "path": "vlm-direct",
+      "question_id": "c02-q1"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "c02",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 157,
+      "kind": "chart",
+      "latency_ms": 1722.401249979157,
+      "output_tokens": 93,
+      "path": "ocr",
+      "question_id": "c02-q2"
+    },
+    {
+      "answer": "session-service",
+      "case_id": "c02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 188,
+      "kind": "chart",
+      "latency_ms": 1251.2581250048243,
+      "output_tokens": 27,
+      "path": "vlm-transcript",
+      "question_id": "c02-q2"
+    },
+    {
+      "answer": "session-service",
+      "case_id": "c02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 809,
+      "kind": "chart",
+      "latency_ms": 1072.3112919949926,
+      "output_tokens": 13,
+      "path": "vlm-direct",
+      "question_id": "c02-q2"
+    },
+    {
+      "answer": "idle",
+      "case_id": "c03",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 158,
+      "kind": "chart",
+      "latency_ms": 2339.6660829894245,
+      "output_tokens": 121,
+      "path": "ocr",
+      "question_id": "c03-q1"
+    },
+    {
+      "answer": "idle in transaction",
+      "case_id": "c03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 204,
+      "kind": "chart",
+      "latency_ms": 1209.5805840217508,
+      "output_tokens": 14,
+      "path": "vlm-transcript",
+      "question_id": "c03-q1"
+    },
+    {
+      "answer": "idle in transaction",
+      "case_id": "c03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 809,
+      "kind": "chart",
+      "latency_ms": 1212.5248750089668,
+      "output_tokens": 18,
+      "path": "vlm-direct",
+      "question_id": "c03-q1"
+    },
+    {
+      "answer": "idle in transaction",
+      "case_id": "c03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 158,
+      "kind": "chart",
+      "latency_ms": 2375.3898330032825,
+      "output_tokens": 116,
+      "path": "ocr",
+      "question_id": "c03-q2"
+    },
+    {
+      "answer": "idle",
+      "case_id": "c03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 204,
+      "kind": "chart",
+      "latency_ms": 1130.073625012301,
+      "output_tokens": 26,
+      "path": "vlm-transcript",
+      "question_id": "c03-q2"
+    },
+    {
+      "answer": "idle",
+      "case_id": "c03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 809,
+      "kind": "chart",
+      "latency_ms": 1304.4826660188846,
+      "output_tokens": 51,
+      "path": "vlm-direct",
+      "question_id": "c03-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "d01",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 162,
+      "kind": "diagram",
+      "latency_ms": 1903.1649579992518,
+      "output_tokens": 73,
+      "path": "ocr",
+      "question_id": "d01-q1"
+    },
+    {
+      "answer": "payments-gateway and billing-service",
+      "case_id": "d01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 206,
+      "kind": "diagram",
+      "latency_ms": 1178.689584019594,
+      "output_tokens": 37,
+      "path": "vlm-transcript",
+      "question_id": "d01-q1"
+    },
+    {
+      "answer": "payments-gateway and billing-service",
+      "case_id": "d01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 960,
+      "kind": "diagram",
+      "latency_ms": 1250.4654169897549,
+      "output_tokens": 52,
+      "path": "vlm-direct",
+      "question_id": "d01-q1"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "d01",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 163,
+      "kind": "diagram",
+      "latency_ms": 4011.522624990903,
+      "output_tokens": 367,
+      "path": "ocr",
+      "question_id": "d01-q2"
+    },
+    {
+      "answer": "promo-engine",
+      "case_id": "d01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 207,
+      "kind": "diagram",
+      "latency_ms": 1330.2765829721466,
+      "output_tokens": 37,
+      "path": "vlm-transcript",
+      "question_id": "d01-q2"
+    },
+    {
+      "answer": "promo-engine",
+      "case_id": "d01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 961,
+      "kind": "diagram",
+      "latency_ms": 1419.5160419913009,
+      "output_tokens": 46,
+      "path": "vlm-direct",
+      "question_id": "d01-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "d02",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 149,
+      "kind": "diagram",
+      "latency_ms": 1390.4570830054581,
+      "output_tokens": 52,
+      "path": "ocr",
+      "question_id": "d02-q1"
+    },
+    {
+      "answer": "orders-db-primary",
+      "case_id": "d02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 184,
+      "kind": "diagram",
+      "latency_ms": 1197.2346249967813,
+      "output_tokens": 38,
+      "path": "vlm-transcript",
+      "question_id": "d02-q1"
+    },
+    {
+      "answer": "orders-db-primary",
+      "case_id": "d02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 770,
+      "kind": "diagram",
+      "latency_ms": 1102.829416980967,
+      "output_tokens": 33,
+      "path": "vlm-direct",
+      "question_id": "d02-q1"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "d02",
+      "correct": false,
+      "in_text": true,
+      "input_tokens": 150,
+      "kind": "diagram",
+      "latency_ms": 1201.717166986782,
+      "output_tokens": 35,
+      "path": "ocr",
+      "question_id": "d02-q2"
+    },
+    {
+      "answer": "orders-db-standby",
+      "case_id": "d02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 185,
+      "kind": "diagram",
+      "latency_ms": 1061.778665985912,
+      "output_tokens": 30,
+      "path": "vlm-transcript",
+      "question_id": "d02-q2"
+    },
+    {
+      "answer": "orders-db-standby",
+      "case_id": "d02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 771,
+      "kind": "diagram",
+      "latency_ms": 1265.3742090333253,
+      "output_tokens": 19,
+      "path": "vlm-direct",
+      "question_id": "d02-q2"
+    },
+    {
+      "answer": "CDN",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 150,
+      "kind": "diagram",
+      "latency_ms": 1330.5730830179527,
+      "output_tokens": 51,
+      "path": "ocr",
+      "question_id": "d03-q1"
+    },
+    {
+      "answer": "CDN",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 182,
+      "kind": "diagram",
+      "latency_ms": 1156.1293749837205,
+      "output_tokens": 29,
+      "path": "vlm-transcript",
+      "question_id": "d03-q1"
+    },
+    {
+      "answer": "CDN",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 750,
+      "kind": "diagram",
+      "latency_ms": 1162.7287909504957,
+      "output_tokens": 32,
+      "path": "vlm-direct",
+      "question_id": "d03-q1"
+    },
+    {
+      "answer": "admin-tools",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 150,
+      "kind": "diagram",
+      "latency_ms": 1709.7471250453964,
+      "output_tokens": 76,
+      "path": "ocr",
+      "question_id": "d03-q2"
+    },
+    {
+      "answer": "admin-tools",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 182,
+      "kind": "diagram",
+      "latency_ms": 1165.001708024647,
+      "output_tokens": 30,
+      "path": "vlm-transcript",
+      "question_id": "d03-q2"
+    },
+    {
+      "answer": "admin-tools",
+      "case_id": "d03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 750,
+      "kind": "diagram",
+      "latency_ms": 1000.0679579679854,
+      "output_tokens": 13,
+      "path": "vlm-direct",
+      "question_id": "d03-q2"
+    },
+    {
+      "answer": "Tom Hughes",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 209,
+      "kind": "pdf-text",
+      "latency_ms": 956.8887919886038,
+      "output_tokens": 13,
+      "path": "pdf-text",
+      "question_id": "p01-q1"
+    },
+    {
+      "answer": "Tom Hughes",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 222,
+      "kind": "pdf-text",
+      "latency_ms": 1033.5970830055885,
+      "output_tokens": 13,
+      "path": "ocr",
+      "question_id": "p01-q1"
+    },
+    {
+      "answer": "Tom Hughes",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 219,
+      "kind": "pdf-text",
+      "latency_ms": 907.2855419944972,
+      "output_tokens": 13,
+      "path": "vlm-transcript",
+      "question_id": "p01-q1"
+    },
+    {
+      "answer": "Tom Hughes",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2538,
+      "kind": "pdf-text",
+      "latency_ms": 1109.0010410407558,
+      "output_tokens": 13,
+      "path": "vlm-direct",
+      "question_id": "p01-q1"
+    },
+    {
+      "answer": "Priya Nair",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 205,
+      "kind": "pdf-text",
+      "latency_ms": 1254.4115839991719,
+      "output_tokens": 15,
+      "path": "pdf-text",
+      "question_id": "p01-q2"
+    },
+    {
+      "answer": "Priya Nair",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 218,
+      "kind": "pdf-text",
+      "latency_ms": 1265.4030839912593,
+      "output_tokens": 15,
+      "path": "ocr",
+      "question_id": "p01-q2"
+    },
+    {
+      "answer": "Priya Nair",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 215,
+      "kind": "pdf-text",
+      "latency_ms": 1036.6011669975705,
+      "output_tokens": 15,
+      "path": "vlm-transcript",
+      "question_id": "p01-q2"
+    },
+    {
+      "answer": "Priya Nair",
+      "case_id": "p01",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2534,
+      "kind": "pdf-text",
+      "latency_ms": 1117.2498340019956,
+      "output_tokens": 15,
+      "path": "vlm-direct",
+      "question_id": "p01-q2"
+    },
+    {
+      "answer": "30 minutes",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 208,
+      "kind": "pdf-text",
+      "latency_ms": 1239.0307080349885,
+      "output_tokens": 13,
+      "path": "pdf-text",
+      "question_id": "p02-q1"
+    },
+    {
+      "answer": "30 minutes",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 215,
+      "kind": "pdf-text",
+      "latency_ms": 1187.8632500302047,
+      "output_tokens": 30,
+      "path": "ocr",
+      "question_id": "p02-q1"
+    },
+    {
+      "answer": "30 minutes",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 216,
+      "kind": "pdf-text",
+      "latency_ms": 1074.8370419605635,
+      "output_tokens": 13,
+      "path": "vlm-transcript",
+      "question_id": "p02-q1"
+    },
+    {
+      "answer": "30 minutes",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2538,
+      "kind": "pdf-text",
+      "latency_ms": 1079.2591669596732,
+      "output_tokens": 13,
+      "path": "vlm-direct",
+      "question_id": "p02-q1"
+    },
+    {
+      "answer": "5 working days",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 207,
+      "kind": "pdf-text",
+      "latency_ms": 1089.7697919863276,
+      "output_tokens": 14,
+      "path": "pdf-text",
+      "question_id": "p02-q2"
+    },
+    {
+      "answer": "5 working days",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 214,
+      "kind": "pdf-text",
+      "latency_ms": 994.705667020753,
+      "output_tokens": 14,
+      "path": "ocr",
+      "question_id": "p02-q2"
+    },
+    {
+      "answer": "5 working days",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 215,
+      "kind": "pdf-text",
+      "latency_ms": 1272.747458948288,
+      "output_tokens": 14,
+      "path": "vlm-transcript",
+      "question_id": "p02-q2"
+    },
+    {
+      "answer": "5 working days",
+      "case_id": "p02",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2537,
+      "kind": "pdf-text",
+      "latency_ms": 1042.0047920197248,
+      "output_tokens": 14,
+      "path": "vlm-direct",
+      "question_id": "p02-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "p03",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 0,
+      "kind": "pdf-scanned",
+      "latency_ms": 0.0,
+      "output_tokens": 0,
+      "path": "pdf-text",
+      "question_id": "p03-q1"
+    },
+    {
+      "answer": "120 orders/s",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 164,
+      "kind": "pdf-scanned",
+      "latency_ms": 1562.6438750186935,
+      "output_tokens": 81,
+      "path": "ocr",
+      "question_id": "p03-q1"
+    },
+    {
+      "answer": "120 orders/s",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 170,
+      "kind": "pdf-scanned",
+      "latency_ms": 1159.6404580050148,
+      "output_tokens": 36,
+      "path": "vlm-transcript",
+      "question_id": "p03-q1"
+    },
+    {
+      "answer": "120 orders/s",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2537,
+      "kind": "pdf-scanned",
+      "latency_ms": 1223.2177919941023,
+      "output_tokens": 14,
+      "path": "vlm-direct",
+      "question_id": "p03-q1"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "p03",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 0,
+      "kind": "pdf-scanned",
+      "latency_ms": 0.0,
+      "output_tokens": 0,
+      "path": "pdf-text",
+      "question_id": "p03-q2"
+    },
+    {
+      "answer": "22 pods",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 161,
+      "kind": "pdf-scanned",
+      "latency_ms": 1557.3277919902466,
+      "output_tokens": 64,
+      "path": "ocr",
+      "question_id": "p03-q2"
+    },
+    {
+      "answer": "22 pods",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 167,
+      "kind": "pdf-scanned",
+      "latency_ms": 1016.0476670134813,
+      "output_tokens": 13,
+      "path": "vlm-transcript",
+      "question_id": "p03-q2"
+    },
+    {
+      "answer": "22 pods",
+      "case_id": "p03",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2534,
+      "kind": "pdf-scanned",
+      "latency_ms": 1038.2357920170762,
+      "output_tokens": 31,
+      "path": "vlm-direct",
+      "question_id": "p03-q2"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "p04",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 0,
+      "kind": "pdf-scanned",
+      "latency_ms": 0.0,
+      "output_tokens": 0,
+      "path": "pdf-text",
+      "question_id": "p04-q1"
+    },
+    {
+      "answer": "Sun 02:00-04:00 UTC",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 188,
+      "kind": "pdf-scanned",
+      "latency_ms": 1832.351542019751,
+      "output_tokens": 130,
+      "path": "ocr",
+      "question_id": "p04-q1"
+    },
+    {
+      "answer": "Sun 02:00-04:00 UTC",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 189,
+      "kind": "pdf-scanned",
+      "latency_ms": 1212.5189999933355,
+      "output_tokens": 37,
+      "path": "vlm-transcript",
+      "question_id": "p04-q1"
+    },
+    {
+      "answer": "Sunday 02:00\u201304:00 UTC",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2534,
+      "kind": "pdf-scanned",
+      "latency_ms": 1767.8859999869019,
+      "output_tokens": 46,
+      "path": "vlm-direct",
+      "question_id": "p04-q1"
+    },
+    {
+      "answer": "unknown",
+      "case_id": "p04",
+      "correct": false,
+      "in_text": false,
+      "input_tokens": 0,
+      "kind": "pdf-scanned",
+      "latency_ms": 0.0,
+      "output_tokens": 0,
+      "path": "pdf-text",
+      "question_id": "p04-q2"
+    },
+    {
+      "answer": "Messaging",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 187,
+      "kind": "pdf-scanned",
+      "latency_ms": 1842.4324590014294,
+      "output_tokens": 114,
+      "path": "ocr",
+      "question_id": "p04-q2"
+    },
+    {
+      "answer": "Messaging",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": true,
+      "input_tokens": 188,
+      "kind": "pdf-scanned",
+      "latency_ms": 1006.8810419761576,
+      "output_tokens": 12,
+      "path": "vlm-transcript",
+      "question_id": "p04-q2"
+    },
+    {
+      "answer": "Messaging",
+      "case_id": "p04",
+      "correct": true,
+      "in_text": null,
+      "input_tokens": 2533,
+      "kind": "pdf-scanned",
+      "latency_ms": 2461.269208986778,
+      "output_tokens": 27,
+      "path": "vlm-direct",
+      "question_id": "p04-q2"
+    }
+  ],
+  "routes": {
+    "c01": "vlm-transcript",
+    "c02": "vlm-transcript",
+    "c03": "vlm-transcript",
+    "d01": "vlm-transcript",
+    "d02": "vlm-transcript",
+    "d03": "vlm-transcript",
+    "p01": "pdf-text",
+    "p02": "pdf-text",
+    "p03": "vlm-transcript",
+    "p04": "vlm-transcript",
+    "s01": "ocr",
+    "s02": "ocr",
+    "s03": "vlm-transcript",
+    "s04": "ocr"
+  },
+  "summary": {
+    "chart": {
+      "ocr": {
+        "correct": 1,
+        "extraction_ms": [
+          200.36341599188745,
+          177.7910409728065,
+          214.6215420216322
+        ],
+        "in_text": 6,
+        "input_tokens": 1006,
+        "output_tokens": 1057,
+        "total": 6,
+        "usd": 0.013085
+      },
+      "vlm-direct": {
+        "correct": 6,
+        "extraction_ms": [],
+        "in_text": 0,
+        "input_tokens": 4862,
+        "output_tokens": 178,
+        "total": 6,
+        "usd": 0.013935
+      },
+      "vlm-transcript": {
+        "correct": 6,
+        "extraction_ms": [
+          5004.694041970652,
+          2583.5812910227105,
+          2806.912458036095
+        ],
+        "in_text": 6,
+        "input_tokens": 4302,
+        "output_tokens": 1172,
+        "total": 6,
+        "usd": 0.022475
+      }
+    },
+    "diagram": {
+      "ocr": {
+        "correct": 2,
+        "extraction_ms": [
+          169.17258402099833,
+          167.3824589815922,
+          192.03233299776912
+        ],
+        "in_text": 5,
+        "input_tokens": 924,
+        "output_tokens": 654,
+        "total": 6,
+        "usd": 0.00885
+      },
+      "vlm-direct": {
+        "correct": 6,
+        "extraction_ms": [],
+        "in_text": 0,
+        "input_tokens": 4962,
+        "output_tokens": 195,
+        "total": 6,
+        "usd": 0.014355
+      },
+      "vlm-transcript": {
+        "correct": 6,
+        "extraction_ms": [
+          3176.073874987196,
+          2001.5663329977542,
+          1858.6630420177244
+        ],
+        "in_text": 6,
+        "input_tokens": 4171,
+        "output_tokens": 803,
+        "total": 6,
+        "usd": 0.018458
+      }
+    },
+    "pdf-scanned": {
+      "ocr": {
+        "correct": 4,
+        "extraction_ms": [
+          282.9795000143349,
+          307.7445419621654
+        ],
+        "in_text": 4,
+        "input_tokens": 700,
+        "output_tokens": 389,
+        "total": 4,
+        "usd": 0.00564
+      },
+      "pdf-text": {
+        "correct": 0,
+        "extraction_ms": [
+          0.7476250175386667,
+          0.825249997433275
+        ],
+        "in_text": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total": 4,
+        "usd": 0.0
+      },
+      "vlm-direct": {
+        "correct": 4,
+        "extraction_ms": [],
+        "in_text": 0,
+        "input_tokens": 10138,
+        "output_tokens": 118,
+        "total": 4,
+        "usd": 0.026525
+      },
+      "vlm-transcript": {
+        "correct": 4,
+        "extraction_ms": [
+          2683.30362503184,
+          2060.1119170314632
+        ],
+        "in_text": 4,
+        "input_tokens": 6148,
+        "output_tokens": 495,
+        "total": 4,
+        "usd": 0.02032
+      }
+    },
+    "pdf-text": {
+      "ocr": {
+        "correct": 4,
+        "extraction_ms": [
+          469.93449999717996,
+          358.2765840110369
+        ],
+        "in_text": 4,
+        "input_tokens": 869,
+        "output_tokens": 72,
+        "total": 4,
+        "usd": 0.002893
+      },
+      "pdf-text": {
+        "correct": 4,
+        "extraction_ms": [
+          70.9038749919273,
+          2.4325420381501317
+        ],
+        "in_text": 4,
+        "input_tokens": 829,
+        "output_tokens": 55,
+        "total": 4,
+        "usd": 0.002622
+      },
+      "vlm-direct": {
+        "correct": 4,
+        "extraction_ms": [],
+        "in_text": 0,
+        "input_tokens": 10147,
+        "output_tokens": 55,
+        "total": 4,
+        "usd": 0.025917
+      },
+      "vlm-transcript": {
+        "correct": 4,
+        "extraction_ms": [
+          3485.9285000129603,
+          2614.0315840020776
+        ],
+        "in_text": 4,
+        "input_tokens": 6299,
+        "output_tokens": 540,
+        "total": 4,
+        "usd": 0.021147
+      }
+    },
+    "screenshot": {
+      "ocr": {
+        "correct": 7,
+        "extraction_ms": [
+          867.1621249523014,
+          395.44266602024436,
+          167.98908304190263,
+          269.6918749716133
+        ],
+        "in_text": 7,
+        "input_tokens": 1677,
+        "output_tokens": 254,
+        "total": 8,
+        "usd": 0.006732
+      },
+      "vlm-direct": {
+        "correct": 8,
+        "extraction_ms": [],
+        "in_text": 0,
+        "input_tokens": 4637,
+        "output_tokens": 222,
+        "total": 8,
+        "usd": 0.013813
+      },
+      "vlm-transcript": {
+        "correct": 8,
+        "extraction_ms": [
+          5697.649082983844,
+          1823.190750030335,
+          1665.4690419672988,
+          1537.6453750068322
+        ],
+        "in_text": 8,
+        "input_tokens": 4856,
+        "output_tokens": 1042,
+        "total": 8,
+        "usd": 0.02256
+      }
+    }
+  }
+}

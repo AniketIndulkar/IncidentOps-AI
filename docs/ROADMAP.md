@@ -112,11 +112,16 @@ Plan and hypotheses: [roadmap-w05.md](roadmap-w05.md). Built 17 Oct, stacked on 
 - ✅ AIENG-37 `QueryHints` (a service suggests, never filters), `AnchoredRetriever` (own documents or graph neighbourhood, fused by RRF), switchable with `INCIDENTOPS_GRAPH_RETRIEVAL`; diagnosis returns `service_context`, degrades when Neo4j is down.
 - ✅ AIENG-38 **Graph does not help retrieval here**: hybrid already reaches Recall@5 1.000 on the graph set; the soft anchor costs 0.196 MRR, the graph +0.000, a hard filter loses every dependency question. ADR-002: the graph answers structured questions and is shown as context.
 
-**W06 · Multimodal** (AIENG-7)
-- AIENG-39 Benchmark (screenshots, diagrams, PDF pages) + hypotheses written first.
-- AIENG-40 OCR/text baseline → AIENG-41 direct VLM / visual embeddings (ColPali optional).
-- AIENG-42 ≥5 multimodal incidents end to end with cited evidence.
-- AIENG-43 Routing decision per document type, evidence-backed.
+**W06 · Multimodal** (AIENG-7) — *exit: benchmarked multimodal ingestion over screenshots, diagrams and complex PDFs*
+
+Plan and hypotheses: [roadmap-w06.md](roadmap-w06.md). Built 17 Oct, stacked on W05. Findings:
+[multimodal-findings](../evals/multimodal/runs/2026-10-17-multimodal-findings.md); decision: [ADR-003](adr/003-multimodal-routing.md).
+
+- ✅ AIENG-39 14 generated assets (screenshots, charts, diagrams, text and scanned PDFs), 28 questions, hypotheses H18–H23 and two rules, committed before extraction code.
+- ✅ AIENG-40 PDF text layer (pypdfium2) and OCR (RapidOCR, optional extra) with a pixel box per line.
+- ✅ AIENG-41 Image inputs in the provider; vision transcript (citable) and direct answers (ceiling). OCR 1/6 on charts and 2/6 on diagrams; the transcript 6/6; ~$0.24 for the whole benchmark at an assumed price.
+- ✅ AIENG-42 `POST/GET /incidents/{id}/attachments`; attachment evidence `A1..An` in the diagnosis with box-level provenance for OCR; six multimodal incidents end to end with real models.
+- ✅ AIENG-43 Routing by file type: text layer → text, scan → OCR, image → vision transcript (OCR fallback). The coverage router written in advance was refuted (9/14).
 
 ### Phase 4 — Orchestration & agents (W07–W08, 16–27 Nov) → **v0.2**
 
@@ -209,11 +214,14 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W05 complete; `v0.1` not tagged yet)
+## Current state (17 Oct 2026, W06 complete; `v0.1` not tagged yet)
 
-- **W01 to W05 complete** (AIENG-2, 15–38). W03 and W04 were built on 16 Oct and W05 on 17 Oct, as
-  stacked pull requests (#3 W03, #4 W04, W05 on top). Next: W06 (multimodal), starting with AIENG-39.
+- **W01 to W06 complete** (AIENG-2, 15–43). W03 and W04 were built on 16 Oct, W05 and W06 on 17 Oct,
+  as stacked pull requests (#3 W03, #4 W04, #5 W05, W06 on top). Next: W07 (LangGraph), AIENG-44.
   Waiting on you: the `v0.1` tag, merging the stack, and the Jira updates.
+- Multimodal evidence (W06, `src/incidentops_ai/multimodal/`): attachments (PNG, JPEG, PDF) checked,
+  routed and stored per incident; PDF text layer, OCR with line boxes, vision transcripts; evidence
+  `A1..An` in the diagnosis (prompt `diagnose_incident/v2`); a generated benchmark and its runner.
 - Knowledge graph (W05, `src/incidentops_ai/graph/`): catalogue loader and validation, Neo4j store with
   uid constraints, Cypher for five traversal questions plus related documents and service context, an
   in-memory reference, graph-anchored retrieval (off by default), and the `graph.benchmark` harness.
@@ -333,6 +341,9 @@ Hard dependencies to protect:
 25. **The reranker is too heavy to run in the 1 GB Lightsail deploy** (0.65 to 1.3 GB). It is off by default and an optional extra, so the default image is unaffected. If a later corpus needs it: depth 10 and a small batch, then a hosted reranker, then a bigger instance.
 26. **The graph is measured on my own catalogue and questions.** Graph value could be under- or over-stated for incidents that describe only the reporting service's view. A new question set would be needed to test that (W11).
 27. **Neo4j adds a second datastore** to development and CI (and to the deploy, if service context is wanted there). The API runs without it; with it down, diagnosis degrades to `graph_status: "unavailable"`.
+28. **Vision transcripts can misread and still be cited faithfully** (`mbznw` for `mbzrw` in the W06 run). A citation of an attachment proves what the transcript says. Candidate mitigation: OCR the image too and flag identifiers the two disagree on.
+29. **OCR can drop whole lines silently**, with high confidence on the lines it keeps. Do not treat OCR text as complete.
+30. **The routing rule was read off 14 synthetic assets.** Real, noisy screenshots and scans are needed to trust it (W11 golden set).
 
 ## Weekly cadence
 

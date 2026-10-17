@@ -475,3 +475,26 @@ async def test_tool_turn_failures_use_the_same_statuses_and_retry_rules():
     )
     assert turn.status is LLMStatus.SUCCEEDED and len(turn.calls) == 1
     assert turn.metadata.attempts == 2 and len(seen) == 2
+
+
+async def test_images_are_sent_as_input_image_parts_next_to_the_text():
+    from incidentops_ai.llm.provider import ImageInput
+
+    provider, seen = provider_with(
+        lambda _: ok(response_body([text_part('{"service": "a", "urgent": false}')]))
+    )
+    prompt = PROMPT.model_copy(
+        update={
+            "images": (ImageInput(media_type="image/png", data=b"\x89PNG-bytes", detail="low"),)
+        }
+    )
+
+    await provider.generate_structured(prompt=prompt, schema=Ticket, config=CONFIG)
+
+    sent = json.loads(seen[0].content)
+    [message] = sent["input"]
+    assert message["role"] == "user"
+    assert message["content"][0] == {"type": "input_text", "text": "pay is down!"}
+    image = message["content"][1]
+    assert image["type"] == "input_image" and image["detail"] == "low"
+    assert image["image_url"] == "data:image/png;base64,iVBORy1ieXRlcw=="

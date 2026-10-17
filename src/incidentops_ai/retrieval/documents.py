@@ -31,6 +31,7 @@ class CorpusError(ValueError):
 class DocType(StrEnum):
     RUNBOOK = "runbook"
     POSTMORTEM = "postmortem"
+    ATTACHMENT = "attachment"  # a file attached to one incident (W06); never in the shared corpus
 
 
 @dataclass(frozen=True, slots=True)

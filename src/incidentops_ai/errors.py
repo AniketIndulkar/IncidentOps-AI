@@ -58,6 +58,32 @@ class RetrievalFailedError(DomainError):
     code = "retrieval_failed"
 
 
+class AttachmentRejectedError(DomainError):
+    """An uploaded file was refused. The subclass decides the HTTP status; `code` says why."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+class UnsupportedMediaError(AttachmentRejectedError):
+    """Not a PNG, JPEG or PDF, judged by the bytes."""
+
+
+class AttachmentTooLargeError(AttachmentRejectedError):
+    """Over the size or pixel limit."""
+
+
+class InvalidAttachmentError(AttachmentRejectedError):
+    """Unreadable, or too many pages."""
+
+
+class ExtractionUnavailableError(DomainError):
+    """The extractor a file needs is not installed or failed (for example OCR without its extra)."""
+
+    code = "extraction_unavailable"
+
+
 class UnauthorizedError(DomainError):
     """The caller did not present the token this endpoint requires."""
 

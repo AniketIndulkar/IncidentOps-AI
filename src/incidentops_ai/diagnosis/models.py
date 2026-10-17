@@ -41,6 +41,7 @@ class EvidenceItem(BaseModel):
     page_end: int
     char_start: int  # span of the whole chunk in the document text
     char_end: int
+    extraction: str | None = None  # attachments: how the text was obtained (W06)
 
 
 class Citation(BaseModel):
@@ -56,6 +57,10 @@ class Citation(BaseModel):
     quote: str
     quote_start: int  # character offsets of the quote in the document text
     quote_end: int
+    # Attachments (W06): the pixel box of the quoted lines in the page image (OCR only), and the
+    # extraction that produced the text, so a reader can check it against the picture.
+    region: tuple[int, int, int, int] | None = None
+    extraction: str | None = None
 
 
 class Cause(BaseModel):

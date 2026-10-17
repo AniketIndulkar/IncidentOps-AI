@@ -1,9 +1,11 @@
 """Diagnose an incident from retrieved evidence, with citations the server has checked."""
 
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from incidentops_ai.diagnosis.evidence import (
+    Evidence,
     no_answer,
     number_evidence,
     render_evidence,
@@ -15,7 +17,7 @@ from incidentops_ai.llm.provider import LLMProvider, LLMStatus, ModelConfig, Run
 from incidentops_ai.retrieval.retriever import QueryHints, RetrievalFilter, Retriever
 
 DIAGNOSE_PROMPT = "diagnose_incident"
-DIAGNOSE_PROMPT_VERSION = "v1"
+DIAGNOSE_PROMPT_VERSION = "v2"  # v2 (W06): attachment evidence A1..An beside E1..En
 EVIDENCE_COUNT = 5  # the top five: the same K the retrieval benchmark calls a hit
 
 
@@ -43,6 +45,7 @@ async def diagnose(
     config: ModelConfig,
     k: int = EVIDENCE_COUNT,
     hints: QueryHints | None = None,
+    attachments: Sequence[Evidence] = (),
 ) -> DiagnosisResult:
     """Retrieve, ask the model, check its citations. Never raises for LLM failures: check
     `status`. With nothing retrieved the model is not called at all."""
@@ -51,7 +54,8 @@ async def diagnose(
         query, k=k, filters=RetrievalFilter(tenant_id=tenant_id), hints=hints
     )
     retrieval_ms = (time.perf_counter() - started) * 1000
-    evidence = number_evidence(results)
+    # The incident's own files (W06) come after the retrieved excerpts, already numbered A1..An.
+    evidence = [*number_evidence(results), *attachments]
 
     if not evidence:
         return DiagnosisResult(

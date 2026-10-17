@@ -74,7 +74,7 @@ class OpenAIProvider:
         outcome = await self._request(
             config,
             instructions=prompt.instructions,
-            input=prompt.input,
+            input=_input(prompt),
             text={"format": _strict_format(schema)},
         )
         response = outcome.response
@@ -229,6 +229,18 @@ def _metadata(
         request_id=getattr(response, "_request_id", None),
         attempt_statuses=[status],
     )
+
+
+def _input(prompt: Prompt) -> str | list[dict]:
+    """Plain text stays a string; with images it becomes one user message of content parts."""
+    if not prompt.images:
+        return prompt.input
+    parts: list[dict] = [{"type": "input_text", "text": prompt.input}]
+    parts += [
+        {"type": "input_image", "image_url": image.data_url(), "detail": image.detail}
+        for image in prompt.images
+    ]
+    return [{"role": "user", "content": parts}]
 
 
 @cache
