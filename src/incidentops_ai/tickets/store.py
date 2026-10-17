@@ -9,7 +9,7 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
-SEED = Path(__file__).resolve().parents[3] / "data" / "tickets" / "seed.json"
+SEED = Path(__file__).with_name("seed.json")  # inside the package, so it ships in the image
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS tickets (
