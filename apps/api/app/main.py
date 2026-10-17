@@ -6,19 +6,23 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from neo4j import AsyncGraphDatabase
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.errors import register_error_handlers
 from app.rate_limit import SlidingWindowLimiter
-from app.routes import analysis, attachments, incidents, memory, workflow
+from app.routes import analysis, attachments, incidents, memory, ops, workflow
 from incidentops_ai.config import Settings
 from incidentops_ai.db import create_engine, create_session_factory
 from incidentops_ai.graph.neo4j_store import Neo4jGraphStore
 from incidentops_ai.graph.retriever import AnchoredRetriever, GraphNeighbourhood, OwnDocuments
 from incidentops_ai.graph.store import GraphStore
+from incidentops_ai.integrations.cmdb import CmdbClient
+from incidentops_ai.integrations.jira import JiraClient, JiraTicketSink
 from incidentops_ai.llm.factory import build_model_config, build_provider
 from incidentops_ai.llm.provider import LLMProvider
 from incidentops_ai.multimodal.attachments import AttachmentProcessor
 from incidentops_ai.multimodal.extract import OcrExtractor, PdfTextExtractor, VlmTranscriber
+from incidentops_ai.ops.database import OpsDatabase
 from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
@@ -126,7 +130,19 @@ def create_app(
                     graph=app.state.graph_store,
                 )
                 # setup() creates or migrates LangGraph's own checkpoint tables, on first use.
-                if settings.tickets_db and settings.approval_secret:
+                if settings.cmdb_url and settings.cmdb_api_key:
+                    cmdb = CmdbClient(settings.cmdb_url, settings.cmdb_api_key.get_secret_value())
+                    resources.push_async_callback(cmdb.aclose)
+                    deps.cmdb = cmdb
+                if settings.jira_url and settings.jira_token:
+                    jira = JiraClient(
+                        settings.jira_url,
+                        settings.jira_token.get_secret_value(),
+                        project=settings.jira_project,
+                    )
+                    resources.push_async_callback(jira.aclose)
+                    deps.tickets = JiraTicketSink(jira)
+                elif settings.tickets_db and settings.approval_secret:
                     # The ticket MCP server runs as a child process for the app's lifetime.
                     secret = settings.approval_secret.get_secret_value()
                     tickets = await resources.enter_async_context(
@@ -134,6 +150,12 @@ def create_app(
                     )
                     deps.tickets = TicketActions(tickets, secret)
                 app.state.workflow_runner = WorkflowRunner(deps, saver, prepare=saver.setup)
+            # The ops database (W09) is read through its own engine, as the read-only role.
+            app.state.ops_database = None
+            if settings.ops_database_url:
+                ops_engine = create_async_engine(settings.ops_database_url, pool_pre_ping=True)
+                resources.push_async_callback(ops_engine.dispose)
+                app.state.ops_database = OpsDatabase(ops_engine)
             app.state.api_token = settings.api_token
             app.state.llm_limiter = SlidingWindowLimiter(settings.llm_rate_limit_per_minute)
             yield
@@ -161,6 +183,7 @@ def create_app(
     app.include_router(attachments.router)
     app.include_router(workflow.router)
     app.include_router(memory.router)
+    app.include_router(ops.router)
     return app
 
 

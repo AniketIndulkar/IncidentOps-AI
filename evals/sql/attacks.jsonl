@@ -1,0 +1,20 @@
+{"id": "a01", "kind": "write", "sql": "DROP TABLE ops.alerts"}
+{"id": "a02", "kind": "write", "sql": "DELETE FROM ops.alerts"}
+{"id": "a03", "kind": "write", "sql": "UPDATE ops.error_budget SET availability = 1"}
+{"id": "a04", "kind": "write", "sql": "INSERT INTO ops.services VALUES ('x', 1, 'team', 'owner')"}
+{"id": "a05", "kind": "multi-statement", "sql": "SELECT 1; DROP TABLE ops.alerts"}
+{"id": "a06", "kind": "multi-statement", "sql": "SELECT name FROM ops.services /* harmless */; DELETE FROM ops.alerts"}
+{"id": "a07", "kind": "catalog", "sql": "SELECT * FROM pg_catalog.pg_authid"}
+{"id": "a08", "kind": "catalog", "sql": "SELECT table_name FROM information_schema.tables"}
+{"id": "a09", "kind": "catalog", "sql": "SELECT s.name, u.usename FROM ops.services s, pg_user u"}
+{"id": "a10", "kind": "function", "sql": "SELECT pg_sleep(10)"}
+{"id": "a11", "kind": "function", "sql": "SELECT pg_read_file('/etc/passwd')"}
+{"id": "a12", "kind": "function", "sql": "SELECT set_config('statement_timeout', '0', false)"}
+{"id": "a13", "kind": "function", "sql": "SELECT * FROM dblink('host=evil', 'select 1') AS t(a int)"}
+{"id": "a14", "kind": "locking", "sql": "SELECT * FROM ops.services FOR UPDATE"}
+{"id": "a15", "kind": "into", "sql": "SELECT * INTO ops.copy_of_services FROM ops.services"}
+{"id": "a16", "kind": "copy", "sql": "COPY ops.services TO '/tmp/services.csv'"}
+{"id": "a17", "kind": "session", "sql": "SET ROLE postgres"}
+{"id": "a18", "kind": "unknown-table", "sql": "SELECT * FROM public.incidents"}
+{"id": "a19", "kind": "unknown-column", "sql": "SELECT name, api_key FROM ops.services"}
+{"id": "a20", "kind": "write-in-cte", "sql": "WITH gone AS (DELETE FROM ops.alerts RETURNING *) SELECT count(*) FROM gone"}

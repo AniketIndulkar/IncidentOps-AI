@@ -59,7 +59,7 @@ async def test_a_completed_run_is_recorded_with_its_route(settings, session_fact
         state = await runner.state(run.id)
 
     assert (run.status, run.route, run.reasons) == ("awaiting_approval", "recommend", [])
-    assert state["route"] == "recommend" and len(state["steps"]) == 8
+    assert state["route"] == "recommend" and len(state["steps"]) == 9
     async with session_factory() as session:
         row = (await session.execute(text("SELECT status, route FROM workflow_runs"))).one()
     assert tuple(row) == ("awaiting_approval", "recommend")

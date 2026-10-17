@@ -137,6 +137,21 @@ uv run python -m incidentops_ai.workflow.faults      # five injected faults (scr
 uv run python -m incidentops_ai.memory.benchmark     # reviewer notes with real models (scratch DB, costs)
 ```
 
+## Integrations and text-to-SQL (W09)
+
+- **Ticket API**: with `INCIDENTOPS_JIRA_URL` and `INCIDENTOPS_JIRA_TOKEN`, approved runs open a Jira
+  issue labelled with the run (found again after a timeout, never duplicated).
+- **Ops questions**: `POST /ops/query {"question": "..."}` answers from the `ops` schema (deployments,
+  alerts, on-call, error budgets). The model writes one SELECT; it runs only if the validator accepts
+  it, as a read-only role (`INCIDENTOPS_OPS_DATABASE_URL`, a login granted `incidentops_ops_reader`).
+- **CMDB**: with `INCIDENTOPS_CMDB_URL` and `INCIDENTOPS_CMDB_API_KEY`, each run looks up the service's
+  owner over SOAP; if the CMDB is down or answers nonsense, the run goes to review
+  (`integration_degraded`). Contracts: [docs/notes/integration-contracts.md](docs/notes/integration-contracts.md).
+
+```bash
+uv run python -m incidentops_ai.ops.benchmark   # text-to-SQL, 15 questions + 8 malicious (real model)
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -149,6 +164,8 @@ uv run python -m incidentops_ai.memory.benchmark     # reviewer notes with real 
   - `workflow/` — the LangGraph triage workflow, routing rule, runs and checkpoints, benchmark (W07); approval gate, budgets, fault injection (W08)
   - `memory/` — reviewer notes: append-only, scoped, recalled as evidence (W08)
   - `tickets/` — the ticket system as an MCP server, its client and signed approvals (W08)
+  - `integrations/` — Jira-style and SOAP CMDB adapters, and fakes of both (W09)
+  - `ops/` — the ops database: allow-list, reader, SQL validator, text-to-SQL (W09)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)

@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     # workflow run opens its ticket there. The secret signs approvals; the model never sees it.
     tickets_db: Path | None = None
     approval_secret: SecretStr | None = None
+    # Jira-style ticket API (W09). When set, it is the ticket system (it wins over the MCP server).
+    jira_url: str | None = None
+    jira_token: SecretStr | None = None
+    jira_project: str = "OPS"
+    # The ops database for text-to-SQL (W09): a login granted only incidentops_ops_reader.
+    ops_database_url: str | None = None
+    # The legacy CMDB (W09, SOAP): the system of record for who owns a service.
+    cmdb_url: str | None = None
+    cmdb_api_key: SecretStr | None = None
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -67,6 +76,11 @@ class Settings(BaseSettings):
         "neo4j_password",
         "tickets_db",
         "approval_secret",
+        "jira_url",
+        "jira_token",
+        "ops_database_url",
+        "cmdb_url",
+        "cmdb_api_key",
         mode="before",
     )
     @classmethod

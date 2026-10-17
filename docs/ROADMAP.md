@@ -159,6 +159,11 @@ faults end safely. Findings: [w08-findings](../evals/workflow/runs/2026-10-17-w0
 - AIENG-57 Text-to-SQL: allow-lists, SQL parse/validate, SELECT-only, row limits, timeouts.
 - AIENG-58 Mock SOAP/XML legacy adapter; degraded/unavailable downstream → human review.
 
+✅ Built 17 Oct, stacked on W08: [roadmap-w09](roadmap-w09.md). Jira-style adapter with safe retries and approved,
+labelled writes; ops schema behind a reader role (12/12 writes fail); text-to-SQL 14/15 with the real model, 20/20
+attacks refused; SOAP CMDB with `integration_degraded` routing. Findings:
+[w09-findings](../evals/sql/runs/2026-10-17-w09-findings.md); decision: [ADR-006](adr/006-text-to-sql-and-integration-failures.md).
+
 **W10 · IAM, RBAC, AI security** (AIENG-11)
 - AIENG-59 Authn/authz model, JWT/OAuth, user/role/tenant context, threat assumptions.
 - AIENG-60 Server-side RBAC (view/approve/admin).
@@ -225,11 +230,15 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W08 complete; `v0.1` and `v0.2` not tagged yet)
+## Current state (17 Oct 2026, W09 complete; `v0.1` and `v0.2` not tagged yet)
 
-- **W01 to W08 complete** (AIENG-2, 15–53). W03 and W04 were built on 16 Oct, W05 to W08 on 17 Oct,
-  as stacked pull requests (#3 W03, #4 W04, #5 W05, #6 W06, #7 W07, W08 on top). Next: W09. Waiting
-  on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- **W01 to W09 complete** (AIENG-2, 15–58). W03 and W04 were built on 16 Oct, W05 to W09 on 17 Oct,
+  as stacked pull requests (#3 W03 … #8 W08, W09 on top). Next: W10 (IAM, RBAC, AI security).
+  Waiting on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- Integrations (W09): `integrations.jira` (Jira-style REST, safe retries, labelled approved writes;
+  used by `act` when `INCIDENTOPS_JIRA_URL` is set), `integrations.cmdb` (SOAP CMDB, `cmdb` workflow
+  step, `integration_degraded`), `ops` (schema `ops`, reader role, allow-list, validator, text-to-SQL,
+  `POST /ops/query`).
 - Human in the loop (W08): every triage run stops at `awaiting_approval` with a proposed ticket;
   `POST .../decision` (once, row-locked); `workflow_events` and `memories` append-only by trigger;
   reviewer notes per tenant and service, recalled as evidence `M1..M3` (prompt `diagnose_incident/v3`);
@@ -371,6 +380,9 @@ Hard dependencies to protect:
 35. **A recommendation can rest on a single reviewer's note** (2 of 3 in the W08 memory check). The gate still requires a person; nothing flags it yet (W09/W10).
 36. **The approval secret mints approvals**: whoever holds `INCIDENTOPS_APPROVAL_SECRET` can sign a ticket write.
 37. **Runs can wait at the gate indefinitely**: no expiry or reminder yet.
+38. **Catalog reads depend on the SQL validator alone.** The reader role can read `information_schema`, `pg_user` (role names) and call `set_config`; PostgreSQL grants those to every role. Fix: the ops data in its own database or cluster.
+39. **The adapters are tested against fakes.** Real Jira and a real CMDB paginate, version and fail in more ways; run the contract tests against sandboxes before production.
+40. **Ops data is not filtered per tenant** yet (W10, AIENG-61).
 
 ## Weekly cadence
 

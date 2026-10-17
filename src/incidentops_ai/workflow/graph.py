@@ -92,6 +92,8 @@ class WorkflowState(TypedDict, total=False):
     retrieval_error: str | None
     service_context: dict | None
     memories: list[dict]  # the notes recalled for this run (W08), as they were when recalled
+    cmdb_status: str  # ok | unknown_service | unavailable | invalid | off (W09)
+    cmdb_record: dict | None
     graph_status: str
     diagnosis: dict | None
     diagnosis_status: str
@@ -114,6 +116,7 @@ class WorkflowDeps:
     graph: GraphStore | None
     tenant_id: str = DEFAULT_TENANT
     tickets: Any = None  # TicketActions (AIENG-52): what act writes to; None: nothing is written
+    cmdb: Any = None  # CmdbClient (W09): the legacy system of record for ownership; None: off
     # Called with the node name before each node runs: tests use it to crash a run on purpose.
     fault: Callable[[str], None] | None = None
     # Model-call records still being written (W08): the runner waits for them before it records a
@@ -307,6 +310,13 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         ]
         return {"memories": memories, "_outcome": f"{len(memories)} notes"}
 
+    async def cmdb(state: WorkflowState) -> dict:
+        if deps.cmdb is None:
+            return {"cmdb_status": "off", "cmdb_record": None, "_outcome": "off"}
+        lookup = await deps.cmdb.service_record(state["incident"]["service"])
+        record = lookup.record.model_dump() if lookup.record else None
+        return {"cmdb_status": lookup.status, "cmdb_record": record, "_outcome": lookup.status}
+
     async def diagnose(state: WorkflowState) -> dict:
         retrieved = [
             RetrievedChunk(chunk=_chunk(e["chunk"]), score=e["score"], rank=e["rank"])
@@ -429,6 +439,7 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
         "retrieve": retrieve,
         "graph": graph,
         "recall": recall,
+        "cmdb": cmdb,
         "diagnose": diagnose,
         "assess": assess,
         "recommend": recommend,
@@ -450,8 +461,9 @@ def build_workflow(deps: WorkflowDeps, *, checkpointer=None, parallel: bool = Tr
         builder.add_edge("intake", "retrieve")
         builder.add_edge("intake", "graph")
         builder.add_edge("intake", "recall")
-        builder.add_edge(["retrieve", "graph", "recall"], "extract")
-        builder.add_edge(["retrieve", "graph", "recall"], "diagnose")
+        builder.add_edge("intake", "cmdb")
+        builder.add_edge(["retrieve", "graph", "recall", "cmdb"], "extract")
+        builder.add_edge(["retrieve", "graph", "recall", "cmdb"], "diagnose")
         builder.add_edge(["extract", "diagnose"], "assess")
     else:
         for source, target in [
@@ -459,7 +471,8 @@ def build_workflow(deps: WorkflowDeps, *, checkpointer=None, parallel: bool = Tr
             ("extract", "retrieve"),
             ("retrieve", "graph"),
             ("graph", "recall"),
-            ("recall", "diagnose"),
+            ("recall", "cmdb"),
+            ("cmdb", "diagnose"),
             ("diagnose", "assess"),
         ]:
             builder.add_edge(source, target)
@@ -498,6 +511,19 @@ def _proposed_ticket(state: WorkflowState, recommendation: dict | None) -> dict:
     else:
         title = f"Investigate: {incident['title']}"
         body = [f"Sent to review: {', '.join(state['reasons'])}."]
+    record, cmdb_status = state.get("cmdb_record"), state.get("cmdb_status")
+    if record:
+        body += [
+            "",
+            (
+                f"Owner (CMDB): {record['owner']}, tier {record['tier']}, "
+                f"maintenance {record['maintenance_window']}."
+            ),
+        ]
+    elif cmdb_status in {"unavailable", "invalid"}:
+        body += ["", f"Owner: unknown (CMDB {cmdb_status}); nothing assumed."]
+    elif cmdb_status == "unknown_service":
+        body += ["", "Owner: unknown (not in the CMDB)."]
     if cited:
         body += ["", "Evidence cited:", *cited]
     body += ["", f"Incident {incident['id']} ({incident['severity']}, {incident['environment']})."]
