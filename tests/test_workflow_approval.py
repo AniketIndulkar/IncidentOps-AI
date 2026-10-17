@@ -14,6 +14,8 @@ from test_workflow import GOOD, ByType, deps, incident
 from incidentops_ai.errors import WorkflowNotAwaitingDecisionError, WorkflowNotResumableError
 from incidentops_ai.workflow.runner import Decision, WorkflowRunner, checkpoint_url
 
+pytestmark = pytest.mark.redteam  # security regressions: their own CI step (W10)
+
 APPROVE = Decision(decision="approve", reviewer="Amara Okafor", comment="Matches the runbook.")
 REJECT = Decision(decision="reject", reviewer="Amara Okafor", comment="Not this, it's the batch.")
 

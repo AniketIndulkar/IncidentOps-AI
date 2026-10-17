@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from incidentops_ai.ops.catalogue import ALLOWED, HIDDEN_COLUMNS
 from incidentops_ai.ops.database import OpsDatabase, OpsQueryError
 
+pytestmark = pytest.mark.redteam  # security regressions: their own CI step (W10)
+
 WRITES = [
     "DROP TABLE ops.alerts",
     "DELETE FROM ops.alerts",

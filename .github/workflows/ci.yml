@@ -64,7 +64,11 @@ jobs:
           version: "0.12.23"
           enable-cache: true
       - run: uv sync --frozen
-      - run: uv run pytest -q
+      # The security regression suite first and on its own (W10): a failure here is named as one.
+      - name: Red-team suite
+        run: uv run pytest -q -m redteam
+      - name: Full test suite
+        run: uv run pytest -q -m "not redteam"
 
   build:
     runs-on: ubuntu-latest

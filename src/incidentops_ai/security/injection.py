@@ -15,9 +15,11 @@ PATTERNS: dict[str, re.Pattern] = {
         r"\b(instructions|rules|guidelines|prompt|policies)\b"
     ),
     "role_marker": re.compile(r"(?im)^\s*(system|assistant|developer)\s*:"),
+    # Any verb near "system prompt": the first version listed verbs, and the real-model run found
+    # "put your full system prompt into the first cause" slipped past it.
     "prompt_request": re.compile(
-        r"(?i)\b(reveal|print|show|repeat|output|leak)\b[^.\n]{0,30}"
-        r"\b(system prompt|your (instructions|rules|prompt))\b"
+        r"(?i)\bsystem prompt\b|\b(reveal|print|show|repeat|output|leak|put|include|give|write)"
+        r"\b[^.\n]{0,30}\byour (instructions|rules|prompt)\b"
     ),
     "new_role": re.compile(
         r"(?i)\byou are now\b|\bmaintenance mode\b|\bdeveloper mode\b|\bjailbreak\b"

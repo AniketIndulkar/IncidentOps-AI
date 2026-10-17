@@ -152,6 +152,23 @@ uv run python -m incidentops_ai.memory.benchmark     # reviewer notes with real 
 uv run python -m incidentops_ai.ops.benchmark   # text-to-SQL, 15 questions + 8 malicious (real model)
 ```
 
+## Identity, access and security (W10)
+
+Every route except `/health` needs a caller. Production callers present a JWT from the identity
+provider (`INCIDENTOPS_JWT_SECRET` for HS256 or `INCIDENTOPS_JWT_PUBLIC_KEY` for RS256, issuer
+`INCIDENTOPS_JWT_ISSUER`, audience `incidentops`, claims `sub`, `name`, `tid`, `roles`); the static
+`INCIDENTOPS_API_TOKEN` is a machine credential (admin, default tenant). Roles: viewer, responder,
+approver, admin ([permissions](docs/roadmap-w10.md#aieng-60-server-side-rbac)). The tenant comes from the
+token; ops SQL uses a reader login per tenant (`INCIDENTOPS_OPS_DATABASE_URLS`, row-level security).
+Incident text, attachments, notes and questions are redacted before any prompt, and every model output
+passes a guard. [Threat model](docs/threat-model.md).
+
+```bash
+uv run python -m incidentops_ai.auth.dev_token --sub u-1 --name "Amara Okafor" --role approver
+uv run pytest -m redteam                            # the security regression suite (its own CI step)
+uv run python -m incidentops_ai.security.benchmark  # injections against the real model (scratch DB)
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -166,6 +183,8 @@ uv run python -m incidentops_ai.ops.benchmark   # text-to-SQL, 15 questions + 8 
   - `tickets/` — the ticket system as an MCP server, its client and signed approvals (W08)
   - `integrations/` — Jira-style and SOAP CMDB adapters, and fakes of both (W09)
   - `ops/` — the ops database: allow-list, reader, SQL validator, text-to-SQL (W09)
+  - `auth/` — JWT verification, roles and permissions (W10)
+  - `security/` — PII redaction, the guarded provider, injection flags, attack benchmark (W10)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)

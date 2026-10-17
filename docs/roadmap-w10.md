@@ -3,8 +3,15 @@
 Source: Jira epic **AIENG-11** and tasks **AIENG-59 to AIENG-63**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W09 (branch `feat/w10-iam-rbac-ai-security`).
 
-> **Status:** design written before any W10 code. Decisions are mine (W05 to W13 built back to back
-> at the user's request).
+> **Status, 17 Oct 2026: built and measured.** Design written before any W10 code; decisions are mine
+> (W05 to W13 built back to back at the user's request).
+>
+> **Result:** H40 to H44 hold. Every route enforces its permission for every role; seven token
+> attacks are refused; another tenant's data and documents never appear; eight attack cases hold
+> against a compromised model; the real model followed 0 of 6 injections. Building it found two
+> cross-tenant leaks (global idempotency keys, an unscoped tool). Findings:
+> [w10-findings](../evals/security/runs/2026-10-17-w10-findings.md); threat model:
+> [threat-model.md](threat-model.md); decision: [ADR-007](adr/007-identity-tenancy-and-model-controls.md).
 
 ## Goal of the week
 

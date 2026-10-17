@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from incidentops_ai.ops.database import OpsDatabase
 from incidentops_ai.ops.sql_guard import SqlRefused, validate
 
+pytestmark = pytest.mark.redteam  # security regressions: their own CI step (W10)
+
 ATTACKS = [json.loads(line) for line in Path("evals/sql/attacks.jsonl").read_text().splitlines()]
 QUESTIONS = [
     json.loads(line) for line in Path("evals/sql/questions.jsonl").read_text().splitlines()
