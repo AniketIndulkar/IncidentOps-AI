@@ -1,6 +1,7 @@
-# Local stack and single-server deploy: API + PostgreSQL.
-#   POSTGRES_PASSWORD must be set (in .env next to this file, never committed).
-#   docker compose up --build
+# IncidentOps AI v1.0: API + PostgreSQL (pgvector), optionally Neo4j. Guide: docs/deploy.md
+#   cp .env.example .env    # then set POSTGRES_PASSWORD, INCIDENTOPS_API_TOKEN, OPENAI_API_KEY, ...
+#   docker compose up -d --build
+#   docker compose --profile graph up -d --build    # with the knowledge graph (W05)
 services:
   db:
     image: pgvector/pgvector:pg17
@@ -18,6 +19,15 @@ services:
       retries: 10
     # No ports published: the database is reachable only from the api container.
 
+  neo4j:
+    profiles: ["graph"]
+    image: neo4j:5-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-change-me-please}
+    volumes:
+      - neo4jdata:/data
+
   api:
     build: .
     image: incidentops-api:local
@@ -25,18 +35,64 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Every setting is passed through from .env; a blank one means its default, which lives only in
+    # src/incidentops_ai/config.py (tests/test_deploy_config.py keeps this list complete).
+    # .env.example says what each one does. The simulated model (load tests) is deliberately absent.
     environment:
       INCIDENTOPS_DATABASE_URL: postgresql+asyncpg://incidentops:${POSTGRES_PASSWORD}@db:5432/incidentops
-      # Optional. Without these the API runs normally and the LLM endpoints answer 503.
-      # Every LLM call costs money, so the endpoints also need INCIDENTOPS_API_TOKEN (callers send
-      # it as a bearer token): with an OpenAI key but no token they stay off. Generate one with
-      # `openssl rand -hex 24`.
+      INCIDENTOPS_DATABASE_ECHO: ${INCIDENTOPS_DATABASE_ECHO:-}
+      INCIDENTOPS_DATABASE_POOL_SIZE: ${INCIDENTOPS_DATABASE_POOL_SIZE:-}
+      INCIDENTOPS_DATABASE_MAX_OVERFLOW: ${INCIDENTOPS_DATABASE_MAX_OVERFLOW:-}
+      INCIDENTOPS_CHECKPOINT_POOL_SIZE: ${INCIDENTOPS_CHECKPOINT_POOL_SIZE:-}
+      # Who may call the API (W10). Without a token or a JWT key every route answers 503.
+      INCIDENTOPS_API_TOKEN: ${INCIDENTOPS_API_TOKEN:-}
+      INCIDENTOPS_JWT_SECRET: ${INCIDENTOPS_JWT_SECRET:-}
+      INCIDENTOPS_JWT_PUBLIC_KEY: ${INCIDENTOPS_JWT_PUBLIC_KEY:-}
+      INCIDENTOPS_JWT_ISSUER: ${INCIDENTOPS_JWT_ISSUER:-}
+      # The model. Without a key and a model name, triage is off (GET /status: MANUAL).
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       INCIDENTOPS_LLM_MODEL: ${INCIDENTOPS_LLM_MODEL:-}
-      INCIDENTOPS_API_TOKEN: ${INCIDENTOPS_API_TOKEN:-}
-      INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE: ${INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE:-10}
+      INCIDENTOPS_LLM_MAX_OUTPUT_TOKENS: ${INCIDENTOPS_LLM_MAX_OUTPUT_TOKENS:-}
+      INCIDENTOPS_LLM_TIMEOUT_S: ${INCIDENTOPS_LLM_TIMEOUT_S:-}
+      INCIDENTOPS_LLM_ROUTES: ${INCIDENTOPS_LLM_ROUTES:-}
+      INCIDENTOPS_LLM_PER_MODEL_PER_MINUTE: ${INCIDENTOPS_LLM_PER_MODEL_PER_MINUTE:-}
+      INCIDENTOPS_LLM_MAX_ATTEMPTS: ${INCIDENTOPS_LLM_MAX_ATTEMPTS:-}
+      INCIDENTOPS_LLM_TOTAL_TIMEOUT_S: ${INCIDENTOPS_LLM_TOTAL_TIMEOUT_S:-}
+      INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE: ${INCIDENTOPS_LLM_RATE_LIMIT_PER_MINUTE:-}
+      # Retrieval: hybrid (dense + BM25) needs the corpus indexed with embeddings; bm25 needs none.
+      INCIDENTOPS_EMBEDDING_MODEL: ${INCIDENTOPS_EMBEDDING_MODEL:-}
+      INCIDENTOPS_EMBEDDING_DIMENSIONS: ${INCIDENTOPS_EMBEDDING_DIMENSIONS:-}
+      INCIDENTOPS_RETRIEVAL_STACK: ${INCIDENTOPS_RETRIEVAL_STACK:-}
+      # Optional integrations: set them in .env to turn them on (docs/deploy.md).
+      INCIDENTOPS_NEO4J_URI: ${INCIDENTOPS_NEO4J_URI:-}
+      INCIDENTOPS_NEO4J_USER: ${INCIDENTOPS_NEO4J_USER:-}
+      INCIDENTOPS_NEO4J_PASSWORD: ${INCIDENTOPS_NEO4J_PASSWORD:-}
+      INCIDENTOPS_GRAPH_RETRIEVAL: ${INCIDENTOPS_GRAPH_RETRIEVAL:-}
+      INCIDENTOPS_TICKETS_DB: ${INCIDENTOPS_TICKETS_DB:-}
+      INCIDENTOPS_APPROVAL_SECRET: ${INCIDENTOPS_APPROVAL_SECRET:-}
+      INCIDENTOPS_JIRA_URL: ${INCIDENTOPS_JIRA_URL:-}
+      INCIDENTOPS_JIRA_TOKEN: ${INCIDENTOPS_JIRA_TOKEN:-}
+      INCIDENTOPS_JIRA_PROJECT: ${INCIDENTOPS_JIRA_PROJECT:-}
+      INCIDENTOPS_CMDB_URL: ${INCIDENTOPS_CMDB_URL:-}
+      INCIDENTOPS_CMDB_API_KEY: ${INCIDENTOPS_CMDB_API_KEY:-}
+      INCIDENTOPS_OPS_DATABASE_URL: ${INCIDENTOPS_OPS_DATABASE_URL:-}
+      INCIDENTOPS_OPS_DATABASE_URLS: ${INCIDENTOPS_OPS_DATABASE_URLS:-}
+      # Tracing (W11).
+      INCIDENTOPS_TRACE_FILE: ${INCIDENTOPS_TRACE_FILE:-}
+      INCIDENTOPS_LANGFUSE_HOST: ${INCIDENTOPS_LANGFUSE_HOST:-}
+      INCIDENTOPS_LANGFUSE_PUBLIC_KEY: ${INCIDENTOPS_LANGFUSE_PUBLIC_KEY:-}
+      INCIDENTOPS_LANGFUSE_SECRET_KEY: ${INCIDENTOPS_LANGFUSE_SECRET_KEY:-}
+      # Reliability (W12/W13).
+      INCIDENTOPS_STALE_RUN_AFTER_S: ${INCIDENTOPS_STALE_RUN_AFTER_S:-}
+      INCIDENTOPS_STALE_RUN_SWEEP_S: ${INCIDENTOPS_STALE_RUN_SWEEP_S:-}
+    volumes:
+      # Files the API writes (the bundled ticket server's database, a trace file):
+      # point INCIDENTOPS_TICKETS_DB and INCIDENTOPS_TRACE_FILE under /var/lib/incidentops.
+      - appdata:/var/lib/incidentops
     ports:
       - "${API_PORT:-8000}:8000"
 
 volumes:
   pgdata:
+  neo4jdata:
+  appdata:

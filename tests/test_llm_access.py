@@ -193,3 +193,14 @@ def test_window_slides_so_old_requests_stop_counting():
     now[0] = 60.1
     assert limiter.hit() is None  # the first hit has expired; the refused ones never counted
     assert limiter.hit() == pytest.approx(9.9)  # the hit at t=10 leaves the window at t=70
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["trace_file", "langfuse_host", "langfuse_public_key", "langfuse_secret_key", "tickets_db"],
+)
+def test_blank_optional_settings_count_as_not_set(settings, name):
+    # .env.example lists these with empty values; a blank trace file used to become the path ".".
+    blank = Settings(_env_file=None, database_url=settings.database_url, **{name: ""})
+
+    assert getattr(blank, name) is None

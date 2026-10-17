@@ -38,7 +38,8 @@ _PROBLEM = {"model": Problem, "content": {PROBLEM_JSON: {}}}
 router = APIRouter(
     prefix="/incidents/{incident_id}/attachments",
     tags=["attachments"],
-    dependencies=[Depends(authenticate), Depends(enforce_llm_rate_limit)],
+    # Login first; only the upload (which may call a vision model) takes the rate limit.
+    dependencies=[Depends(authenticate)],
     responses={
         **ERROR_RESPONSES,
         401: _PROBLEM,
@@ -68,6 +69,7 @@ def _label(filename: str | None) -> str:
     "",
     response_model=AttachmentRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(enforce_llm_rate_limit)],
     responses={
         200: {"description": "The same file was already attached; the stored one is returned."}
     },

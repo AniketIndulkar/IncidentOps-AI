@@ -158,3 +158,41 @@ async def test_a_recent_running_run_is_left_alone(session_factory, saver):
         await session.commit()
 
     assert await runner.recover_stale(older_than_s=600) == []  # slow, not dead
+
+
+async def test_the_periodic_sweep_recovers_a_stuck_run_without_a_restart(settings, session_factory):
+    # W13 must-fix: recovery at startup only left runs stuck after a database blip.
+    from test_diagnosis import POOL, StaticRetriever, chunks_of, retrieved
+
+    from app.main import create_app
+    from incidentops_ai.llm.fake_provider import FakeProvider
+
+    swept = settings.model_copy(update={"stale_run_after_s": 1, "stale_run_sweep_s": 0.2})
+    app = create_app(
+        swept,
+        llm_provider=FakeProvider([]),
+        retriever=StaticRetriever(retrieved(*chunks_of("rb-orders-db-pool", POOL))),
+    )
+    async with app.router.lifespan_context(app):
+        incident_id = await incident(session_factory)
+        async with session_factory() as session:
+            await session.execute(
+                text(
+                    "INSERT INTO workflow_runs (id, tenant_id, incident_id, status, reasons, "
+                    "created_at, updated_at) VALUES (gen_random_uuid(), 'default', :i, 'running', "
+                    "'[]', now() - interval '1 hour', now() - interval '1 hour')"
+                ),
+                {"i": incident_id},
+            )
+            await session.commit()
+        for _ in range(40):  # up to 4 s: a few sweep intervals
+            await asyncio.sleep(0.1)
+            async with session_factory() as session:
+                status = await session.scalar(
+                    text("SELECT status FROM workflow_runs WHERE incident_id = :i"),
+                    {"i": incident_id},
+                )
+            if status == "failed":
+                break
+
+    assert status == "failed"

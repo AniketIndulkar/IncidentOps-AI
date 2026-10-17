@@ -11,9 +11,14 @@ class Settings(BaseSettings):
     """Runtime configuration, read from environment variables (prefix INCIDENTOPS_) or .env."""
 
     # hide_input_in_errors: a rejected value (a too-short token, a database URL with its password)
-    # must not be printed back in the startup error.
+    # must not be printed back in the startup error. env_ignore_empty: docker compose passes VAR=""
+    # for every setting .env leaves out, which must mean the default, not a value that fails to parse.
     model_config = SettingsConfigDict(
-        env_prefix="INCIDENTOPS_", env_file=".env", extra="ignore", hide_input_in_errors=True
+        env_prefix="INCIDENTOPS_",
+        env_file=".env",
+        extra="ignore",
+        hide_input_in_errors=True,
+        env_ignore_empty=True,
     )
 
     database_url: str = "postgresql+asyncpg://localhost:5432/incidentops"
@@ -40,7 +45,9 @@ class Settings(BaseSettings):
     # W12: "simulated" answers with the latencies and token counts of real runs, for load tests.
     llm_provider: Literal["openai", "simulated"] = "openai"
     # W12: a run still "running" this long after its last update belonged to a process that died.
-    stale_run_after_s: int = 900
+    stale_run_after_s: float = 900
+    # W13: how often the API looks for such runs (also once at startup).
+    stale_run_sweep_s: float = 60
     # W12: connection pools, configurable. Doubling them made no measurable difference under load
     # (the bottleneck was CPU on one event loop), so the defaults stay where they were.
     database_pool_size: int = Field(default=5, ge=1)
@@ -110,6 +117,10 @@ class Settings(BaseSettings):
         "cmdb_api_key",
         "jwt_secret",
         "jwt_public_key",
+        "trace_file",
+        "langfuse_host",
+        "langfuse_public_key",
+        "langfuse_secret_key",
         mode="before",
     )
     @classmethod

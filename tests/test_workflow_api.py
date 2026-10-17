@@ -158,3 +158,27 @@ async def test_with_a_ticket_system_an_approval_opens_the_ticket(settings, tmp_p
     body = decided.json()
     assert body["run"]["status"] == "actioned"
     assert body["action_result"]["id"].startswith("TCK-") and body["action_result"]["created"]
+
+
+async def test_reading_and_deciding_do_not_spend_the_model_budget(settings):
+    # W13: the rate limit guards model spend. Reading a run or recording a decision calls no
+    # model, so a reviewer must never get a 429 for approving because others triaged.
+    one_call = settings.model_copy(update={"llm_rate_limit_per_minute": 1})
+    provider = ByType(EXTRACTION, model_says(cause("A leak exhausts the pool.", GOOD)))
+    async with client(one_call, provider) as c:
+        incident_id = (await c.post("/incidents", json=INCIDENT)).json()["id"]
+        base = f"/incidents/{incident_id}"
+        run_id = (await c.post(f"{base}/triage")).json()["run"]["id"]
+
+        reads = [
+            await c.get(f"{base}/triage"),
+            await c.get(f"{base}/triage/{run_id}"),
+            await c.get(f"{base}/triage/{run_id}/events"),
+            await c.get(f"{base}/attachments"),
+        ]
+        decided = await c.post(f"{base}/triage/{run_id}/decision", json={"decision": "approve"})
+        second = await c.post(f"{base}/triage")
+
+    assert [r.status_code for r in reads] == [200, 200, 200, 200]
+    assert decided.status_code == 200
+    assert second.status_code == 429
