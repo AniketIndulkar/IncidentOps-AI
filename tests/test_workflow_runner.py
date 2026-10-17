@@ -145,3 +145,25 @@ async def test_a_branch_that_fails_beside_a_running_sibling_still_marks_the_run_
         run = await runner.get(failed.value.run_id)
 
     assert (run.status, run.error) == ("failed", "RuntimeError")
+
+
+async def test_a_model_call_cancelled_by_a_failing_sibling_is_still_recorded(
+    settings, session_factory
+):
+    # extract's model call returns, then diagnose (same step) raises and LangGraph cancels extract
+    # while it records the call. The call was made (and paid for), so its record must survive.
+    def crash_diagnosis(node: str) -> None:
+        if node == "diagnose":
+            raise RuntimeError("diagnosis crashed")
+
+    provider = ByType(EXTRACTION, model_says(cause("Leak.", GOOD)))
+    async with AsyncPostgresSaver.from_conn_string(saver_url(settings)) as saver:
+        await saver.setup()
+        runner = WorkflowRunner(deps(session_factory, provider, fault=crash_diagnosis), saver)
+        with pytest.raises(WorkflowFailedError):
+            await runner.start(await incident(session_factory))
+
+    async with session_factory() as session:
+        recorded = (await session.execute(text("SELECT operation FROM llm_runs"))).scalars().all()
+    assert provider.calls == ["IncidentExtraction"]
+    assert recorded == ["workflow_extract"]

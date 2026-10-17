@@ -16,16 +16,17 @@ resumed in another process. Every node appends one entry to the step log: name, 
 resumes it (W08). Nothing after it runs without one; re-invoking the paused run stops there again.
 """
 
+import asyncio
 import operator
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Annotated, Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from incidentops_ai.diagnosis.evidence import number_evidence
@@ -58,6 +59,7 @@ from incidentops_ai.workflow.assess import review_reasons
 EVIDENCE_COUNT = 5
 MODEL_STEPS = frozenset({"extract", "diagnose"})
 HUMAN_STEPS = frozenset({"approval"})
+MAX_INVALID_ANSWERS = 3  # malformed answers at the gate before the run fails
 
 
 class Decision(BaseModel):
@@ -114,6 +116,9 @@ class WorkflowDeps:
     tickets: Any = None  # TicketActions (AIENG-52): what act writes to; None: nothing is written
     # Called with the node name before each node runs: tests use it to crash a run on purpose.
     fault: Callable[[str], None] | None = None
+    # Model-call records still being written (W08): the runner waits for them before it records a
+    # failure, so a call whose step was cancelled is still on record.
+    pending: set[asyncio.Task] = field(default_factory=set)
 
 
 def initial_state(
@@ -208,15 +213,24 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def record(
         operation: str, state: WorkflowState, result: Any, output: dict | None
     ) -> None:
-        async with deps.sessions() as session:
-            await LLMRunRepository(session).record(
-                operation=operation,
-                incident_id=uuid.UUID(state["incident_id"]),
-                status=result.status,
-                metadata=result.metadata,
-                error_detail=result.error_detail,
-                output=output,
-            )
+        """Record a model call that happened. Shielded: when a sibling step fails, LangGraph
+        cancels this step, and the call was made (and paid for) whether or not the step finishes."""
+
+        async def write() -> None:
+            async with deps.sessions() as session:
+                await LLMRunRepository(session).record(
+                    operation=operation,
+                    incident_id=uuid.UUID(state["incident_id"]),
+                    status=result.status,
+                    metadata=result.metadata,
+                    error_detail=result.error_detail,
+                    output=output,
+                )
+
+        task = asyncio.ensure_future(write())
+        deps.pending.add(task)
+        task.add_done_callback(deps.pending.discard)
+        await asyncio.shield(task)
 
     async def extract(state: WorkflowState) -> dict:
         incident = state["incident"]
@@ -378,14 +392,22 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
 
     async def approval(state: WorkflowState) -> dict:
         # Everything before interrupt() runs again on resume, so nothing here has side effects.
-        value = interrupt(
-            {
-                "route": state["route"],
-                "reasons": state["reasons"],
-                "proposed_action": state["proposed_action"],
-            }
-        )
-        decision = RecordedDecision.model_validate(value)  # anything else fails the run
+        question = {
+            "route": state["route"],
+            "reasons": state["reasons"],
+            "proposed_action": state["proposed_action"],
+        }
+        value = interrupt(question)
+        # LangGraph stores each answer in the checkpoint and replays it when the node runs
+        # again, so raising on a bad answer would replay it forever. Ask again instead.
+        for _ in range(MAX_INVALID_ANSWERS):
+            try:
+                decision = RecordedDecision.model_validate(value)
+                break
+            except ValidationError:
+                value = interrupt({**question, "error": "not a valid decision; send another"})
+        else:
+            raise ValueError(f"{MAX_INVALID_ANSWERS} invalid answers at the approval gate")
         return {"decision": decision.model_dump(), "_outcome": decision.decision}
 
     async def act(state: WorkflowState) -> dict:

@@ -151,3 +151,19 @@ async def test_workflow_events_are_append_only(session_factory, saver, statement
     async with session_factory() as session:
         with pytest.raises(DBAPIError, match="append-only"):
             await session.execute(text(statement))
+
+
+async def test_a_malformed_answer_at_the_gate_is_asked_again_not_stored(session_factory, saver):
+    # A resume value that is not a decision used to be stored as the gate's answer: every later
+    # decision replayed it, and the run failed. The gate now asks again instead.
+    from langgraph.types import Command
+
+    runner = WorkflowRunner(deps(session_factory, clear_model()), saver)
+    run = await runner.start(await incident(session_factory))
+    config = {"configurable": {"thread_id": str(run.id)}}
+
+    again = await runner.graph.ainvoke(Command(resume={"decision": "maybe"}), config)
+    done = await runner.decide(run.id, APPROVE)
+
+    assert "__interrupt__" in again
+    assert done.status == "approved"

@@ -209,6 +209,8 @@ class WorkflowRunner:
         try:
             final = await self._graph.ainvoke(payload, self._config(run_id))
         except Exception as error:  # any step that raises stops the run; its checkpoints stay
+            # Records of model calls in steps that were cancelled finish first (see graph.record).
+            await asyncio.gather(*list(self._deps.pending), return_exceptions=True)
             name = type(error).__name__
             if await self._resumes(run_id) >= self._max_resumes:
                 await self._finish(
