@@ -31,6 +31,7 @@ from incidentops_ai.errors import (
 )
 from incidentops_ai.incidents.repository import IncidentRepository
 from incidentops_ai.memory.repository import MemoryRepository
+from incidentops_ai.observability.tracing import get_tracer
 from incidentops_ai.workflow.graph import Decision, WorkflowDeps, build_workflow, initial_state
 from incidentops_ai.workflow.orm import WorkflowEventRow, WorkflowRunRow
 
@@ -147,7 +148,7 @@ class WorkflowRunner:
             session.add(self._event(tenant, run.id, "started", {"incident_id": str(incident_id)}))
             await session.commit()
         state = initial_state(incident_id, str(run.id), tenant)
-        return await self._drive(run.id, state)
+        return await self._drive(run.id, state, phase="start")
 
     async def resume(self, run_id: uuid.UUID, *, tenant_id: str | None = None) -> WorkflowRunRead:
         """Continue a failed run. A run paused at the gate is not failed: only `decide` moves it."""
@@ -159,7 +160,8 @@ class WorkflowRunner:
             run.status, run.error = "running", None
             session.add(self._event(run.tenant_id, run_id, "resumed"))
             await session.commit()
-        return await self._drive(run_id, None)  # None: continue from the last checkpoint
+        # None: continue from the last checkpoint
+        return await self._drive(run_id, None, phase="resume")
 
     async def decide(
         self, run_id: uuid.UUID, decision: Decision, *, tenant_id: str | None = None
@@ -193,7 +195,7 @@ class WorkflowRunner:
             session.add(event)
             await session.commit()
         resume = {**decision.model_dump(), "decision_id": str(event.id)}
-        return await self._drive(run_id, Command(resume=resume))
+        return await self._drive(run_id, Command(resume=resume), phase="decide")
 
     async def get(self, run_id: uuid.UUID, *, tenant_id: str | None = None) -> WorkflowRunRead:
         async with self._deps.sessions() as session:
@@ -226,9 +228,22 @@ class WorkflowRunner:
         snapshot = await self._graph.aget_state(self._config(run_id))
         return dict(snapshot.values)
 
-    async def _drive(self, run_id: uuid.UUID, payload) -> WorkflowRunRead:
+    async def _drive(self, run_id: uuid.UUID, payload, *, phase: str) -> WorkflowRunRead:
         try:
-            final = await self._graph.ainvoke(payload, self._config(run_id))
+            # One trace per run (trace id = run id): its start, decision and resume together.
+            with get_tracer().span(
+                "workflow.run",
+                kind="workflow",
+                trace_id=run_id.hex,
+                run_id=str(run_id),
+                phase=phase,
+            ) as span:
+                final = await self._graph.ainvoke(payload, self._config(run_id))
+                span.set(
+                    route=final.get("route"),
+                    paused=bool(final.get("__interrupt__")),
+                    status=final.get("status"),
+                )
         except Exception as error:  # any step that raises stops the run; its checkpoints stay
             # Records of model calls in steps that were cancelled finish first (see graph.record).
             await asyncio.gather(*list(self._deps.pending), return_exceptions=True)

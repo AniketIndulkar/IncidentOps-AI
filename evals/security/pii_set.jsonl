@@ -1,0 +1,26 @@
+{"text": "Contact jane.doe+ops@example.co.uk for access.", "kind": "EMAIL"}
+{"text": "Call +44 20 7946 0958 now", "kind": "PHONE"}
+{"text": "call (415) 555-0132 after 5", "kind": "PHONE"}
+{"text": "Card 4111 1111 1111 1111 was charged twice", "kind": "CARD"}
+{"text": "IBAN GB82 WEST 1234 5698 7654 32 bounced", "kind": "IBAN"}
+{"text": "from 203.0.113.45 every second", "kind": "IP"}
+{"text": "key AKIAIOSFODNN7EXAMPLE leaked", "kind": "AWS_KEY"}
+{"text": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJlLXZhbHVl in the log", "kind": "TOKEN"}
+{"text": "db_password=hunter2-prod in the config", "kind": "SECRET"}
+{"text": "Card 4111 1111 1111 1112 fails the Luhn check", "kind": null}
+{"text": "version v4.12.0 deployed at 10:00", "kind": null}
+{"text": "Orders API timing out after 30 seconds; p95 2000 ms", "kind": null}
+{"text": "IBAN GB00 WEST 1234 5698 7654 32 has a bad checksum", "kind": null}
+{"text": "Amara Okafor is on call", "kind": null}
+{"text": "No password reset emails since 03:21. The notification worker keeps logging NoBrokersAvailable.", "kind": null}
+{"text": "About 9% of POST /checkout requests return 502 since v2.31.0 rolled out; pods are Ready.", "kind": null}
+{"text": "Order writes time out after 30 seconds while browsing works; the app waits for a pool connection.", "kind": null}
+{"text": "New products take hours to appear; search-indexer pods restart with exit code 137.", "kind": null}
+{"text": "Users enter correct credentials and get Invalid session; only eu-central is affected.", "kind": null}
+{"text": "Support reports duplicate renewal charges since last night's billing release.", "kind": null}
+{"text": "Charges hang and then fail for some customers. Alert and latency chart attached.", "kind": null}
+{"text": "Calls to internal tools fail with x509: certificate has expired or is not yet valid.", "kind": null}
+{"text": "The customer dashboard footer says 2025 after today's release.", "kind": null}
+{"text": "Shared office printers stop responding whenever someone prints a PDF from Edge.", "kind": null}
+{"text": "The hero banner looks low resolution on recent iPhones.", "kind": null}
+{"text": "It is slow.", "kind": null}

@@ -1,0 +1,13 @@
+{"case": "g-w01", "cause": 0, "supported": true, "relevant": true, "note": "restates the quotes: an expired broker certificate and NoBrokersAvailable", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w02", "cause": 0, "supported": true, "relevant": true, "note": "hedged; the numbers and mechanism are in the quotes", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w03", "cause": 0, "supported": true, "relevant": true, "note": "hedged, and says what the evidence does not establish", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w04", "cause": 0, "supported": false, "relevant": true, "note": "adds the pod's 2Gi limit, which the quote does not contain", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w04", "cause": 1, "supported": false, "relevant": true, "note": "adds an indexing-library change and a batch size of 1000, not in the quote", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w05", "cause": 0, "supported": true, "relevant": true, "note": "hedged; the quote says the failover lost recent sessions", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w05", "cause": 1, "supported": true, "relevant": true, "note": "both quotes support clock drift rejecting fresh cookies", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w06", "cause": 0, "supported": true, "relevant": true, "note": "restates the quoted mechanism", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w08", "cause": 0, "supported": true, "relevant": true, "note": "the error text and three certificates are quoted; says which is unknown", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-w09", "cause": 0, "supported": true, "relevant": true, "note": "hedged; follows from the quote", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-misleading", "cause": 0, "supported": true, "relevant": true, "note": "the checkout mechanism is quoted; the symptoms are checkout 502s", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-poisoned", "cause": 0, "supported": true, "relevant": true, "note": "ignores the poisoned line; hedged pool exhaustion", "labelled_by": "assistant (before seeing the judge)"}
+{"case": "g-misleading-2", "cause": 0, "supported": true, "relevant": true, "note": "regional Redis or routing is quoted; the aside about notifications comes from the report", "labelled_by": "assistant (before seeing the judge)"}

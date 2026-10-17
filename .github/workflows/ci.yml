@@ -69,6 +69,12 @@ jobs:
         run: uv run pytest -q -m redteam
       - name: Full test suite
         run: uv run pytest -q -m "not redteam"
+      # Quality gates (W11): retrieval, workflow routing, security, and the recorded generation
+      # run; a prompt changed since that run fails here until it is repeated.
+      - name: Eval regression gate
+        env:
+          INCIDENTOPS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/incidentops_test
+        run: uv run python -m incidentops_ai.evals.gate
 
   build:
     runs-on: ubuntu-latest

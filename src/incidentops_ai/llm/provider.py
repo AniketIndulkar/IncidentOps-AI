@@ -70,6 +70,7 @@ class RunMetadata(BaseModel):
     output_tokens: int | None = None
     request_id: str | None = None
     attempt_statuses: list[LLMStatus] = []  # one entry per request sent, in order
+    fallback_from: list[str] = []  # W11: models the gateway tried first, which failed
 
     def combine(self, later: "RunMetadata") -> "RunMetadata":
         """Totals for this call followed by `later`. The only place cost is added up, so a new

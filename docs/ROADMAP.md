@@ -184,6 +184,12 @@ redaction and a guarded provider; injection flags; 170 red-team tests in their o
 - AIENG-67 Langfuse spans for model/retrieval/tool/workflow; latency, tokens, cost.
 - AIENG-68 Eval regression gates in CI; deliberate regression must block.
 
+✅ Built 17 Oct, stacked on W10: [roadmap-w11](roadmap-w11.md). Four layers with datasets and thresholds; generation
+15/16 with citation precision 1.0; the judge's agreement with labels 31% then 77% (reported, not gated); a gateway
+with fallback and a breaker; traces with JSONL and Langfuse exporters; a CI gate that fails deliberate regressions
+and unevaluated prompt changes. Findings: [w11-findings](../evals/generation/runs/2026-10-17-w11-findings.md);
+decision: [ADR-008](adr/008-evaluation-gateway-and-tracing.md).
+
 ### Phase 6 — Reliability & release (W12–W13, 21 Dec–1 Jan) → **v1.0**
 
 **W12 · Failure engineering** (AIENG-13)
@@ -236,11 +242,15 @@ Hard dependencies to protect:
 | Graph database | **Local Neo4j** (`neo4j:5-community`) ✅ adopted (W05) | No account, CI runs it as a service; ADR-002 limits it to structured context |
 | Retrieval stack | **Hybrid**: dense (pgvector) + BM25, RRF k = 60 ✅ adopted (W04); reranker off by default | Chosen by a rule fixed before the run: hybrid +0.006 / +0.029 MRR on the two decision configs, the reranker −0.006 / −0.029. `INCIDENTOPS_RETRIEVAL_STACK` switches it. |
 
-## Current state (17 Oct 2026, W10 complete; `v0.1` and `v0.2` not tagged yet)
+## Current state (17 Oct 2026, W11 complete; `v0.1` and `v0.2` not tagged yet)
 
-- **W01 to W10 complete** (AIENG-2, 15–63). W03 and W04 were built on 16 Oct, W05 to W10 on 17 Oct,
-  as stacked pull requests (#3 W03 … #9 W09, W10 on top). Next: W11 (evals, gateway, observability).
-  Waiting on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- **W01 to W11 complete** (AIENG-2, 15–68). W03 and W04 were built on 16 Oct, W05 to W11 on 17 Oct,
+  as stacked pull requests (#3 W03 … #10 W10, W11 on top). Next: W12 (reliability, load, failure
+  testing). Waiting on you: the `v0.1` and `v0.2` tags, merging the stack, and the Jira updates.
+- Quality and operations (W11): `evals` (four layers, the generation layer and judge, the CI gate,
+  `evals/dashboard.md`), `llm.gateway` (routes, fallback, breaker), `observability` (spans, JSONL and
+  Langfuse exporters, the trace report). **A prompt change now needs a real-model generation run and
+  a refreshed `evals/baseline.json`, or CI fails.**
 - Security (W10): `auth` (JWT verification, roles, `permit` per route; the static token is a machine
   credential), tenant on incidents and idempotency keys, ops row-level security per reader login,
   `security` (PII redaction, `GuardedProvider`, injection flags → `suspicious_evidence`), the
@@ -397,6 +407,9 @@ Hard dependencies to protect:
 42. **PII detection is pattern-based**: names and addresses are not redacted.
 43. **The injection detector is a phrase list**; the real-model run found a phrasing it missed. It routes to review, it does not block.
 44. **No real identity provider has been connected**; tokens were minted for the tests.
+45. **The LLM judge is not calibrated enough to gate** (77% agreement with 13 labels written by the assistant). The user's labels are the next step.
+46. **The Langfuse adapter has only met a fake** ingestion server.
+47. **Prompt changes cost a real-model run** before CI passes (about $0.15 for generation).
 
 ## Weekly cadence
 
