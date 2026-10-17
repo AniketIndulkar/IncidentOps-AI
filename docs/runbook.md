@@ -91,7 +91,11 @@ connection details. The tiers:
 
 ## Load
 
-The W12 baseline (one process, one laptop, simulated model): no errors up to 100 concurrent
-responders; triage P95 under 10 s. The first system bottleneck is the database connection pools:
-at 100 responders creating an incident takes 400 ms at the median instead of 9 ms. If request
-latency climbs while model latency does not, raise the pool sizes or run more API processes.
+The W12 baseline (one API process, one laptop, simulated model, at most 25 responders per client
+process): no errors up to 100 concurrent responders; triage P95 9.1 s at 100, almost all of it the
+model. The API's own overhead per run (checkpoint writes, the event loop) grows from about 40 ms at
+1 responder to about 400 ms at 100. Larger connection pools (`INCIDENTOPS_DATABASE_POOL_SIZE`,
+`INCIDENTOPS_DATABASE_MAX_OVERFLOW`, `INCIDENTOPS_CHECKPOINT_POOL_SIZE`) take 10 to 15% off that at
+100 concurrent runs; past that, run more API processes. When you load-test, split the load
+generator across processes: one client process cannot drive 100 concurrent requests itself
+([how this was found](../evals/reliability/runs/2026-10-17-measurement.md)).

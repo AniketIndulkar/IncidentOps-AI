@@ -159,7 +159,7 @@ def create_app(
                 pool = AsyncConnectionPool(
                     checkpoint_url(settings.database_url),
                     min_size=1,
-                    max_size=5,
+                    max_size=settings.checkpoint_pool_size,
                     timeout=5,
                     open=False,
                     kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},

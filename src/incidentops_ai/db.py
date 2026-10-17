@@ -15,8 +15,14 @@ class Base(DeclarativeBase):
 
 def create_engine(settings: Settings) -> AsyncEngine:
     # pool_pre_ping drops dead connections (e.g. after a Postgres restart) instead of failing a request.
+    # Pool sizes are settings since W12 (defaults: SQLAlchemy's 5 + 10 overflow). The load test
+    # measured no gain from doubling them: requests queue on CPU before they wait for a connection.
     return create_async_engine(
-        settings.database_url, echo=settings.database_echo, pool_pre_ping=True
+        settings.database_url,
+        echo=settings.database_echo,
+        pool_pre_ping=True,
+        pool_size=settings.database_pool_size,
+        max_overflow=settings.database_max_overflow,
     )
 
 

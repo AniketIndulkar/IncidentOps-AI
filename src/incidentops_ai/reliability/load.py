@@ -50,7 +50,9 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
-def start_server(database_url: str, trace_file: Path, port: int) -> subprocess.Popen:
+def start_server(
+    database_url: str, trace_file: Path, port: int, *, workers: int = 1
+) -> subprocess.Popen:
     env = {
         **os.environ,
         "INCIDENTOPS_DATABASE_URL": database_url,
@@ -74,6 +76,8 @@ def start_server(database_url: str, trace_file: Path, port: int) -> subprocess.P
             str(port),
             "--log-level",
             "warning",
+            "--workers",
+            str(workers),
         ],
         env=env,
     )
@@ -110,6 +114,9 @@ async def responder(client: httpx.AsyncClient, level: int, user: int, iterations
         )
         return response
 
+    # One untimed request first: it opens this responder's connection, so connection setup is
+    # not counted as the first endpoint's latency (it was, in the first W12 runs).
+    await client.get("/health")
     for i in range(iterations):
         case = cases[(user + i) % len(cases)]
         body = {
@@ -225,7 +232,43 @@ def bottleneck(spans, windows: dict[int, tuple[float, float]]) -> list[dict]:
     return rows
 
 
+USERS_PER_PROCESS = (
+    25  # one Python client process cannot drive more without becoming the bottleneck
+)
+
+
+async def drive(base: str, level: int, users: range, iterations: int) -> list[Sample]:
+    """Run some of a level's responders in this process."""
+    samples: list[Sample] = []
+    limits = httpx.Limits(max_connections=len(users) + 5)
+    async with httpx.AsyncClient(
+        base_url=base, timeout=120, limits=limits, headers={"Authorization": f"Bearer {TOKEN}"}
+    ) as client:
+        await asyncio.gather(*(responder(client, level, u, iterations, samples) for u in users))
+    return samples
+
+
+def _child(base: str, level: int, first: int, last: int, iterations: int) -> subprocess.Popen:
+    return subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "incidentops_ai.reliability.load",
+            "--child",
+            base,
+            str(level),
+            str(first),
+            str(last),
+            str(iterations),
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+
 async def run(database_url: str, out: Path, iterations: int, levels=LEVELS) -> dict:
+    """The responders of a level are split across client processes of at most 25 each: one
+    process driving 100 concurrent requests measured its own queue, not the API's (W12)."""
     trace_file = out.parent / f"{out.stem}-traces.jsonl"
     trace_file.unlink(missing_ok=True)
     port = _free_port()
@@ -235,17 +278,20 @@ async def run(database_url: str, out: Path, iterations: int, levels=LEVELS) -> d
     windows: dict[int, tuple[float, float]] = {}
     try:
         await wait_until_up(base)
-        limits = httpx.Limits(max_connections=100)
-        async with httpx.AsyncClient(
-            base_url=base, timeout=120, limits=limits, headers={"Authorization": f"Bearer {TOKEN}"}
-        ) as client:
-            for level in levels:
-                begin = time.time()
-                await asyncio.gather(
-                    *(responder(client, level, u, iterations, samples) for u in range(level))
-                )
-                windows[level] = (begin, time.time())
-                print(f"level {level}: {sum(1 for s in samples if s.level == level)} requests")
+        for level in levels:
+            begin = time.time()
+            children = [
+                _child(base, level, first, min(first + USERS_PER_PROCESS, level), iterations)
+                for first in range(0, level, USERS_PER_PROCESS)
+            ]
+            for child in children:
+                output, _ = await asyncio.to_thread(child.communicate)
+                samples += [Sample(**row) for row in json.loads(output)]
+            windows[level] = (begin, time.time())
+            print(
+                f"level {level}: {sum(1 for s in samples if s.level == level)} requests, "
+                f"{len(children)} client processes"
+            )
     finally:
         server.terminate()
         server.wait(timeout=10)
@@ -258,6 +304,7 @@ async def run(database_url: str, out: Path, iterations: int, levels=LEVELS) -> d
             "model": "simulated (W07 latencies)",
             "retrieval": "bm25",
             "server": "uvicorn, 1 process",
+            "clients": f"at most {USERS_PER_PROCESS} responders per client process",
             "host": "one laptop: load, API, PostgreSQL",
             "tokens_per_call": TOKENS,
         },
@@ -274,7 +321,8 @@ def render(report: dict) -> str:
         f"# Load test baseline ({report['date']})",
         "",
         (
-            f"Conditions: {c['server']}; model {c['model']}; retrieval {c['retrieval']}; "
+            f"Conditions: {c['server']}; {c.get('clients', 'one client process')}; model {c['model']}; "
+            f"retrieval {c['retrieval']}; "
             f"{c['iterations_per_user']} iterations per responder; {c['host']}."
         ),
         (
@@ -313,6 +361,11 @@ def render(report: dict) -> str:
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "--child":
+        base, level, first, last, iterations = sys.argv[2], *map(int, sys.argv[3:7])
+        samples = asyncio.run(drive(base, level, range(first, last), iterations))
+        print(json.dumps([asdict(s) for s in samples]))
+        return
     parser = argparse.ArgumentParser(description="Load test the API (AIENG-69).")
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--levels", default="1,5,10,20", help="comma-separated responders")

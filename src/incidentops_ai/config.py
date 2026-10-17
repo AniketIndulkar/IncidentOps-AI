@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "simulated"] = "openai"
     # W12: a run still "running" this long after its last update belonged to a process that died.
     stale_run_after_s: int = 900
+    # W12: connection pools, configurable. Doubling them made no measurable difference under load
+    # (the bottleneck was CPU on one event loop), so the defaults stay where they were.
+    database_pool_size: int = Field(default=5, ge=1)
+    database_max_overflow: int = Field(default=10, ge=0)
+    checkpoint_pool_size: int = Field(default=5, ge=1)
     simulated_latency_scale: float = 1.0
 
     # Knowledge graph (W05). With a URI and a password the API reads service context from Neo4j.
