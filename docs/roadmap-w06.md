@@ -3,8 +3,14 @@
 Source: Jira epic **AIENG-7** and tasks **AIENG-39 to AIENG-43**, read 17 Oct 2026. Overall plan:
 [ROADMAP.md](ROADMAP.md). Built early, stacked on W05 (branch `feat/w06-multimodal`).
 
-> **Status:** design written before any extraction code. Decisions are mine (the user asked for
-> W05 to W13 back to back); the spend cap and local-first choices are the user's.
+> **Status, 17 Oct 2026: built and measured.** Design written before any extraction code; decisions
+> are mine (the user asked for W05 to W13 back to back), the spend cap is the user's.
+>
+> **Result:** text PDFs use their text layer, scans use OCR, images a vision transcript (OCR 1/6 on
+> charts, 2/6 on diagrams; the transcript 6/6 on both). H18 to H22 confirmed; H23 refuted: the coverage
+> router matched only 9 of 14 assets, so the product routes on file type instead. Six incidents ran end
+> to end. Findings: [multimodal-findings](../evals/multimodal/runs/2026-10-17-multimodal-findings.md);
+> decision: [ADR-003](adr/003-multimodal-routing.md).
 
 ## Goal of the week
 

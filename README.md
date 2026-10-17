@@ -94,6 +94,19 @@ Tests need a second container for the graph (port 7688, as in CI):
 docker run -d --name incidentops-neo4j-test -p 7688:7687 -e NEO4J_AUTH=neo4j/incidentops-test neo4j:5-community
 ```
 
+## Multimodal evidence (W06)
+
+Incidents take attachments (PNG, JPEG or PDF, up to 5 MB): `POST /incidents/{id}/attachments` with a
+multipart `file`. Text is extracted at upload (PDF text layer, OCR for scans, a vision-model
+transcript for images) and the diagnosis cites it as evidence `A1..An`
+([findings](evals/multimodal/runs/2026-10-17-multimodal-findings.md), [ADR-003](docs/adr/003-multimodal-routing.md)).
+
+```bash
+uv sync --extra ocr                                            # local OCR (RapidOCR, ~250 MB with OpenCV)
+uv run python -m incidentops_ai.multimodal.assets              # regenerate the benchmark assets
+uv run --extra ocr python -m incidentops_ai.multimodal.benchmark   # OCR vs vision on 28 questions
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -102,6 +115,7 @@ docker run -d --name incidentops-neo4j-test -p 7688:7687 -e NEO4J_AUTH=neo4j/inc
   - `retrieval/` — documents, chunking, embeddings, retrievers, metrics, benchmark (W03); BM25, hybrid, reranker, stacks (W04)
   - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
   - `graph/` — service catalogue, Neo4j store and Cypher, graph-anchored retrieval (W05)
+  - `multimodal/` — attachments, PDF text, OCR, vision transcripts, the multimodal benchmark (W06)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
 - `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04)
