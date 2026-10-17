@@ -28,6 +28,7 @@ from incidentops_ai.retrieval.factory import build_embedder
 from incidentops_ai.retrieval.rerank import CrossEncoderReranker
 from incidentops_ai.retrieval.retriever import Retriever
 from incidentops_ai.retrieval.stack import build_retriever
+from incidentops_ai.security.guard import GuardedProvider
 from incidentops_ai.tickets.client import TicketActions, TicketClient
 from incidentops_ai.workflow.graph import WorkflowDeps
 from incidentops_ai.workflow.runner import WorkflowRunner, checkpoint_url
@@ -74,7 +75,10 @@ def create_app(
         try:
             if llm_provider is None and settings.openai_api_key:
                 owned_provider = build_provider(settings)
-            app.state.llm_provider = llm_provider or owned_provider
+            # W10: every model call goes through the guard (canary, output PII), whoever made the
+            # provider; closing it stays with whoever made it.
+            inner = llm_provider or owned_provider
+            app.state.llm_provider = GuardedProvider(inner) if inner is not None else None
             # The retrieval stack embeds questions with OpenAI, so it needs the key too.
             if retriever is None and settings.openai_api_key:
                 owned_embedder = build_embedder(settings)

@@ -13,6 +13,7 @@ REVIEW_REASONS = (
     "extraction_needs_review",  # the W02 review rules flag the extraction
     "sev1",  # high impact: a person sees it before anyone acts
     "integration_degraded",  # W09: the CMDB could not say who owns the service
+    "suspicious_evidence",  # W10: something the model read looks like instructions to it
 )
 
 
@@ -35,4 +36,6 @@ def review_reasons(state: Mapping) -> list[str]:
         reasons.append("sev1")
     if state.get("cmdb_status") in {"unavailable", "invalid"}:
         reasons.append("integration_degraded")
+    if state.get("suspicious"):
+        reasons.append("suspicious_evidence")
     return reasons

@@ -15,6 +15,7 @@ from incidentops_ai.llm.runs import LLMRunRepository
 from incidentops_ai.ops.catalogue import schema_text
 from incidentops_ai.ops.database import OpsDatabase, OpsQueryError
 from incidentops_ai.ops.sql_guard import SqlRefused, validate
+from incidentops_ai.security.pii import redact
 
 PROMPT, VERSION = "text_to_sql", "v1"
 
@@ -52,7 +53,7 @@ async def answer_question(
     *,
     sessions: async_sessionmaker[AsyncSession] | None = None,
 ) -> OpsAnswer:
-    prompt = load_prompt(PROMPT, VERSION, input_text=_input(question))
+    prompt = load_prompt(PROMPT, VERSION, input_text=_input(redact(question).text))
     reply = await provider.generate_structured(prompt=prompt, schema=SqlAnswer, config=config)
     answer = await _answer(reply, database, question)
     if sessions is not None:

@@ -39,6 +39,7 @@ from incidentops_ai.related import find_related_incidents
 from incidentops_ai.retrieval.embeddings import EmbeddingError
 from incidentops_ai.retrieval.rerank import RerankerError
 from incidentops_ai.retrieval.retriever import QueryHints
+from incidentops_ai.security.pii import redact
 from incidentops_ai.tools.recent_incidents import make_recent_incidents_tool
 from incidentops_ai.tools.registry import ToolExecution, ToolRegistry
 
@@ -122,7 +123,8 @@ async def _load(sessions: SessionFactory, incident_id: uuid.UUID, tenant_id: str
 
 
 def _report_text(incident: IncidentRead) -> str:
-    return f"{incident.title}\n\n{incident.description}"
+    """What the model reads of the incident: PII and secrets replaced (W10)."""
+    return redact(f"{incident.title}\n\n{incident.description}").text
 
 
 async def _claim(
@@ -298,6 +300,7 @@ async def diagnose_incident(
     async with _release_claim_on_error(sessions, DIAGNOSE_OPERATION, idempotency_key):
         async with sessions() as session:
             sources = await AttachmentRepository(session).texts_for_incident(incident.id)
+        sources = [s.redacted() for s in sources]
         attachments = await attachment_evidence(
             _report_text(incident), sources, tenant_id=principal.tenant_id
         )
