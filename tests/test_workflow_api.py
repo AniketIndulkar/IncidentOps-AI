@@ -137,3 +137,26 @@ async def test_a_decision_through_the_api_completes_the_run_and_is_audited(setti
     assert again.status_code == 409 and again.json()["code"] == "workflow_not_awaiting_decision"
     assert [e["kind"] for e in events] == ["started", "awaiting_approval", "decided", "completed"]
     assert events[2]["actor"] == "Amara Okafor"
+
+
+async def test_with_a_ticket_system_an_approval_opens_the_ticket(settings, tmp_path):
+    from pydantic import SecretStr
+
+    with_tickets = settings.model_copy(
+        update={
+            "tickets_db": tmp_path / "tickets.db",
+            "approval_secret": SecretStr("test-approval-secret-0123456789"),
+        }
+    )
+    provider = ByType(EXTRACTION, model_says(cause("A leak exhausts the pool.", GOOD)))
+    async with client(with_tickets, provider) as c:
+        incident_id = (await c.post("/incidents", json=INCIDENT)).json()["id"]
+        run_id = (await c.post(f"/incidents/{incident_id}/triage")).json()["run"]["id"]
+        decided = await c.post(
+            f"/incidents/{incident_id}/triage/{run_id}/decision",
+            json={"decision": "approve", "reviewer": "Amara Okafor"},
+        )
+
+    body = decided.json()
+    assert body["run"]["status"] == "actioned"
+    assert body["action_result"]["id"].startswith("TCK-") and body["action_result"]["created"]

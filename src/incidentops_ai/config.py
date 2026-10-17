@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
@@ -44,6 +45,11 @@ class Settings(BaseSettings):
     neo4j_user: str = "neo4j"
     neo4j_password: SecretStr | None = None
     graph_retrieval: Literal["off", "anchor", "graph"] = "off"
+
+    # Ticket system (W08). With both set, the API starts the ticket MCP server and an approved
+    # workflow run opens its ticket there. The secret signs approvals; the model never sees it.
+    tickets_db: Path | None = None
+    approval_secret: SecretStr | None = None
     llm_max_attempts: int = 3
     llm_total_timeout_s: float = 60.0
 
@@ -54,7 +60,14 @@ class Settings(BaseSettings):
     llm_rate_limit_per_minute: int = Field(default=10, ge=1)
 
     @field_validator(
-        "openai_api_key", "llm_model", "api_token", "neo4j_uri", "neo4j_password", mode="before"
+        "openai_api_key",
+        "llm_model",
+        "api_token",
+        "neo4j_uri",
+        "neo4j_password",
+        "tickets_db",
+        "approval_secret",
+        mode="before",
     )
     @classmethod
     def _blank_means_unset(cls, value):

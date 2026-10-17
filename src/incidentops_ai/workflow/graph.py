@@ -111,7 +111,7 @@ class WorkflowDeps:
     retriever: Retriever
     graph: GraphStore | None
     tenant_id: str = DEFAULT_TENANT
-    tickets: Any = None  # the ticket system act writes to (AIENG-52); None: nothing is written
+    tickets: Any = None  # TicketActions (AIENG-52): what act writes to; None: nothing is written
     # Called with the node name before each node runs: tests use it to crash a run on purpose.
     fault: Callable[[str], None] | None = None
 
@@ -391,7 +391,12 @@ def nodes(deps: WorkflowDeps) -> dict[str, Node]:
     async def act(state: WorkflowState) -> dict:
         if deps.tickets is None:
             return {"action_result": None, "status": "approved", "_outcome": "no ticket system"}
-        raise NotImplementedError("the ticket system arrives with AIENG-52")
+        # Keyed on the run id: a retry after a timeout returns the ticket already created.
+        ticket = await deps.tickets.create(
+            state["proposed_action"], run_id=state["run_id"], decision=state["decision"]
+        )
+        outcome = ticket["id"] if ticket["created"] else f"{ticket['id']} (already created)"
+        return {"action_result": ticket, "status": "actioned", "_outcome": outcome}
 
     async def rejected(state: WorkflowState) -> dict:
         return {"action_result": None, "status": "rejected", "_outcome": "rejected"}

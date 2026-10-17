@@ -212,11 +212,11 @@ class WorkflowRunner:
             name = type(error).__name__
             if await self._resumes(run_id) >= self._max_resumes:
                 await self._finish(
-                    run_id, status="abandoned", error=name, event=("abandoned", {"error": name})
+                    run_id, status="abandoned", error=name, events=[("abandoned", {"error": name})]
                 )
                 raise WorkflowAbandonedError(run_id) from error
             await self._finish(
-                run_id, status="failed", error=name, event=("failed", {"error": name})
+                run_id, status="failed", error=name, events=[("failed", {"error": name})]
             )
             raise WorkflowFailedError(run_id) from error
         route, reasons = final.get("route"), final.get("reasons", [])
@@ -226,14 +226,14 @@ class WorkflowRunner:
                 status="awaiting_approval",
                 route=route,
                 reasons=reasons,
-                event=("awaiting_approval", {"route": route, "reasons": reasons}),
+                events=[("awaiting_approval", {"route": route, "reasons": reasons})],
             )
+        events = [("completed", {"status": final["status"]})]
+        if ticket := final.get("action_result"):
+            executed = {"ticket_id": ticket["id"], "created": ticket["created"]}
+            events.insert(0, ("action_executed", executed))
         return await self._finish(
-            run_id,
-            status=final["status"],
-            route=route,
-            reasons=reasons,
-            event=("completed", {"status": final["status"]}),
+            run_id, status=final["status"], route=route, reasons=reasons, events=events
         )
 
     async def _finish(
@@ -241,7 +241,7 @@ class WorkflowRunner:
         run_id: uuid.UUID,
         *,
         status: str,
-        event: tuple[str, dict],
+        events: list[tuple[str, dict]],
         route: str | None = None,
         reasons: list[str] | None = None,
         error: str | None = None,
@@ -251,6 +251,7 @@ class WorkflowRunner:
             if status in {"failed", "abandoned"}:  # a failure keeps what the run had decided
                 route, reasons = run.route, run.reasons
             run.status, run.route, run.reasons, run.error = status, route, reasons or [], error
-            session.add(self._event(run_id, *event))
+            for kind, data in events:
+                session.add(self._event(run_id, kind, data))
             await session.commit()
             return WorkflowRunRead.model_validate(run, from_attributes=True)
