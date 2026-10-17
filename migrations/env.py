@@ -13,6 +13,7 @@ from incidentops_ai.incidents import orm  # noqa: F401
 from incidentops_ai.llm import runs  # noqa: F401  (registers tables on Base.metadata)
 from incidentops_ai.multimodal import orm as multimodal_orm  # noqa: F401
 from incidentops_ai.retrieval import orm as retrieval_orm  # noqa: F401
+from incidentops_ai.workflow import orm as workflow_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,6 +25,22 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
+
+# LangGraph's checkpointer creates and versions these itself (AsyncPostgresSaver.setup, W07);
+# autogenerate must not offer to drop them.
+CHECKPOINT_TABLES = {
+    "checkpoints",
+    "checkpoint_blobs",
+    "checkpoint_writes",
+    "checkpoint_migrations",
+}
+
+
+def include_name(name, type_, parent_names) -> bool:
+    if type_ == "table":
+        return name not in CHECKPOINT_TABLES
+    return True
+
 
 # An explicit URL (e.g. set by tests) wins; otherwise use app Settings / INCIDENTOPS_DATABASE_URL.
 if not config.get_main_option("sqlalchemy.url"):
@@ -53,6 +70,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_name=include_name,
     )
 
     with context.begin_transaction():
@@ -60,7 +78,9 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, include_name=include_name
+    )
 
     with context.begin_transaction():
         context.run_migrations()

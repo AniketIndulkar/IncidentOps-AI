@@ -1,0 +1,1468 @@
+{
+  "stack": "hybrid-rrf",
+  "model": "gpt-6-luna",
+  "results": [
+    {
+      "case_id": "w01",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-notification-kafka",
+        "pm-2026-02-kafka"
+      ],
+      "success": true,
+      "seconds": 9.068,
+      "model_calls": 2,
+      "input_tokens": 4170,
+      "output_tokens": 1081,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 11.4,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 282.9,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 4300.4,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 8672.7,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w01",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review"
+      ],
+      "cited": [
+        "pm-2026-02-kafka"
+      ],
+      "success": false,
+      "seconds": 9.474,
+      "model_calls": 2,
+      "input_tokens": 4150,
+      "output_tokens": 813,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.8,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 6876.3,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 330.7,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2210.4,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w02",
+      "mode": "sequential",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "pm-2026-03-checkout"
+      ],
+      "success": true,
+      "seconds": 12.094,
+      "model_calls": 2,
+      "input_tokens": 4037,
+      "output_tokens": 995,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.4,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 8446.2,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 1007.0,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2591.3,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "0 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w02",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "pm-2026-03-checkout"
+      ],
+      "success": true,
+      "seconds": 6.569,
+      "model_calls": 2,
+      "input_tokens": 4047,
+      "output_tokens": 875,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 7.4,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 286.4,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2474.9,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 6225.9,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "0 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w03",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review",
+        "sev1"
+      ],
+      "cited": [
+        "pm-2026-05-orders-pool"
+      ],
+      "success": true,
+      "seconds": 6.204,
+      "model_calls": 2,
+      "input_tokens": 4071,
+      "output_tokens": 759,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 7.8,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 275.0,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2240.1,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5877.4,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "extraction_needs_review,sev1"
+        }
+      ]
+    },
+    {
+      "case_id": "w03",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "sev1"
+      ],
+      "cited": [
+        "pm-2026-05-orders-pool"
+      ],
+      "success": true,
+      "seconds": 8.646,
+      "model_calls": 2,
+      "input_tokens": 4041,
+      "output_tokens": 736,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5712.4,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 232.5,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2652.7,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "sev1"
+        }
+      ]
+    },
+    {
+      "case_id": "w04",
+      "mode": "sequential",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-search-indexer-oom"
+      ],
+      "success": true,
+      "seconds": 16.315,
+      "model_calls": 2,
+      "input_tokens": 3867,
+      "output_tokens": 1441,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 10.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7820.4,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 252.8,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 8183.0,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w04",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "pm-2026-07-search"
+      ],
+      "success": true,
+      "seconds": 6.694,
+      "model_calls": 2,
+      "input_tokens": 3877,
+      "output_tokens": 1025,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.9,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 273.2,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 3830.9,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 6365.9,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "0 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w05",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-session-invalid"
+      ],
+      "success": true,
+      "seconds": 6.479,
+      "model_calls": 2,
+      "input_tokens": 3710,
+      "output_tokens": 909,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.5,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 256.3,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 3016.2,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 6167.8,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w05",
+      "mode": "sequential",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-session-invalid"
+      ],
+      "success": true,
+      "seconds": 10.649,
+      "model_calls": 2,
+      "input_tokens": 3690,
+      "output_tokens": 1042,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 4.6,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7483.7,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 271.4,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2846.0,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w06",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review",
+        "sev1"
+      ],
+      "cited": [
+        "pm-2026-09-billing"
+      ],
+      "success": true,
+      "seconds": 10.116,
+      "model_calls": 2,
+      "input_tokens": 4102,
+      "output_tokens": 1014,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.2,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7997.7,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 228.1,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1838.6,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "extraction_needs_review,sev1"
+        }
+      ]
+    },
+    {
+      "case_id": "w06",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "sev1"
+      ],
+      "cited": [
+        "pm-2026-09-billing"
+      ],
+      "success": true,
+      "seconds": 9.465,
+      "model_calls": 2,
+      "input_tokens": 4102,
+      "output_tokens": 1271,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.8,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 164.6,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 3267.0,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 9248.1,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "sev1"
+        }
+      ]
+    },
+    {
+      "case_id": "w07",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review"
+      ],
+      "cited": [
+        "pm-2026-06-payments"
+      ],
+      "success": false,
+      "seconds": 5.162,
+      "model_calls": 2,
+      "input_tokens": 3941,
+      "output_tokens": 764,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 257.6,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 4544.0,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 4860.0,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w07",
+      "mode": "sequential",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "pm-2026-06-payments",
+        "att-93460072-85a5-44ba-8cfb-a1a17123ed71"
+      ],
+      "success": true,
+      "seconds": 9.959,
+      "model_calls": 2,
+      "input_tokens": 3955,
+      "output_tokens": 910,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7159.4,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 244.2,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2510.2,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "0 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w08",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "extraction_needs_review"
+      ],
+      "cited": [
+        "rb-auth-proxy-cert"
+      ],
+      "success": false,
+      "seconds": 10.448,
+      "model_calls": 2,
+      "input_tokens": 4047,
+      "output_tokens": 956,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 4868.8,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 273.3,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 5258.7,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w08",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-auth-proxy-cert"
+      ],
+      "success": true,
+      "seconds": 7.854,
+      "model_calls": 2,
+      "input_tokens": 4057,
+      "output_tokens": 1211,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 6.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 213.2,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 4197.0,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7590.9,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w09",
+      "mode": "parallel",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-dashboard-assets"
+      ],
+      "success": true,
+      "seconds": 5.402,
+      "model_calls": 2,
+      "input_tokens": 4156,
+      "output_tokens": 768,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.7,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 289.9,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 3176.4,
+          "outcome": "answered"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5064.8,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w09",
+      "mode": "sequential",
+      "route": "recommend",
+      "reasons": [],
+      "cited": [
+        "rb-dashboard-assets"
+      ],
+      "success": true,
+      "seconds": 9.207,
+      "model_calls": 2,
+      "input_tokens": 4146,
+      "output_tokens": 852,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 5.6,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 6051.6,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 220.6,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2894.5,
+          "outcome": "answered"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "recommend"
+        },
+        {
+          "node": "recommend",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "1 runbooks"
+        }
+      ]
+    },
+    {
+      "case_id": "w10",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 9.74,
+      "model_calls": 2,
+      "input_tokens": 4170,
+      "output_tokens": 818,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 4.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7692.0,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 255.1,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "unknown service"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1745.0,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer,extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w10",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 7.927,
+      "model_calls": 2,
+      "input_tokens": 4170,
+      "output_tokens": 879,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 7.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "unknown service"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 205.0,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1148.7,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 7670.9,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer,extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w11",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "no_answer"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 5.365,
+      "model_calls": 2,
+      "input_tokens": 4095,
+      "output_tokens": 560,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 7.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "unknown service"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 200.8,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1269.7,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5111.0,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer"
+        }
+      ]
+    },
+    {
+      "case_id": "w11",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 6.19,
+      "model_calls": 2,
+      "input_tokens": 4105,
+      "output_tokens": 488,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 8.0,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 4610.9,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 261.2,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "unknown service"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1269.3,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer,extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w12",
+      "mode": "sequential",
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 8.329,
+      "model_calls": 2,
+      "input_tokens": 3885,
+      "output_tokens": 743,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 4.7,
+          "outcome": "ok"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5988.4,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 232.2,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 2063.3,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer,extraction_needs_review"
+        }
+      ]
+    },
+    {
+      "case_id": "w12",
+      "mode": "parallel",
+      "route": "review",
+      "reasons": [
+        "no_answer",
+        "extraction_needs_review"
+      ],
+      "cited": [],
+      "success": true,
+      "seconds": 5.554,
+      "model_calls": 2,
+      "input_tokens": 3875,
+      "output_tokens": 646,
+      "steps": [
+        {
+          "node": "intake",
+          "kind": "deterministic",
+          "ms": 7.5,
+          "outcome": "ok"
+        },
+        {
+          "node": "graph",
+          "kind": "deterministic",
+          "ms": 0.1,
+          "outcome": "ok"
+        },
+        {
+          "node": "retrieve",
+          "kind": "deterministic",
+          "ms": 240.6,
+          "outcome": "5 chunks"
+        },
+        {
+          "node": "diagnose",
+          "kind": "model",
+          "ms": 1721.1,
+          "outcome": "no_answer"
+        },
+        {
+          "node": "extract",
+          "kind": "model",
+          "ms": 5263.6,
+          "outcome": "succeeded"
+        },
+        {
+          "node": "assess",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "review"
+        },
+        {
+          "node": "review",
+          "kind": "deterministic",
+          "ms": 0.0,
+          "outcome": "no_answer,extraction_needs_review"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "success": {
+      "parallel": 11,
+      "sequential": 10
+    },
+    "agree": 8,
+    "median_seconds": {
+      "parallel": 6.524,
+      "sequential": 9.849499999999999
+    },
+    "reduction": 0.33763135184527127,
+    "model_calls": 48,
+    "input_tokens": 96466,
+    "output_tokens": 21556
+  },
+  "resume": {
+    "case_id": "w01",
+    "calls_before_crash": 2,
+    "calls_on_resume": 0,
+    "status": "recommended",
+    "route": "recommend"
+  },
+  "overhead": {
+    "runs": 30,
+    "timings": {
+      "plain function": {
+        "median_ms": 9.9,
+        "p95_ms": 11.9,
+        "overhead_ms": 0.0
+      },
+      "graph, no checkpointer": {
+        "median_ms": 16.3,
+        "p95_ms": 18.5,
+        "overhead_ms": 6.4
+      },
+      "graph, in-memory checkpoints": {
+        "median_ms": 16.4,
+        "p95_ms": 18.2,
+        "overhead_ms": 6.5
+      },
+      "graph, PostgreSQL checkpoints": {
+        "median_ms": 47.6,
+        "p95_ms": 56.2,
+        "overhead_ms": 37.7
+      }
+    }
+  }
+}

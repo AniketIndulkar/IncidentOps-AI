@@ -107,6 +107,21 @@ uv run python -m incidentops_ai.multimodal.assets              # regenerate the 
 uv run --extra ocr python -m incidentops_ai.multimodal.benchmark   # OCR vs vision on 28 questions
 ```
 
+## Incident workflow (W07)
+
+`POST /incidents/{id}/triage` runs the triage workflow (LangGraph): intake, retrieval and service
+context, extraction and diagnosis side by side, then a routing rule in code that sends the incident to
+**recommend** (cited runbooks, on-call, open fixes) or **review** with reason codes. Every step is
+checkpointed in PostgreSQL; `GET /incidents/{id}/triage/{run_id}` shows the state and step log, and
+`POST /incidents/{id}/triage/{run_id}/resume` continues a failed run without repeating finished steps
+([findings](evals/workflow/runs/2026-10-17-workflow-findings.md), [ADR-004](docs/adr/004-agentic-vs-deterministic-steps.md)).
+The checkpoint tables are created by LangGraph on first use, not by Alembic.
+
+```bash
+uv run python -m incidentops_ai.workflow.benchmark --overhead   # LangGraph vs a plain function, scripted (free)
+uv run python -m incidentops_ai.workflow.benchmark              # 12 incidents, real models (scratch DB, costs)
+```
+
 ## Layout
 
 - `apps/api/app` — HTTP layer (FastAPI app factory, routes, dependencies)
@@ -116,8 +131,9 @@ uv run --extra ocr python -m incidentops_ai.multimodal.benchmark   # OCR vs visi
   - `diagnosis/` — evidence numbering, citation check, cited diagnosis (W04)
   - `graph/` — service catalogue, Neo4j store and Cypher, graph-anchored retrieval (W05)
   - `multimodal/` — attachments, PDF text, OCR, vision transcripts, the multimodal benchmark (W06)
+  - `workflow/` — the LangGraph triage workflow, routing rule, runs and checkpoints, benchmark (W07)
 - `data/corpus` — runbooks and postmortems (synthetic) for retrieval
 - `data/graph` — the service catalogue the knowledge graph is built from (synthetic)
-- `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04)
+- `evals` — extraction samples (W02), retrieval questions and benchmark runs (W03, W04), diagnosis spot check (W04), graph questions (W05), multimodal benchmark (W06), workflow cases and runs (W07)
 - `migrations` — Alembic schema migrations
 - `docs` — roadmap, notes, ADRs

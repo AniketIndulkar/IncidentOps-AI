@@ -36,6 +36,54 @@ def _model_input(query: str, evidence_text: str) -> str:
     return f"Incident report:\n{query}\n\nEvidence (cite by id):\n\n{evidence_text}"
 
 
+async def diagnose_from_evidence(
+    provider: LLMProvider,
+    *,
+    query: str,
+    evidence: Sequence[Evidence],
+    config: ModelConfig,
+    stack: str = "given",
+    retrieval_ms: float = 0.0,
+) -> DiagnosisResult:
+    """Ask the model about evidence that was already gathered, then check its citations. With no
+    evidence the model is not called. Never raises for LLM failures: check `status`. (W07: the
+    workflow retrieves in its own step and calls this.)"""
+    if not evidence:
+        return DiagnosisResult(
+            status=LLMStatus.SUCCEEDED,
+            diagnosis=no_answer("no_evidence", evidence),
+            metadata=RunMetadata(
+                provider="none",
+                model="none",
+                prompt_name=DIAGNOSE_PROMPT,
+                prompt_version=DIAGNOSE_PROMPT_VERSION,
+                attempts=0,
+                latency_ms=round(retrieval_ms),
+            ),
+            error_detail=None,
+            retry_after_s=None,
+            stack=stack,
+            retrieval_ms=retrieval_ms,
+        )
+
+    prompt = load_prompt(
+        DIAGNOSE_PROMPT,
+        DIAGNOSE_PROMPT_VERSION,
+        input_text=_model_input(query, render_evidence(evidence)),
+    )
+    reply = await provider.generate_structured(prompt=prompt, schema=ModelDiagnosis, config=config)
+    succeeded = reply.status is LLMStatus.SUCCEEDED and reply.value is not None
+    return DiagnosisResult(
+        status=reply.status,
+        diagnosis=verify(reply.value, evidence) if succeeded and reply.value else None,
+        metadata=reply.metadata,
+        error_detail=reply.error_detail,
+        retry_after_s=reply.retry_after_s,
+        stack=stack,
+        retrieval_ms=retrieval_ms,
+    )
+
+
 async def diagnose(
     provider: LLMProvider,
     retriever: Retriever,
@@ -55,39 +103,11 @@ async def diagnose(
     )
     retrieval_ms = (time.perf_counter() - started) * 1000
     # The incident's own files (W06) come after the retrieved excerpts, already numbered A1..An.
-    evidence = [*number_evidence(results), *attachments]
-
-    if not evidence:
-        return DiagnosisResult(
-            status=LLMStatus.SUCCEEDED,
-            diagnosis=no_answer("no_evidence", evidence),
-            metadata=RunMetadata(
-                provider="none",
-                model="none",
-                prompt_name=DIAGNOSE_PROMPT,
-                prompt_version=DIAGNOSE_PROMPT_VERSION,
-                attempts=0,
-                latency_ms=round(retrieval_ms),
-            ),
-            error_detail=None,
-            retry_after_s=None,
-            stack=retriever.name,
-            retrieval_ms=retrieval_ms,
-        )
-
-    prompt = load_prompt(
-        DIAGNOSE_PROMPT,
-        DIAGNOSE_PROMPT_VERSION,
-        input_text=_model_input(query, render_evidence(evidence)),
-    )
-    reply = await provider.generate_structured(prompt=prompt, schema=ModelDiagnosis, config=config)
-    succeeded = reply.status is LLMStatus.SUCCEEDED and reply.value is not None
-    return DiagnosisResult(
-        status=reply.status,
-        diagnosis=verify(reply.value, evidence) if succeeded and reply.value else None,
-        metadata=reply.metadata,
-        error_detail=reply.error_detail,
-        retry_after_s=reply.retry_after_s,
+    return await diagnose_from_evidence(
+        provider,
+        query=query,
+        evidence=[*number_evidence(results), *attachments],
+        config=config,
         stack=retriever.name,
         retrieval_ms=retrieval_ms,
     )
