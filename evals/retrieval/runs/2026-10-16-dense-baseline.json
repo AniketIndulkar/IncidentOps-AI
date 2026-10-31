@@ -1,0 +1,2664 @@
+{
+  "by_category": {
+    "identifier": {
+      "hit": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "mrr": 1.0,
+      "n": 5,
+      "precision": {
+        "1": 1.0,
+        "10": 0.1,
+        "3": 0.3333,
+        "5": 0.2
+      },
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      }
+    },
+    "lookup": {
+      "hit": {
+        "1": 0.75,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "mrr": 0.8542,
+      "n": 8,
+      "precision": {
+        "1": 0.75,
+        "10": 0.1,
+        "3": 0.3333,
+        "5": 0.2
+      },
+      "recall": {
+        "1": 0.75,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      }
+    },
+    "multi": {
+      "hit": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "mrr": 1.0,
+      "n": 5,
+      "precision": {
+        "1": 1.0,
+        "10": 0.18,
+        "3": 0.5333,
+        "5": 0.32
+      },
+      "recall": {
+        "1": 0.6,
+        "10": 1.0,
+        "3": 0.9,
+        "5": 0.9
+      }
+    },
+    "paraphrase": {
+      "hit": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "mrr": 1.0,
+      "n": 8,
+      "precision": {
+        "1": 1.0,
+        "10": 0.15,
+        "3": 0.5,
+        "5": 0.3
+      },
+      "recall": {
+        "1": 0.8125,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      }
+    },
+    "procedure": {
+      "hit": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "mrr": 1.0,
+      "n": 4,
+      "precision": {
+        "1": 1.0,
+        "10": 0.15,
+        "3": 0.5,
+        "5": 0.3
+      },
+      "recall": {
+        "1": 0.875,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      }
+    }
+  },
+  "date": "2026-10-16",
+  "embedding_model": "text-embedding-3-small",
+  "k": 10,
+  "latency_ms": [
+    315.5,
+    206.0,
+    284.5,
+    209.8,
+    190.1,
+    198.3,
+    182.2,
+    208.4,
+    164.1,
+    169.8,
+    283.4,
+    214.7,
+    275.5,
+    202.8,
+    221.6,
+    188.0,
+    148.1,
+    222.2,
+    191.9,
+    198.5,
+    189.4,
+    183.0,
+    281.7,
+    191.7,
+    219.3,
+    190.8,
+    163.8,
+    182.4,
+    200.4,
+    221.8
+  ],
+  "questions": {
+    "q01": {
+      "category": "lookup",
+      "first_relevant_rank": 2,
+      "recall": {
+        "1": 0.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 0.5,
+      "top": [
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 1,
+          "score": 0.541489,
+          "section": null
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 2,
+          "score": 0.533674,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 3,
+          "score": 0.478682,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 4,
+          "score": 0.417385,
+          "section": null
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.415932,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 6,
+          "score": 0.341698,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 7,
+          "score": 0.32078,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 8,
+          "score": 0.281135,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 9,
+          "score": 0.269967,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 10,
+          "score": 0.269936,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        }
+      ]
+    },
+    "q02": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 1,
+          "score": 0.536384,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 2,
+          "score": 0.485835,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 3,
+          "score": 0.278065,
+          "section": null
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 4,
+          "score": 0.230597,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 5,
+          "score": 0.224846,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 6,
+          "score": 0.224241,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 7,
+          "score": 0.177544,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 8,
+          "score": 0.16888,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 9,
+          "score": 0.166775,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 10,
+          "score": 0.160751,
+          "section": "checkout-api returns 502 Bad Gateway"
+        }
+      ]
+    },
+    "q03": {
+      "category": "identifier",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 1,
+          "score": 0.371534,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 2,
+          "score": 0.353408,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 3,
+          "score": 0.336419,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 4,
+          "score": 0.329962,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.319325,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 6,
+          "score": 0.304705,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 7,
+          "score": 0.30418,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 8,
+          "score": 0.288633,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 9,
+          "score": 0.276736,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 10,
+          "score": 0.268871,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        }
+      ]
+    },
+    "q04": {
+      "category": "identifier",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 1,
+          "score": 0.58028,
+          "section": "notification-worker cannot reach Kafka"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 2,
+          "score": 0.503059,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 3,
+          "score": 0.313815,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 4,
+          "score": 0.268386,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.263779,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 6,
+          "score": 0.26131,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 7,
+          "score": 0.259367,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 8,
+          "score": 0.25901,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 9,
+          "score": 0.250812,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 10,
+          "score": 0.245181,
+          "section": null
+        }
+      ]
+    },
+    "q05": {
+      "category": "identifier",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 1,
+          "score": 0.51902,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 2,
+          "score": 0.48935,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 3,
+          "score": 0.401464,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 4,
+          "score": 0.383334,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.370414,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 6,
+          "score": 0.354161,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 7,
+          "score": 0.335087,
+          "section": null
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 8,
+          "score": 0.334301,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 9,
+          "score": 0.333842,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 10,
+          "score": 0.315379,
+          "section": null
+        }
+      ]
+    },
+    "q06": {
+      "category": "identifier",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 1,
+          "score": 0.379423,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 2,
+          "score": 0.274399,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 3,
+          "score": 0.193291,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 4,
+          "score": 0.183611,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 5,
+          "score": 0.182943,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 6,
+          "score": 0.182297,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.178895,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 8,
+          "score": 0.166893,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 9,
+          "score": 0.155946,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 10,
+          "score": 0.152395,
+          "section": "Postmortem: annual subscribers charged twice"
+        }
+      ]
+    },
+    "q07": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "1da8b3df-a86d-53b1-a9f0-ac79498ee5c8",
+          "doc_id": "rb-auth-proxy-cert",
+          "rank": 1,
+          "score": 0.587929,
+          "section": "internal-auth-proxy rejects requests with an expired certificate"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 2,
+          "score": 0.286241,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 3,
+          "score": 0.28569,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 4,
+          "score": 0.266743,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 5,
+          "score": 0.234202,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 6,
+          "score": 0.23131,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 7,
+          "score": 0.226037,
+          "section": null
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 8,
+          "score": 0.216968,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 9,
+          "score": 0.21073,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 10,
+          "score": 0.207695,
+          "section": "orders-api database connection pool exhausted"
+        }
+      ]
+    },
+    "q08": {
+      "category": "lookup",
+      "first_relevant_rank": 3,
+      "recall": {
+        "1": 0.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 0.3333,
+      "top": [
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 1,
+          "score": 0.203796,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 2,
+          "score": 0.199177,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 3,
+          "score": 0.194896,
+          "section": "notification-worker cannot reach Kafka"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 4,
+          "score": 0.182579,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 5,
+          "score": 0.17566,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 6,
+          "score": 0.160378,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.155617,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 8,
+          "score": 0.148119,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.136977,
+          "section": null
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 10,
+          "score": 0.127604,
+          "section": "Postmortem: German users logged out after Redis failover"
+        }
+      ]
+    },
+    "q09": {
+      "category": "identifier",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 1,
+          "score": 0.529073,
+          "section": null
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 2,
+          "score": 0.45676,
+          "section": null
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 3,
+          "score": 0.373363,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 4,
+          "score": 0.372555,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 5,
+          "score": 0.357727,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 6,
+          "score": 0.279534,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 7,
+          "score": 0.278118,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 8,
+          "score": 0.273281,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 9,
+          "score": 0.269954,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 10,
+          "score": 0.263984,
+          "section": "payments-gateway latency and charge failures"
+        }
+      ]
+    },
+    "q10": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2dfb0cf9-2495-500e-98e0-49c6836406cd",
+          "doc_id": "rb-general-triage",
+          "rank": 1,
+          "score": 0.547745,
+          "section": "General incident triage and severity levels"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 2,
+          "score": 0.393633,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 3,
+          "score": 0.341227,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 4,
+          "score": 0.32576,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 5,
+          "score": 0.320696,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 6,
+          "score": 0.318399,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 7,
+          "score": 0.288646,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 8,
+          "score": 0.285505,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 9,
+          "score": 0.28461,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 10,
+          "score": 0.283881,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        }
+      ]
+    },
+    "q11": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 1,
+          "score": 0.592294,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 2,
+          "score": 0.488231,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 3,
+          "score": 0.430505,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 4,
+          "score": 0.425243,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 5,
+          "score": 0.384814,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 6,
+          "score": 0.377264,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 7,
+          "score": 0.37722,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 8,
+          "score": 0.360025,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 9,
+          "score": 0.309364,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 10,
+          "score": 0.307421,
+          "section": "checkout-api returns 502 Bad Gateway"
+        }
+      ]
+    },
+    "q12": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 1,
+          "score": 0.480459,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 2,
+          "score": 0.425953,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 3,
+          "score": 0.404526,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 4,
+          "score": 0.32451,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 5,
+          "score": 0.31344,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 6,
+          "score": 0.309724,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.299681,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 8,
+          "score": 0.291849,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 9,
+          "score": 0.278709,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 10,
+          "score": 0.271359,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        }
+      ]
+    },
+    "q13": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 1,
+          "score": 0.469955,
+          "section": "notification-worker cannot reach Kafka"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 2,
+          "score": 0.459724,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 3,
+          "score": 0.315339,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 4,
+          "score": 0.310908,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 5,
+          "score": 0.278905,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 6,
+          "score": 0.254408,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.22737,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 8,
+          "score": 0.224827,
+          "section": null
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 9,
+          "score": 0.22393,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 10,
+          "score": 0.221486,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        }
+      ]
+    },
+    "q14": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 1,
+          "score": 0.538618,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 2,
+          "score": 0.324669,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 3,
+          "score": 0.31643,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 4,
+          "score": 0.281456,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.255304,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 6,
+          "score": 0.252098,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.24353,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 8,
+          "score": 0.240084,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 9,
+          "score": 0.222691,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 10,
+          "score": 0.216065,
+          "section": "Users get \"Invalid session\" after logging in"
+        }
+      ]
+    },
+    "q15": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 1,
+          "score": 0.585387,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 2,
+          "score": 0.55475,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 3,
+          "score": 0.355985,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 4,
+          "score": 0.276683,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.275489,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 6,
+          "score": 0.262283,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.22758,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 8,
+          "score": 0.225519,
+          "section": null
+        },
+        {
+          "chunk_id": "1da8b3df-a86d-53b1-a9f0-ac79498ee5c8",
+          "doc_id": "rb-auth-proxy-cert",
+          "rank": 9,
+          "score": 0.225466,
+          "section": "internal-auth-proxy rejects requests with an expired certificate"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 10,
+          "score": 0.219287,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        }
+      ]
+    },
+    "q16": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 1,
+          "score": 0.530576,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 2,
+          "score": 0.517928,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 3,
+          "score": 0.377442,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 4,
+          "score": 0.359421,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 5,
+          "score": 0.349947,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 6,
+          "score": 0.33744,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 7,
+          "score": 0.332948,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 8,
+          "score": 0.32349,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.316423,
+          "section": null
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 10,
+          "score": 0.308007,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        }
+      ]
+    },
+    "q17": {
+      "category": "paraphrase",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 1,
+          "score": 0.500193,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 2,
+          "score": 0.44501,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 3,
+          "score": 0.44367,
+          "section": null
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 4,
+          "score": 0.437799,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 5,
+          "score": 0.433492,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 6,
+          "score": 0.430008,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.395707,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 8,
+          "score": 0.375096,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 9,
+          "score": 0.332661,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 10,
+          "score": 0.324194,
+          "section": "Postmortem: German users logged out after Redis failover"
+        }
+      ]
+    },
+    "q18": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "1da8b3df-a86d-53b1-a9f0-ac79498ee5c8",
+          "doc_id": "rb-auth-proxy-cert",
+          "rank": 1,
+          "score": 0.431956,
+          "section": "internal-auth-proxy rejects requests with an expired certificate"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 2,
+          "score": 0.340458,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 3,
+          "score": 0.234792,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 4,
+          "score": 0.23166,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 5,
+          "score": 0.230622,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "2cf95445-ea1a-5186-afe5-e8db0d3560b2",
+          "doc_id": "rb-dashboard-assets",
+          "rank": 6,
+          "score": 0.209329,
+          "section": "web-dashboard shows stale or wrong content"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 7,
+          "score": 0.203692,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 8,
+          "score": 0.198883,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 9,
+          "score": 0.188722,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 10,
+          "score": 0.187427,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        }
+      ]
+    },
+    "q19": {
+      "category": "procedure",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 1,
+          "score": 0.732592,
+          "section": null
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 2,
+          "score": 0.625821,
+          "section": null
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 3,
+          "score": 0.457914,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 4,
+          "score": 0.436715,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 5,
+          "score": 0.358713,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 6,
+          "score": 0.35208,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 7,
+          "score": 0.342952,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 8,
+          "score": 0.34147,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 9,
+          "score": 0.334398,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 10,
+          "score": 0.319194,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        }
+      ]
+    },
+    "q20": {
+      "category": "procedure",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 1,
+          "score": 0.46394,
+          "section": null
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 2,
+          "score": 0.446997,
+          "section": null
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 3,
+          "score": 0.329833,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 4,
+          "score": 0.312605,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 5,
+          "score": 0.311886,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 6,
+          "score": 0.311343,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.302456,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 8,
+          "score": 0.29013,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 9,
+          "score": 0.277337,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 10,
+          "score": 0.264222,
+          "section": "payments-gateway latency and charge failures"
+        }
+      ]
+    },
+    "q21": {
+      "category": "procedure",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "1da8b3df-a86d-53b1-a9f0-ac79498ee5c8",
+          "doc_id": "rb-auth-proxy-cert",
+          "rank": 1,
+          "score": 0.601698,
+          "section": "internal-auth-proxy rejects requests with an expired certificate"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 2,
+          "score": 0.339364,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 3,
+          "score": 0.300602,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 4,
+          "score": 0.300551,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 5,
+          "score": 0.298243,
+          "section": null
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 6,
+          "score": 0.296641,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.281165,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 8,
+          "score": 0.269377,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "2f5975ed-bdae-5f4d-8427-02b56d07656e",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.269323,
+          "section": null
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 10,
+          "score": 0.265769,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        }
+      ]
+    },
+    "q22": {
+      "category": "procedure",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 1,
+          "score": 0.601513,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 2,
+          "score": 0.500979,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 3,
+          "score": 0.474997,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 4,
+          "score": 0.399545,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 5,
+          "score": 0.385902,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 6,
+          "score": 0.370205,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 7,
+          "score": 0.367091,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 8,
+          "score": 0.36034,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.357725,
+          "section": null
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 10,
+          "score": 0.344604,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        }
+      ]
+    },
+    "q23": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 1,
+          "score": 0.551967,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 2,
+          "score": 0.526732,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 3,
+          "score": 0.383772,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 4,
+          "score": 0.361968,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 5,
+          "score": 0.325181,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 6,
+          "score": 0.319307,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.294188,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 8,
+          "score": 0.285119,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 9,
+          "score": 0.259191,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 10,
+          "score": 0.25754,
+          "section": "Postmortem: German users logged out after Redis failover"
+        }
+      ]
+    },
+    "q24": {
+      "category": "multi",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 1,
+          "score": 0.385877,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 2,
+          "score": 0.335978,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 3,
+          "score": 0.330076,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 4,
+          "score": 0.27192,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 5,
+          "score": 0.243512,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 6,
+          "score": 0.237927,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 7,
+          "score": 0.185198,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 8,
+          "score": 0.18503,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 9,
+          "score": 0.183118,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 10,
+          "score": 0.171805,
+          "section": "orders-api database connection pool exhausted > Fix"
+        }
+      ]
+    },
+    "q25": {
+      "category": "multi",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 0.5,
+        "5": 0.5
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 1,
+          "score": 0.457913,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 2,
+          "score": 0.430157,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 3,
+          "score": 0.425858,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 4,
+          "score": 0.415559,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 5,
+          "score": 0.397155,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 6,
+          "score": 0.38637,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 7,
+          "score": 0.366775,
+          "section": "notification-worker cannot reach Kafka"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 8,
+          "score": 0.358746,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 9,
+          "score": 0.328865,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 10,
+          "score": 0.318365,
+          "section": "Users get \"Invalid session\" after logging in"
+        }
+      ]
+    },
+    "q26": {
+      "category": "multi",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 1,
+          "score": 0.468559,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "a75857dc-cda4-52cb-809b-92caa0897435",
+          "doc_id": "rb-search-indexer-oom",
+          "rank": 2,
+          "score": 0.356526,
+          "section": "search-indexer pods OOMKilled"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 3,
+          "score": 0.264137,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 4,
+          "score": 0.216521,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 5,
+          "score": 0.207314,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 6,
+          "score": 0.194877,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 7,
+          "score": 0.188667,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 8,
+          "score": 0.180714,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "b09dc6e4-4f84-59e9-ad7e-86df376a4ad8",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 9,
+          "score": 0.173153,
+          "section": "orders-api database connection pool exhausted"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 10,
+          "score": 0.172863,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        }
+      ]
+    },
+    "q27": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "2dfb0cf9-2495-500e-98e0-49c6836406cd",
+          "doc_id": "rb-general-triage",
+          "rank": 1,
+          "score": 0.471083,
+          "section": "General incident triage and severity levels"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 2,
+          "score": 0.397081,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 3,
+          "score": 0.394535,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 4,
+          "score": 0.382039,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 5,
+          "score": 0.377779,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 6,
+          "score": 0.361692,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 7,
+          "score": 0.35811,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 8,
+          "score": 0.354614,
+          "section": "notification-worker cannot reach Kafka"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.347889,
+          "section": null
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 10,
+          "score": 0.342913,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        }
+      ]
+    },
+    "q28": {
+      "category": "lookup",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 1,
+          "score": 0.613897,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 2,
+          "score": 0.490309,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 3,
+          "score": 0.474285,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 4,
+          "score": 0.457101,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 5,
+          "score": 0.442101,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 6,
+          "score": 0.438633,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.415017,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "2dfb0cf9-2495-500e-98e0-49c6836406cd",
+          "doc_id": "rb-general-triage",
+          "rank": 8,
+          "score": 0.409667,
+          "section": "General incident triage and severity levels"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 9,
+          "score": 0.404708,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 10,
+          "score": 0.382671,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        }
+      ]
+    },
+    "q29": {
+      "category": "multi",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 0.5,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "69199a77-41ba-561e-8571-8a5acb8e3b40",
+          "doc_id": "pm-2026-08-session",
+          "rank": 1,
+          "score": 0.557351,
+          "section": "Postmortem: German users logged out after Redis failover"
+        },
+        {
+          "chunk_id": "d3726f0f-408a-514f-899f-6cc0848e81bb",
+          "doc_id": "rb-session-invalid",
+          "rank": 2,
+          "score": 0.423721,
+          "section": "Users get \"Invalid session\" after logging in"
+        },
+        {
+          "chunk_id": "8e9e1977-00ba-5c94-bca7-87498ae47c54",
+          "doc_id": "rb-session-invalid",
+          "rank": 3,
+          "score": 0.407063,
+          "section": "Users get \"Invalid session\" after logging in > Customer impact notes"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 4,
+          "score": 0.360054,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "c5e11f41-4cbd-5862-bd9f-8689b969d654",
+          "doc_id": "pm-2026-02-kafka",
+          "rank": 5,
+          "score": 0.356761,
+          "section": "Postmortem: notifications stopped when the Kafka broker certificate expired"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 6,
+          "score": 0.333146,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "867f0098-f288-5003-bf38-f77ffdeb980d",
+          "doc_id": "pm-2026-05-orders-pool",
+          "rank": 7,
+          "score": 0.304435,
+          "section": "Postmortem: orders-api writes failing, connection pool exhausted"
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 8,
+          "score": 0.295312,
+          "section": "orders-api database connection pool exhausted > Fix"
+        },
+        {
+          "chunk_id": "817e3991-1f5b-57cc-8e9b-a050ee3b5ede",
+          "doc_id": "pm-2026-07-search",
+          "rank": 9,
+          "score": 0.271206,
+          "section": "Postmortem: search results stale after repeated indexer restarts"
+        },
+        {
+          "chunk_id": "e3754598-6bad-59be-a820-5c139bdfb1aa",
+          "doc_id": "rb-notification-kafka",
+          "rank": 10,
+          "score": 0.265553,
+          "section": "notification-worker cannot reach Kafka"
+        }
+      ]
+    },
+    "q30": {
+      "category": "multi",
+      "first_relevant_rank": 1,
+      "recall": {
+        "1": 1.0,
+        "10": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "reciprocal_rank": 1.0,
+      "top": [
+        {
+          "chunk_id": "e41e0b59-3d88-5785-b7f6-50ee3c756e2f",
+          "doc_id": "rb-billing-duplicates",
+          "rank": 1,
+          "score": 0.550601,
+          "section": "billing-service charges customers twice"
+        },
+        {
+          "chunk_id": "eb045215-0014-5669-8b39-09bbfc7d9cca",
+          "doc_id": "pm-2026-09-billing",
+          "rank": 2,
+          "score": 0.436841,
+          "section": "Postmortem: annual subscribers charged twice"
+        },
+        {
+          "chunk_id": "372ed0ad-8ee7-5229-a399-46b3145a730c",
+          "doc_id": "pm-2026-06-payments",
+          "rank": 3,
+          "score": 0.336124,
+          "section": "Postmortem: card charges timing out in eu-west-1"
+        },
+        {
+          "chunk_id": "f6e3e191-2e64-5a23-92d0-d08079a611fc",
+          "doc_id": "rb-payments-latency",
+          "rank": 4,
+          "score": 0.3139,
+          "section": "payments-gateway latency and charge failures > Stripe unavailable (PAY-1050)"
+        },
+        {
+          "chunk_id": "ed2b82c9-f053-5eee-99a3-74d2999a1734",
+          "doc_id": "rb-payments-latency",
+          "rank": 5,
+          "score": 0.290493,
+          "section": "payments-gateway latency and charge failures"
+        },
+        {
+          "chunk_id": "bfaf386e-f6eb-5076-a19a-f0df1ab2653b",
+          "doc_id": "pm-2026-03-checkout",
+          "rank": 6,
+          "score": 0.259961,
+          "section": "Postmortem: checkout-api 502 errors after release v2.31.0"
+        },
+        {
+          "chunk_id": "2624aef1-0f9f-5b21-b4e1-1c24f76b817d",
+          "doc_id": "rb-checkout-502",
+          "rank": 7,
+          "score": 0.254031,
+          "section": "checkout-api returns 502 Bad Gateway > Likely causes and fixes > Keepalive mismatch between nginx and the app"
+        },
+        {
+          "chunk_id": "2d0e4de9-e07a-5461-95f5-d205868b3ffb",
+          "doc_id": "rb-checkout-502",
+          "rank": 8,
+          "score": 0.236562,
+          "section": "checkout-api returns 502 Bad Gateway"
+        },
+        {
+          "chunk_id": "c3cdfc81-18b4-5702-a0de-d216ddce3164",
+          "doc_id": "rb-orders-db-failover",
+          "rank": 9,
+          "score": 0.218152,
+          "section": null
+        },
+        {
+          "chunk_id": "737059ef-4eb2-5df6-a052-905dac62466d",
+          "doc_id": "rb-orders-db-pool",
+          "rank": 10,
+          "score": 0.20237,
+          "section": "orders-api database connection pool exhausted > Fix"
+        }
+      ]
+    }
+  },
+  "retriever": "dense-pgvector",
+  "summary": {
+    "hit": {
+      "1": 0.9333,
+      "10": 1.0,
+      "3": 1.0,
+      "5": 1.0
+    },
+    "mrr": 0.9611,
+    "n": 30,
+    "precision": {
+      "1": 0.9333,
+      "10": 0.1333,
+      "3": 0.4333,
+      "5": 0.26
+    },
+    "recall": {
+      "1": 0.8,
+      "10": 1.0,
+      "3": 0.9833,
+      "5": 0.9833
+    }
+  }
+}
