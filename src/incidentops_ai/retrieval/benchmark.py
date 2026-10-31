@@ -35,13 +35,15 @@ from incidentops_ai.retrieval.metrics import (
 from incidentops_ai.retrieval.retriever import RetrievedChunk, Retriever
 from incidentops_ai.retrieval.store import PgVectorRetriever
 
-TOP_K = 10
+TOP_K = 10  # results requested per question
 MISS_K = 5  # a question is a miss when its evidence is not all inside the top 5
-SNIPPET_CHARS = 110
+SNIPPET_CHARS = 110  # longest text excerpt shown in the report
 
 
 @dataclass(frozen=True)
 class Miss:
+    """A question whose evidence was not all found in the top `MISS_K`, kept for the report."""
+
     question: Question
     missing: tuple[Evidence, ...]  # evidence not covered by any of the top 5
     top: tuple[RetrievedChunk, ...]  # what was retrieved instead (first three)
@@ -49,20 +51,24 @@ class Miss:
 
 @dataclass(frozen=True)
 class BenchmarkResult:
-    retriever: str
-    k: int
-    scores: list[QuestionScore]
-    rankings: dict[str, list[RetrievedChunk]]
-    latencies_ms: list[float]
-    summary: Summary
-    by_category: dict[str, Summary]
+    """Everything one benchmark run measured, ready to render."""
+
+    retriever: str  # `Retriever.name`
+    k: int  # results requested per question
+    scores: list[QuestionScore]  # per question, in eval-set order
+    rankings: dict[str, list[RetrievedChunk]]  # question id -> top k
+    latencies_ms: list[float]  # per question: query embedding plus search
+    summary: Summary  # averages over all questions
+    by_category: dict[str, Summary]  # averages per question style
     misses: list[Miss]
 
 
 @dataclass(frozen=True)
 class BenchmarkFiles:
-    report_path: Path
-    data_path: Path
+    """Where a run's outputs were written."""
+
+    report_path: Path  # markdown for people
+    data_path: Path  # JSON for diffing runs
 
 
 async def run_benchmark(
@@ -73,6 +79,15 @@ async def run_benchmark(
     k: int = TOP_K,
     use_service_filter: bool = False,
 ) -> BenchmarkResult:
+    """Evaluate `retriever` on the eval set and collect the misses for error analysis.
+
+    Args:
+        retriever: what to benchmark.
+        documents: the corpus, used to locate evidence quotes.
+        questions: the eval set.
+        k: results requested per question.
+        use_service_filter: restrict each question to the service it names.
+    """
     evaluation = await evaluate_retriever(
         retriever, documents, questions, k=k, use_service_filter=use_service_filter
     )
@@ -80,9 +95,10 @@ async def run_benchmark(
     misses: list[Miss] = []
     for question, score in zip(questions, evaluation.scores, strict=True):
         if score.recall[MISS_K] >= 1.0:
-            continue
+            continue  # all evidence found in the top MISS_K: not a miss
         ranked = evaluation.rankings[question.id]
         gold = resolve_question(question, by_id)
+        # The evidence items that no top-MISS_K chunk covers.
         missing = tuple(
             evidence
             for evidence, span in zip(question.evidence, gold, strict=True)
@@ -102,16 +118,22 @@ async def run_benchmark(
 
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
+    """Nearest-rank percentile: the smallest value with at least `fraction` of values at or below.
+
+    `fraction=0.95` gives p95. No interpolation, so the result is always an observed latency.
+    """
     ordered = sorted(values)
     return ordered[max(math.ceil(fraction * len(ordered)) - 1, 0)]
 
 
 def _snippet(text: str) -> str:
+    """`text` on one line, cut to `SNIPPET_CHARS` with an ellipsis, for the report."""
     flat = " ".join(text.split())
     return flat if len(flat) <= SNIPPET_CHARS else flat[: SNIPPET_CHARS - 1] + "…"
 
 
 def _metrics_table(summary: Summary) -> list[str]:
+    """Markdown table lines: one row per metric, one column per K."""
     ks = list(summary.recall)
     return [
         "| Metric | " + " | ".join(f"K={k}" for k in ks) + " |",
@@ -129,6 +151,11 @@ def render_benchmark_report(
     run_date: str,
     filtered: BenchmarkResult | None = None,
 ) -> str:
+    """The markdown report: setup, metrics, latency, results by style, filter effect, misses.
+
+    `filtered` is the same retriever run with the service filter; when given, the report adds
+    a comparison section.
+    """
     latency = result.latencies_ms
     lines = [f"# Dense retrieval baseline, {run_date}", ""]
     if embedding_model.startswith("fake"):
@@ -137,6 +164,7 @@ def render_benchmark_report(
             "The numbers show that the pipeline runs and say nothing about semantic retrieval."
         )
         lines += [banner, ""]
+    # Every chunk in one run comes from the same chunker; read its name off the first result.
     chunker = next(iter(result.rankings.values()))[0].chunk.chunker
     lines += [
         f"- Retriever: `{result.retriever}`, exact cosine scan, tenant-filtered",
@@ -224,6 +252,7 @@ def write_benchmark(
     filtered: BenchmarkResult | None = None,
     name: str = "dense-baseline",
 ) -> BenchmarkFiles:
+    """Write `<run_date>-<name>.md` (the report) and `.json` (per-question data) to `out_dir`."""
     out_dir.mkdir(parents=True, exist_ok=True)
     files = BenchmarkFiles(out_dir / f"{run_date}-{name}.md", out_dir / f"{run_date}-{name}.json")
     files.report_path.write_text(
@@ -260,15 +289,18 @@ def write_benchmark(
         },
         "latency_ms": [round(ms, 1) for ms in result.latencies_ms],
     }
+    # sort_keys makes the output stable, so two runs can be compared with a plain diff.
     files.data_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return files
 
 
 def _filter_row(label: str, summary: Summary) -> str:
+    """One row of the service filter comparison table."""
     return f"| {label} | {summary.recall[5]:.3f} | {summary.precision[5]:.3f} | {summary.mrr:.3f} |"
 
 
 def _summary_data(summary: Summary) -> dict:
+    """A `Summary` as JSON-ready data. JSON keys must be strings, hence `str(k)`."""
     return {
         "n": summary.n,
         "mrr": round(summary.mrr, 4),
@@ -279,6 +311,8 @@ def _summary_data(summary: Summary) -> dict:
 
 
 async def _run(args: argparse.Namespace) -> BenchmarkFiles:
+    """Benchmark the pgvector retriever twice (without and with the service filter), write the
+    report and print a summary. Chunks must already be ingested and indexed."""
     settings = Settings()
     embedder: Embedder = (
         FakeEmbedder(settings.embedding_dimensions) if args.fake else build_embedder(settings)
@@ -306,6 +340,7 @@ async def _run(args: argparse.Namespace) -> BenchmarkFiles:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Command-line entry point. `argv` is for tests; None means the real command line."""
     parser = argparse.ArgumentParser(description="Benchmark dense retrieval (AIENG-28).")
     parser.add_argument("--corpus", type=Path, default=Path("data/corpus"))
     parser.add_argument("--questions", type=Path, default=Path("evals/retrieval/questions.jsonl"))

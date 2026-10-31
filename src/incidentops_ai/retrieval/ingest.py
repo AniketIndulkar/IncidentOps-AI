@@ -5,6 +5,9 @@
 Repeatable: documents whose file, parser version and chunker are unchanged are skipped; changed
 ones are replaced together with their chunks. Everything runs in one transaction, so a failure
 leaves the previous state untouched.
+
+Ingestion stores text only. Embeddings are added afterwards by `index.py`, so the two steps can
+fail, be re-run and be changed (e.g. a new embedding model) independently.
 """
 
 import argparse
@@ -33,10 +36,12 @@ DEFAULT_CHUNKER = "fixed-2000-200"
 
 @dataclass(frozen=True)
 class IngestReport:
-    added: int
-    updated: int
-    unchanged: int
-    removed: int
+    """What one ingestion run did, counted in documents (except `chunks`)."""
+
+    added: int  # new documents
+    updated: int  # documents whose file, parser version or chunker changed, re-chunked
+    unchanged: int  # skipped: stored chunks are still correct
+    removed: int  # deleted because they left the corpus (only with prune)
     chunks: int  # written by this run
 
 
@@ -48,7 +53,16 @@ async def ingest_documents(
     tenant_id: str = DEFAULT_TENANT,
     prune: bool = False,
 ) -> IngestReport:
-    """Store `documents` for one tenant. The caller owns the transaction (commit or roll back)."""
+    """Store `documents` for one tenant. The caller owns the transaction (commit or roll back).
+
+    Args:
+        session: open session inside a transaction; this function flushes but never commits.
+        documents: the parsed corpus, all belonging to `tenant_id`.
+        chunker: how to cut changed or new documents into chunks.
+        tenant_id: whose documents these are.
+        prune: also delete stored documents that are not in `documents`. Off by default, so a
+            run against a wrong or partial directory cannot wipe the table.
+    """
     for document in documents:
         if document.tenant_id != tenant_id:
             raise ValueError(
@@ -56,6 +70,7 @@ async def ingest_documents(
                 f"not {tenant_id!r}"
             )
 
+    # Everything this tenant already has, keyed by document id.
     stored = {
         row.id: row
         for row in (
@@ -65,6 +80,7 @@ async def ingest_documents(
     added = updated = unchanged = chunks_written = 0
     for document in documents:
         previous = stored.get(document.id)
+        # Same file, parsed by the same parser version, cut by the same chunker: nothing to do.
         if (
             previous is not None
             and previous.content_sha256 == document.content_sha256
@@ -101,6 +117,7 @@ async def ingest_documents(
             )
         )
         await session.flush()  # the document row must exist before its chunks
+        # New chunks have no embedding yet; `index.py` fills it in.
         session.add_all(
             ChunkRow(
                 id=chunk.id,
@@ -145,12 +162,14 @@ async def run_ingest(
     chunker_name: str = DEFAULT_CHUNKER,
     prune: bool = False,
 ) -> IngestReport:
+    """Parse `corpus_dir`, then ingest it in one transaction that commits only on success."""
     documents = load_corpus(
         corpus_dir, tenant_id=tenant_id
     )  # parse everything before touching the DB
     chunker = chunker_from_name(chunker_name)
     engine = create_engine(settings)
     try:
+        # `session.begin()` commits when the block exits normally and rolls back on an exception.
         async with create_session_factory(engine)() as session, session.begin():
             return await ingest_documents(
                 session, documents, chunker, tenant_id=tenant_id, prune=prune
@@ -160,6 +179,7 @@ async def run_ingest(
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Command-line entry point. `argv` is for tests; None means the real command line."""
     parser = argparse.ArgumentParser(description="Load the retrieval corpus into PostgreSQL.")
     parser.add_argument("corpus", nargs="?", type=Path, default=Path("data/corpus"))
     parser.add_argument("--tenant", default=DEFAULT_TENANT)

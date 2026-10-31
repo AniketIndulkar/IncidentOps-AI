@@ -2,6 +2,9 @@
 
 Search is an exact cosine scan filtered by tenant first. At this corpus size that is faster than
 an approximate index and never misses; see the note in the migration for when that changes.
+
+pgvector is a PostgreSQL extension that adds a `vector` column type and distance operators;
+`cosine_distance` below compiles to its `<=>` operator (1 - cosine similarity).
 """
 
 from collections.abc import Sequence
@@ -17,6 +20,11 @@ from incidentops_ai.retrieval.retriever import RetrievalFilter, RetrievedChunk
 
 
 def row_to_chunk(row: ChunkRow, *, title: str, source_path: str) -> Chunk:
+    """Rebuild the `Chunk` a row was stored from.
+
+    `title` and `source_path` live on the document row, so the caller selects them in a join and
+    passes them in.
+    """
     return Chunk(
         tenant_id=row.tenant_id,
         doc_id=row.doc_id,
@@ -36,6 +44,7 @@ def row_to_chunk(row: ChunkRow, *, title: str, source_path: str) -> Chunk:
 
 
 def _check_dimensions(embedder: Embedder) -> None:
+    """Fail early with a clear message if the embedder's vectors do not fit the column."""
     if embedder.dimensions != EMBEDDING_DIMENSIONS:
         raise ValueError(
             f"the chunks table holds {EMBEDDING_DIMENSIONS}-dimensional vectors, "
@@ -55,8 +64,17 @@ async def index_chunks(
 
     Returns how many were embedded. The caller owns the transaction: if embedding fails part way,
     rolling back leaves the previous vectors untouched.
+
+    Args:
+        session: open database session; changes are flushed but not committed.
+        embedder: makes the vectors; its `model` is stored on each row.
+        tenant_id: only this tenant's chunks are indexed.
+        with_context: embed title and section with each chunk (`Chunk.embedding_text`).
+        batch_size: chunks embedded per `embedder.embed` call.
     """
     _check_dimensions(embedder)
+    # A row needs (re-)embedding if it has no vector, or its vector was made differently.
+    # IS DISTINCT FROM treats NULL as a value, where `!=` against NULL would be NULL (not true).
     stale = (
         ChunkRow.embedding.is_(None)
         | ChunkRow.embedding_model.is_distinct_from(embedder.model)
@@ -83,6 +101,7 @@ async def index_chunks(
             for r, title, path in batch
         ]
         for (row, _, _), vector in zip(batch, await embedder.embed(texts), strict=True):
+            # Assigning to ORM attributes marks the rows dirty; flush() writes them.
             row.embedding = vector
             row.embedding_model = embedder.model
             row.embedding_context = with_context
@@ -91,11 +110,15 @@ async def index_chunks(
 
 
 class PgVectorRetriever:
+    """Dense retrieval in PostgreSQL: filters and cosine ranking in one SQL query."""
+
     name = "dense-pgvector"
 
     def __init__(
         self, session_factory: async_sessionmaker[AsyncSession], embedder: Embedder
     ) -> None:
+        """`session_factory` opens a short session per query; `embedder` must be the model the
+        chunks were indexed with (rows from other models are excluded by the query)."""
         _check_dimensions(embedder)
         self._session_factory = session_factory
         self._embedder = embedder
@@ -103,14 +126,15 @@ class PgVectorRetriever:
     async def retrieve(
         self, query: str, *, k: int, filters: RetrievalFilter
     ) -> list[RetrievedChunk]:
+        """Embed `query`, then return the `k` closest allowed chunks, best first."""
         if k <= 0:
             raise ValueError("k must be positive")
         [vector] = await self._embedder.embed([query])
         distance = ChunkRow.embedding.cosine_distance(vector).label("distance")
         conditions = [
             ChunkRow.tenant_id == filters.tenant_id,
-            ChunkRow.embedding.is_not(None),
-            ChunkRow.embedding_model == self._embedder.model,
+            ChunkRow.embedding.is_not(None),  # not indexed yet: nothing to compare
+            ChunkRow.embedding_model == self._embedder.model,  # never mix vector spaces
         ]
         if filters.services is not None:
             conditions.append(ChunkRow.service.in_(filters.services))
@@ -135,7 +159,7 @@ class PgVectorRetriever:
         return [
             RetrievedChunk(
                 chunk=row_to_chunk(row, title=title, source_path=path),
-                score=1.0 - float(dist),
+                score=1.0 - float(dist),  # distance -> similarity, so higher is better
                 rank=rank,
             )
             for rank, (row, title, path, dist) in enumerate(rows, start=1)

@@ -25,8 +25,13 @@ async def run_index(
     tenant_id: str = DEFAULT_TENANT,
     with_context: bool = False,
 ) -> int:
+    """Embed this tenant's stale chunks in one transaction; returns how many were embedded.
+
+    If any embedding call fails, the transaction rolls back and existing vectors are kept.
+    """
     engine = create_engine(settings)
     try:
+        # `session.begin()` commits when the block exits normally and rolls back on an exception.
         async with create_session_factory(engine)() as session, session.begin():
             return await index_chunks(
                 session, embedder, tenant_id=tenant_id, with_context=with_context
@@ -36,6 +41,7 @@ async def run_index(
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Command-line entry point. `argv` is for tests; None means the real command line."""
     parser = argparse.ArgumentParser(description="Embed stored chunks into pgvector.")
     parser.add_argument("--tenant", default=DEFAULT_TENANT)
     parser.add_argument(

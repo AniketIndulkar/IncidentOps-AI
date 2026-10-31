@@ -31,6 +31,7 @@ from incidentops_ai.retrieval.experiment import (
 )
 from incidentops_ai.retrieval.factory import build_embedder
 
+# The configurations the selection rule chooses between (names parsed by `chunker_from_name`).
 PRIMARY_CONFIGS = (
     "fixed-500-50",
     "fixed-1000-100",
@@ -38,17 +39,21 @@ PRIMARY_CONFIGS = (
     "paragraph-1000",
     "section-1500",
 )
-TOP_K = 10
+TOP_K = 10  # results requested per question
 
 
 @dataclass(frozen=True)
 class ChunkingExperiment:
-    primary: list[ConfigResult]
-    winner: ConfigResult
-    with_context: list[ConfigResult]
-    winner_filtered: ConfigResult
-    report_path: Path
-    data_path: Path
+    """All results of one experiment run and where they were written."""
+
+    primary: list[ConfigResult]  # one per PRIMARY_CONFIGS entry
+    winner: ConfigResult  # chosen from `primary` by `pick_winner`
+    # Exploratory runs, outside the selection rule: more runs would mean more chances to find a
+    # "winner" by luck.
+    with_context: list[ConfigResult]  # the same configs with title > section embedded
+    winner_filtered: ConfigResult  # the winner with the service filter on
+    report_path: Path  # markdown tables
+    data_path: Path  # per-question JSON
 
 
 async def run_chunking_experiment(
@@ -59,7 +64,13 @@ async def run_chunking_experiment(
     out_dir: Path,
     run_date: str,
 ) -> ChunkingExperiment:
+    """Run every configuration, pick the winner, run the exploratory variants, write the files.
+
+    `run_date` (YYYY-MM-DD) goes into the file names, so runs on different days sit side by side.
+    """
+
     async def run(name: str, *, with_context: bool = False, use_service_filter: bool = False):
+        """Evaluate one named configuration with this experiment's corpus, questions, embedder."""
         config = ExperimentConfig(chunker_from_name(name), with_context=with_context)
         return await run_config(
             config, documents, questions, embedder, k=TOP_K, use_service_filter=use_service_filter
@@ -69,6 +80,7 @@ async def run_chunking_experiment(
     winner = pick_winner(primary)
     with_context = [await run(name, with_context=True) for name in PRIMARY_CONFIGS]
     filtered = await run(winner.name, use_service_filter=True)
+    # `replace` copies a frozen dataclass with some fields changed; here only the label.
     winner_filtered = replace(filtered, name=f"{winner.name} (service filter)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -95,6 +107,7 @@ def _render_report(
     embedder: Embedder,
     run_date: str,
 ) -> str:
+    """The human-readable markdown report: setup, comparison tables and the selected config."""
     spans = sum(len(q.evidence) for q in questions)
     categories = list(experiment.primary[0].by_category)
     style_rows = [
@@ -152,7 +165,10 @@ def _render_report(
 
 
 def _render_data(experiment: ChunkingExperiment, embedder: Embedder, run_date: str) -> str:
+    """Machine-readable results as JSON, with sorted keys so two runs can be diffed."""
+
     def entry(result: ConfigResult) -> dict:
+        """One configuration's summary and per-question numbers."""
         return {
             "chunks": result.chunk_count,
             "mean_chunk_chars": round(result.mean_chunk_chars, 1),
@@ -185,6 +201,7 @@ def _render_data(experiment: ChunkingExperiment, embedder: Embedder, run_date: s
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Command-line entry point. `argv` is for tests; None means the real command line."""
     parser = argparse.ArgumentParser(description="Compare chunking configurations (AIENG-26).")
     parser.add_argument("--corpus", type=Path, default=Path("data/corpus"))
     parser.add_argument("--questions", type=Path, default=Path("evals/retrieval/questions.jsonl"))
@@ -200,6 +217,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     settings = Settings()
     if args.model:
         settings = settings.model_copy(update={"embedding_model": args.model})
+    # The real model is always wrapped in the disk cache, so re-runs cost nothing.
     embedder: Embedder = (
         FakeEmbedder(settings.embedding_dimensions)
         if args.fake
